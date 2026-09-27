@@ -274,6 +274,7 @@
     transition: all .2s ease;
   }
   .btn-sm:hover{ background: var(--accent-soft); }
+  .btn-sm.recording{ background: var(--danger); color:#fff; border-color: var(--danger); }
   .btn-sm.danger{ border-color: var(--danger); color: var(--danger); }
   .btn-sm.danger:hover{ background: rgba(239,68,68,0.1); }
   .reset-row{ text-align:right; padding-top:4px; }
@@ -490,24 +491,33 @@
       <div class="field-message" id="ai-message"></div>
 
       <div id="ai-results" class="hidden" style="margin-top:16px;">
+        <p class="muted" style="margin:0 0 10px;">Correggi qui metodica ed esame se non sono stati riconosciuti correttamente: senza un esame selezionato non è possibile aggiungere le voci alla libreria.</p>
         <div class="field-row">
           <div class="field">
             <label>Metodica riconosciuta</label>
-            <input type="text" id="ai-metodica-riconosciuta" disabled>
+            <select id="ai-metodica-riconosciuta"></select>
           </div>
           <div class="field">
             <label>Esame riconosciuto</label>
-            <input type="text" id="ai-esame-riconosciuto" disabled>
+            <select id="ai-esame-riconosciuto"></select>
           </div>
         </div>
         <div id="ai-indicazione-row" class="field-row hidden">
           <div class="field">
             <label>Indicazione riconosciuta</label>
-            <input type="text" id="ai-indicazione-riconosciuta" disabled>
+            <input type="text" id="ai-indicazione-riconosciuta">
           </div>
+          <button class="btn-sm" id="ai-add-indicazione-btn" style="align-self:flex-end;">+ Aggiungi indicazione</button>
         </div>
-        <p class="muted" style="margin:10px 0 6px;">Voci proposte — rivedi e aggiungi solo quelle corrette:</p>
+        <p class="muted" style="margin:16px 0 6px;">Voci proposte — rivedi, correggi gruppo/etichetta e seleziona solo quelle da aggiungere alla libreria:</p>
         <div id="ai-voci-list"></div>
+        <div class="field-row" id="ai-voci-empty-row" style="display:none;">
+          <p class="muted" style="margin:0;">Nessuna frase riutilizzabile è stata individuata nel testo.</p>
+        </div>
+        <div class="field-row">
+          <button class="btn-sm" id="ai-add-selected-btn">+ Aggiungi le voci selezionate alla libreria</button>
+        </div>
+        <div class="field-message" id="ai-add-message"></div>
       </div>
     </div>
     </div>
@@ -862,6 +872,7 @@ function refreshAllSettingsSelects(){
 
   refreshEditRefertoGroups();
   refreshEditIndicazioneItems();
+  refreshAiSelects();
 }
 
 function refreshEditRefertoGroups(){
@@ -1048,6 +1059,355 @@ document.getElementById('btn-reset-data').onclick = () => {
   persist();
   refreshAllSettingsSelects();
 };
+
+// ============ ANALISI E SCOMPOSIZIONE DI UN REFERTO ESISTENTE ============
+
+function escapeHtml(s){
+  return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function metodicaOfEsame(esame){
+  for (const m of DATA.metodiche){
+    if ((DATA.esamiByMetodica[m] || []).includes(esame)) return m;
+  }
+  return null;
+}
+
+function refreshAiSelects(){
+  const metodicaSel = document.getElementById('ai-metodica-riconosciuta');
+  const esameSel = document.getElementById('ai-esame-riconosciuto');
+  if (!metodicaSel || !esameSel) return;
+  const prevMetodica = metodicaSel.value;
+  fillSelect(metodicaSel, DATA.metodiche.map(m => ({ value: m, label: m })), DATA.metodiche.length ? null : 'Nessuna metodica');
+  if (DATA.metodiche.includes(prevMetodica)) metodicaSel.value = prevMetodica;
+  refreshAiEsameOptions();
+}
+
+function refreshAiEsameOptions(){
+  const metodicaSel = document.getElementById('ai-metodica-riconosciuta');
+  const esameSel = document.getElementById('ai-esame-riconosciuto');
+  if (!metodicaSel || !esameSel) return;
+  const metodica = metodicaSel.value;
+  const prevEsame = esameSel.value;
+  const esami = metodica ? (DATA.esamiByMetodica[metodica] || []) : [];
+  fillSelect(esameSel, esami.map(e => ({ value: e, label: e })), esami.length ? null : 'Nessun esame');
+  if (esami.includes(prevEsame)) esameSel.value = prevEsame;
+}
+
+function normalizeForMatch(s){
+  return (s || '').toUpperCase().replace(/\s+/g, ' ').trim();
+}
+
+function findEsameInText(text){
+  const norm = normalizeForMatch(text);
+  let best = null;
+  allEsami().forEach(({ esame, metodica }) => {
+    const enorm = normalizeForMatch(esame);
+    if (enorm && norm.includes(enorm)){
+      if (!best || enorm.length > normalizeForMatch(best.esame).length){
+        best = { esame, metodica };
+      }
+    }
+  });
+  return best;
+}
+
+function findIndicazioneInText(text, esame){
+  const lines = text.split('\n');
+  for (const line of lines){
+    const m = line.match(/^\s*indicazion[ei]\s*(clinic[ah])?\s*[:\-]\s*(.+)$/i);
+    if (m && m[2] && m[2].trim()) return m[2].trim();
+  }
+  if (esame && DATA.indicazioniByEsame[esame]){
+    const norm = normalizeForMatch(text);
+    for (const ind of DATA.indicazioniByEsame[esame]){
+      if (ind && norm.includes(normalizeForMatch(ind))) return ind;
+    }
+  }
+  return '';
+}
+
+function stripKnownLines(text, esameMatch, indicazioneText){
+  const skipPatterns = [
+    /^indicazion[ei]\s*(clinic[ah])?\s*[:\-]/i,
+    /^confronto con precedente/i,
+    /^presa visione di precedente/i,
+    /^non disponibili precedenti per confronto/i,
+    /^dott\.?\s/i,
+    /^refert[oi]\s*[:\-]?\s*$/i
+  ];
+  const esameNorm = esameMatch ? normalizeForMatch(esameMatch.esame) : null;
+  const metodicaNorm = esameMatch ? normalizeForMatch(esameMatch.metodica) : null;
+  const indNorm = indicazioneText ? normalizeForMatch(indicazioneText) : null;
+
+  return text.split('\n').filter(rawLine => {
+    const line = rawLine.trim();
+    if (!line) return false;
+    if (skipPatterns.some(re => re.test(line))) return false;
+    const lineNorm = normalizeForMatch(line);
+    if (esameNorm && lineNorm === esameNorm) return false;
+    if (metodicaNorm && lineNorm === metodicaNorm) return false;
+    if (indNorm && lineNorm === indNorm) return false;
+    return true;
+  }).join(' ');
+}
+
+function splitIntoSentences(text){
+  const joined = text.replace(/\s+/g, ' ').trim();
+  if (!joined) return [];
+  const rough = joined.split(/(?<=[.!?])\s+(?=[A-ZÀÈÉÌÍÒÓÙÚ0-9«"])/);
+  const seen = new Set();
+  const out = [];
+  rough.map(s => s.trim()).filter(s => s.length >= 4).forEach(s => {
+    const key = s.toLowerCase();
+    if (!seen.has(key)){ seen.add(key); out.push(s); }
+  });
+  return out;
+}
+
+function guessGroup(sentence, esame){
+  if (!esame || !DATA.refertoByEsame[esame]) return '';
+  const groups = Object.keys(DATA.refertoByEsame[esame]);
+  const sentenceWords = sentence.toLowerCase().replace(/[.,;:]/g, '').split(/\s+/);
+  for (const g of groups){
+    const groupWords = g.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+    const matched = groupWords.some(gw => {
+      const prefix = gw.slice(0, Math.min(5, gw.length));
+      return sentenceWords.some(sw => sw.startsWith(prefix));
+    });
+    if (matched) return g;
+  }
+  return '';
+}
+
+function guessNeg(sentence){
+  const s = sentence.trim().toLowerCase();
+  if (/^non\s/.test(s)) return false;
+  if (/nei limiti della norma|nella norma|regolare|indenne|libera|libere/.test(s)) return false;
+  return true;
+}
+
+function guessLabel(sentence){
+  const clean = sentence.replace(/[.]+$/, '').trim();
+  const words = clean.split(/\s+/);
+  const short = words.slice(0, 6).join(' ');
+  return short.length < clean.length ? short + '…' : short;
+}
+
+let aiProposedVoci = [];
+
+function renderAiVoci(){
+  const list = document.getElementById('ai-voci-list');
+  const emptyRow = document.getElementById('ai-voci-empty-row');
+  list.innerHTML = '';
+  if (!aiProposedVoci.length){
+    emptyRow.style.display = '';
+    return;
+  }
+  emptyRow.style.display = 'none';
+  aiProposedVoci.forEach((voce, idx) => {
+    const card = document.createElement('div');
+    card.className = 'settings-section';
+    card.innerHTML = `
+      <div class="field-row">
+        <div class="checkbox-row" style="flex:0 0 auto;">
+          <input type="checkbox" id="ai-voce-${idx}-include" ${voce.include ? 'checked' : ''}>
+          <label for="ai-voce-${idx}-include" style="margin:0;">Includi</label>
+        </div>
+        <div class="field">
+          <label>Gruppo / distretto</label>
+          <input type="text" id="ai-voce-${idx}-group" value="${escapeHtml(voce.group)}" placeholder="es. Parenchima">
+        </div>
+        <div class="field">
+          <label>Etichetta pulsante</label>
+          <input type="text" id="ai-voce-${idx}-label" value="${escapeHtml(voce.label)}">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Testo inserito nel referto</label>
+          <textarea id="ai-voce-${idx}-text">${escapeHtml(voce.text)}</textarea>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="checkbox-row">
+          <input type="checkbox" id="ai-voce-${idx}-neg" ${voce.neg ? 'checked' : ''}>
+          <label for="ai-voce-${idx}-neg" style="margin:0;">Segna come reperto da approfondire</label>
+        </div>
+      </div>
+    `;
+    list.appendChild(card);
+    card.querySelector('#ai-voce-' + idx + '-include').addEventListener('change', e => { voce.include = e.target.checked; });
+    card.querySelector('#ai-voce-' + idx + '-group').addEventListener('input', e => { voce.group = e.target.value; });
+    card.querySelector('#ai-voce-' + idx + '-label').addEventListener('input', e => { voce.label = e.target.value; });
+    card.querySelector('#ai-voce-' + idx + '-text').addEventListener('input', e => { voce.text = e.target.value; });
+    card.querySelector('#ai-voce-' + idx + '-neg').addEventListener('change', e => { voce.neg = e.target.checked; });
+  });
+}
+
+document.getElementById('ai-metodica-riconosciuta').addEventListener('change', () => {
+  refreshAiEsameOptions();
+});
+
+document.getElementById('ai-analyze-btn').onclick = () => {
+  const textarea = document.getElementById('ai-report-text');
+  const msg = document.getElementById('ai-message');
+  msg.className = 'field-message';
+  const rawText = textarea.value;
+  if (!rawText || !rawText.trim()){
+    msg.textContent = 'Incolla o detta prima il testo del referto da analizzare.';
+    msg.classList.add('error');
+    return;
+  }
+
+  const esameMatch = findEsameInText(rawText);
+  const indicazioneText = findIndicazioneInText(rawText, esameMatch ? esameMatch.esame : null);
+  const bodyText = stripKnownLines(rawText, esameMatch, indicazioneText);
+  const sentences = splitIntoSentences(bodyText);
+
+  aiProposedVoci = sentences.map(s => ({
+    include: true,
+    group: guessGroup(s, esameMatch ? esameMatch.esame : null),
+    label: guessLabel(s),
+    text: s,
+    neg: guessNeg(s)
+  }));
+
+  refreshAiSelects();
+  const metodicaSel = document.getElementById('ai-metodica-riconosciuta');
+  const esameSel = document.getElementById('ai-esame-riconosciuto');
+  if (esameMatch){
+    metodicaSel.value = esameMatch.metodica;
+    refreshAiEsameOptions();
+    esameSel.value = esameMatch.esame;
+  }
+
+  const indRow = document.getElementById('ai-indicazione-row');
+  const indInput = document.getElementById('ai-indicazione-riconosciuta');
+  if (indicazioneText){
+    indRow.classList.remove('hidden');
+    indInput.value = indicazioneText;
+  } else {
+    indRow.classList.add('hidden');
+    indInput.value = '';
+  }
+
+  renderAiVoci();
+  document.getElementById('ai-results').classList.remove('hidden');
+  document.getElementById('ai-add-message').textContent = '';
+
+  if (!esameMatch){
+    msg.textContent = 'Esame non riconosciuto automaticamente: selezionalo manualmente qui sotto per poter aggiungere le voci alla libreria.';
+    msg.classList.add('error');
+  } else if (!sentences.length){
+    msg.textContent = 'Metodica ed esame riconosciuti, ma non è stata trovata nessuna frase da proporre come voce.';
+    msg.classList.add('ok');
+  } else {
+    msg.textContent = 'Analisi completata: rivedi i risultati qui sotto prima di aggiungerli alla libreria.';
+    msg.classList.add('ok');
+  }
+};
+
+document.getElementById('ai-add-indicazione-btn').onclick = () => {
+  const esame = document.getElementById('ai-esame-riconosciuto').value;
+  const text = document.getElementById('ai-indicazione-riconosciuta').value.trim();
+  const msg = document.getElementById('ai-add-message');
+  msg.className = 'field-message';
+  if (!esame){
+    msg.textContent = 'Seleziona prima un esame.';
+    msg.classList.add('error');
+    return;
+  }
+  if (!text) return;
+  DATA.indicazioniByEsame[esame] = DATA.indicazioniByEsame[esame] || [];
+  if (!DATA.indicazioniByEsame[esame].includes(text)){
+    DATA.indicazioniByEsame[esame].push(text);
+    persist();
+    refreshAllSettingsSelects();
+    msg.textContent = 'Indicazione aggiunta alla libreria per l\'esame "' + esame + '".';
+    msg.classList.add('ok');
+  } else {
+    msg.textContent = 'Questa indicazione è già presente in libreria per questo esame.';
+  }
+};
+
+document.getElementById('ai-add-selected-btn').onclick = () => {
+  const esame = document.getElementById('ai-esame-riconosciuto').value;
+  const msg = document.getElementById('ai-add-message');
+  msg.className = 'field-message';
+  if (!esame){
+    msg.textContent = 'Seleziona prima l\'esame a cui aggiungere le voci.';
+    msg.classList.add('error');
+    return;
+  }
+  const daAggiungere = aiProposedVoci.filter(v => v.include && v.text.trim() && v.group.trim() && v.label.trim());
+  if (!daAggiungere.length){
+    msg.textContent = 'Nessuna voce pronta da aggiungere: seleziona almeno una voce e compila gruppo ed etichetta.';
+    msg.classList.add('error');
+    return;
+  }
+  DATA.refertoByEsame[esame] = DATA.refertoByEsame[esame] || {};
+  daAggiungere.forEach(v => {
+    const group = v.group.trim();
+    DATA.refertoByEsame[esame][group] = DATA.refertoByEsame[esame][group] || [];
+    DATA.refertoByEsame[esame][group].push({ label: v.label.trim(), text: v.text.trim(), neg: !!v.neg });
+  });
+  persist();
+  refreshAllSettingsSelects();
+  aiProposedVoci = aiProposedVoci.filter(v => daAggiungere.indexOf(v) === -1);
+  renderAiVoci();
+  msg.textContent = daAggiungere.length + (daAggiungere.length === 1 ? ' voce aggiunta' : ' voci aggiunte') + ' alla libreria per l\'esame "' + esame + '".';
+  msg.classList.add('ok');
+};
+
+const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+
+function createMicHandler(getTargetEl, btnEl){
+  let recognition = null;
+  let recording = false;
+  btnEl.addEventListener('click', () => {
+    const target = getTargetEl();
+    if (!target) return;
+    if (!SpeechRecognitionCtor){
+      alert('La dettatura vocale non è supportata da questo browser. Usa Chrome o Edge.');
+      return;
+    }
+    if (recording){
+      recognition && recognition.stop();
+      return;
+    }
+    recognition = new SpeechRecognitionCtor();
+    recognition.lang = 'it-IT';
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    recognition.onresult = (e) => {
+      let finalText = '';
+      for (let i = e.resultIndex; i < e.results.length; i++){
+        if (e.results[i].isFinal) finalText += e.results[i][0].transcript;
+      }
+      finalText = finalText.trim();
+      if (finalText){
+        const needsSpace = target.value && !/[\s\n]$/.test(target.value);
+        target.value = target.value + (needsSpace ? ' ' : '') + finalText + ' ';
+      }
+    };
+    recognition.onerror = () => { recording = false; btnEl.classList.remove('recording'); };
+    recognition.onend = () => { recording = false; btnEl.classList.remove('recording'); };
+    try{
+      recognition.start();
+      recording = true;
+      btnEl.classList.add('recording');
+    }catch(err){ recording = false; }
+  });
+}
+
+createMicHandler(() => document.getElementById('ai-report-text'), document.getElementById('mic-ai-report-text'));
+createMicHandler(() => document.getElementById('new-indicazione-text'), document.getElementById('mic-new-indicazione-text'));
+createMicHandler(() => document.getElementById('new-referto-text'), document.getElementById('mic-new-referto-text'));
+createMicHandler(() => document.getElementById('edit-referto-text'), document.getElementById('mic-edit-referto-text'));
+createMicHandler(() => document.getElementById('edit-indicazione-text'), document.getElementById('mic-edit-indicazione-text'));
+
+// ============ FINE ANALISI E SCOMPOSIZIONE REFERTO ============
 
 let letterheads = [];
 
