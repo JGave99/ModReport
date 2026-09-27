@@ -509,13 +509,10 @@
           </div>
           <button class="btn-sm" id="ai-add-indicazione-btn" style="align-self:flex-end;">+ Aggiungi indicazione</button>
         </div>
-        <p class="muted" style="margin:16px 0 6px;">Voci proposte — rivedi, correggi gruppo/etichetta e seleziona solo quelle da aggiungere alla libreria:</p>
+        <p class="muted" style="margin:16px 0 6px;">Voci proposte — rivedi e correggi ciascuna, poi premi "Includi nella libreria" per aggiungerla singolarmente:</p>
         <div id="ai-voci-list"></div>
         <div class="field-row" id="ai-voci-empty-row" style="display:none;">
           <p class="muted" style="margin:0;">Nessuna frase riutilizzabile è stata individuata nel testo.</p>
-        </div>
-        <div class="field-row">
-          <button class="btn-sm" id="ai-add-selected-btn">+ Aggiungi le voci selezionate alla libreria</button>
         </div>
         <div class="field-message" id="ai-add-message"></div>
       </div>
@@ -1210,10 +1207,6 @@ function renderAiVoci(){
     card.className = 'settings-section';
     card.innerHTML = `
       <div class="field-row">
-        <div class="checkbox-row" style="flex:0 0 auto;">
-          <input type="checkbox" id="ai-voce-${idx}-include" ${voce.include ? 'checked' : ''}>
-          <label for="ai-voce-${idx}-include" style="margin:0;">Includi</label>
-        </div>
         <div class="field">
           <label>Gruppo / distretto</label>
           <input type="text" id="ai-voce-${idx}-group" value="${escapeHtml(voce.group)}" placeholder="es. Parenchima">
@@ -1235,14 +1228,45 @@ function renderAiVoci(){
           <label for="ai-voce-${idx}-neg" style="margin:0;">Segna come reperto da approfondire</label>
         </div>
       </div>
+      <div class="field-row">
+        <button class="btn-sm" id="ai-voce-${idx}-add-btn">+ Includi nella libreria</button>
+      </div>
     `;
     list.appendChild(card);
-    card.querySelector('#ai-voce-' + idx + '-include').addEventListener('change', e => { voce.include = e.target.checked; });
     card.querySelector('#ai-voce-' + idx + '-group').addEventListener('input', e => { voce.group = e.target.value; });
     card.querySelector('#ai-voce-' + idx + '-label').addEventListener('input', e => { voce.label = e.target.value; });
     card.querySelector('#ai-voce-' + idx + '-text').addEventListener('input', e => { voce.text = e.target.value; });
     card.querySelector('#ai-voce-' + idx + '-neg').addEventListener('change', e => { voce.neg = e.target.checked; });
+    card.querySelector('#ai-voce-' + idx + '-add-btn').addEventListener('click', () => addSingleVoceToLibrary(voce));
   });
+}
+
+function addSingleVoceToLibrary(voce){
+  const esame = document.getElementById('ai-esame-riconosciuto').value;
+  const msg = document.getElementById('ai-add-message');
+  msg.className = 'field-message';
+  if (!esame){
+    msg.textContent = 'Seleziona prima l\'esame a cui aggiungere la voce.';
+    msg.classList.add('error');
+    return;
+  }
+  const group = voce.group.trim();
+  const label = voce.label.trim();
+  const text = voce.text.trim();
+  if (!group || !label || !text){
+    msg.textContent = 'Compila gruppo, etichetta e testo prima di includere questa voce.';
+    msg.classList.add('error');
+    return;
+  }
+  DATA.refertoByEsame[esame] = DATA.refertoByEsame[esame] || {};
+  DATA.refertoByEsame[esame][group] = DATA.refertoByEsame[esame][group] || [];
+  DATA.refertoByEsame[esame][group].push({ label, text, neg: !!voce.neg });
+  persist();
+  refreshAllSettingsSelects();
+  aiProposedVoci = aiProposedVoci.filter(v => v !== voce);
+  renderAiVoci();
+  msg.textContent = 'Voce "' + label + '" aggiunta alla libreria per l\'esame "' + esame + '".';
+  msg.classList.add('ok');
 }
 
 document.getElementById('ai-metodica-riconosciuta').addEventListener('change', () => {
@@ -1266,7 +1290,6 @@ document.getElementById('ai-analyze-btn').onclick = () => {
   const sentences = splitIntoSentences(bodyText);
 
   aiProposedVoci = sentences.map(s => ({
-    include: true,
     group: guessGroup(s, esameMatch ? esameMatch.esame : null),
     label: guessLabel(s),
     text: s,
@@ -1329,35 +1352,6 @@ document.getElementById('ai-add-indicazione-btn').onclick = () => {
   } else {
     msg.textContent = 'Questa indicazione è già presente in libreria per questo esame.';
   }
-};
-
-document.getElementById('ai-add-selected-btn').onclick = () => {
-  const esame = document.getElementById('ai-esame-riconosciuto').value;
-  const msg = document.getElementById('ai-add-message');
-  msg.className = 'field-message';
-  if (!esame){
-    msg.textContent = 'Seleziona prima l\'esame a cui aggiungere le voci.';
-    msg.classList.add('error');
-    return;
-  }
-  const daAggiungere = aiProposedVoci.filter(v => v.include && v.text.trim() && v.group.trim() && v.label.trim());
-  if (!daAggiungere.length){
-    msg.textContent = 'Nessuna voce pronta da aggiungere: seleziona almeno una voce e compila gruppo ed etichetta.';
-    msg.classList.add('error');
-    return;
-  }
-  DATA.refertoByEsame[esame] = DATA.refertoByEsame[esame] || {};
-  daAggiungere.forEach(v => {
-    const group = v.group.trim();
-    DATA.refertoByEsame[esame][group] = DATA.refertoByEsame[esame][group] || [];
-    DATA.refertoByEsame[esame][group].push({ label: v.label.trim(), text: v.text.trim(), neg: !!v.neg });
-  });
-  persist();
-  refreshAllSettingsSelects();
-  aiProposedVoci = aiProposedVoci.filter(v => daAggiungere.indexOf(v) === -1);
-  renderAiVoci();
-  msg.textContent = daAggiungere.length + (daAggiungere.length === 1 ? ' voce aggiunta' : ' voci aggiunte') + ' alla libreria per l\'esame "' + esame + '".';
-  msg.classList.add('ok');
 };
 
 const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition || null;
