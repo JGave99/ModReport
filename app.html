@@ -881,7 +881,7 @@ function renderMetodica(){
   DATA.metodiche.forEach(m => {
     const b = document.createElement('button');
     b.className = 'chip' + (state.metodica === m ? ' active' : '');
-    b.textContent = m;
+    b.textContent = m.toUpperCase();
     b.onclick = () => {
       if (state.metodica === m) return;
       state.metodica = m;
@@ -989,11 +989,11 @@ function renderReferto(){
 
 function renderBreadcrumb(){
   el.breadcrumb.innerHTML = `
-    <span class="seg ${state.metodica ? '' : 'empty'}">${state.metodica || 'metodica'}</span>
+    <span class="seg ${state.metodica ? '' : 'empty'}">${state.metodica ? state.metodica.toUpperCase() : 'metodica'}</span>
     <span class="sep">›</span>
     <span class="seg ${state.esame ? '' : 'empty'}">${state.esame || 'esame'}</span>
   `;
-  el.metaMetodica.textContent = state.metodica || '—';
+  el.metaMetodica.textContent = state.metodica ? state.metodica.toUpperCase() : '—';
   el.metaEsame.textContent = state.esame || '—';
 }
 
