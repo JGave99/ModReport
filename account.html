@@ -858,9 +858,9 @@ function fillSelect(selectEl, items, placeholder){
 
 function refreshAllSettingsSelects(){
   fillSelect(document.getElementById('new-esame-metodica'),
-    DATA.metodiche.map(m => ({ value: m, label: m })));
+    DATA.metodiche.map(m => ({ value: m, label: m.toUpperCase() })));
 
-  const esamiOptions = allEsami().map(({esame, metodica}) => ({ value: esame, label: metodica + ' — ' + esame }));
+  const esamiOptions = allEsami().map(({esame, metodica}) => ({ value: esame, label: metodica.toUpperCase() + ' — ' + esame }));
 
   fillSelect(document.getElementById('new-indicazione-esame'), esamiOptions, esamiOptions.length ? null : 'Nessun esame disponibile');
   fillSelect(document.getElementById('new-referto-esame'), esamiOptions, esamiOptions.length ? null : 'Nessun esame disponibile');
@@ -1076,7 +1076,7 @@ function refreshAiSelects(){
   const esameSel = document.getElementById('ai-esame-riconosciuto');
   if (!metodicaSel || !esameSel) return;
   const prevMetodica = metodicaSel.value;
-  fillSelect(metodicaSel, DATA.metodiche.map(m => ({ value: m, label: m })), DATA.metodiche.length ? null : 'Nessuna metodica');
+  fillSelect(metodicaSel, DATA.metodiche.map(m => ({ value: m, label: m.toUpperCase() })), DATA.metodiche.length ? null : 'Nessuna metodica');
   if (DATA.metodiche.includes(prevMetodica)) metodicaSel.value = prevMetodica;
   refreshAiEsameOptions();
 }
