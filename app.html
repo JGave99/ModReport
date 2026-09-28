@@ -255,6 +255,45 @@
     overflow:hidden;
     background: var(--panel-alt);
   }
+  .workspace-tabs{
+    display:flex;
+    gap:8px;
+    margin-bottom:16px;
+    flex:none;
+  }
+  .workspace-tab{
+    font-family: var(--font);
+    font-size:13px;
+    font-weight:700;
+    width:30px;
+    height:30px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--ink-soft);
+    cursor:pointer;
+    transition: all .15s ease;
+    position:relative;
+    flex:none;
+  }
+  .workspace-tab:hover{ border-color: var(--accent); color: var(--ink); }
+  .workspace-tab.active{
+    background: var(--accent-strong);
+    border-color: var(--accent);
+    color:#fff;
+    box-shadow: 0 4px 12px rgba(2,132,199,.35);
+  }
+  .workspace-tab .dot{
+    position:absolute; top:-3px; right:-3px;
+    width:8px; height:8px; border-radius:50%;
+    background: var(--accent);
+    border: 2px solid var(--panel-alt);
+    display:none;
+  }
+  .workspace-tab.has-content .dot{ display:block; }
   .report-toolbar{
     display:flex;
     align-items:center;
@@ -638,6 +677,7 @@
   </aside>
 
   <main class="report-panel">
+    <div class="workspace-tabs" id="workspace-tabs"></div>
     <div class="report-toolbar">
       <h2 id="i18n-report-preview">Anteprima referto</h2>
       <div class="actions">
@@ -810,6 +850,13 @@ function persist(){
   }, 500);
 }
 
+function createEmptyWorkspace(){
+  return { metodica: null, esame: null, urgenzaMode: false, indicazioneLines: [], lastHeaderText: '', pendingEsameOpen: false, reportText: '' };
+}
+const WORKSPACE_COUNT = 5;
+let workspaces = Array.from({ length: WORKSPACE_COUNT }, createEmptyWorkspace);
+let activeWorkspaceIndex = 0;
+
 const state = { metodica: null, esame: null };
 let urgenzaMode = false;
 let indicazioneLines = [];
@@ -955,7 +1002,59 @@ function renderAll(){
   renderIndicazione();
   renderReferto();
   renderBreadcrumb();
+  renderWorkspaceTabs();
 }
+
+function saveActiveWorkspace(){
+  const w = workspaces[activeWorkspaceIndex];
+  w.metodica = state.metodica;
+  w.esame = state.esame;
+  w.urgenzaMode = urgenzaMode;
+  w.indicazioneLines = indicazioneLines;
+  w.lastHeaderText = lastHeaderText;
+  w.pendingEsameOpen = pendingEsameOpen;
+  w.reportText = el.reportText.value;
+}
+
+function loadWorkspace(i){
+  activeWorkspaceIndex = i;
+  const w = workspaces[i];
+  state.metodica = w.metodica;
+  state.esame = w.esame;
+  urgenzaMode = w.urgenzaMode;
+  indicazioneLines = w.indicazioneLines;
+  lastHeaderText = w.lastHeaderText;
+  pendingEsameOpen = w.pendingEsameOpen;
+  el.reportText.value = w.reportText;
+  document.getElementById('btn-urgenza-toggle').classList.toggle('active', urgenzaMode);
+  renderAll();
+}
+
+function switchWorkspace(i){
+  if (i === activeWorkspaceIndex) return;
+  saveActiveWorkspace();
+  loadWorkspace(i);
+}
+
+function renderWorkspaceTabs(){
+  const container = document.getElementById('workspace-tabs');
+  if (!container) return;
+  container.innerHTML = '';
+  workspaces.forEach((w, i) => {
+    const isActive = i === activeWorkspaceIndex;
+    const hasContent = isActive
+      ? !!(el.reportText.value.trim() || state.metodica || state.esame)
+      : !!(w.reportText.trim() || w.metodica || w.esame);
+    const b = document.createElement('button');
+    b.className = 'workspace-tab' + (isActive ? ' active' : '') + (hasContent ? ' has-content' : '');
+    b.innerHTML = (i + 1) + '<span class="dot"></span>';
+    b.title = 'Referto ' + (i + 1) + (hasContent ? '' : ' (vuoto)');
+    b.onclick = () => switchWorkspace(i);
+    container.appendChild(b);
+  });
+}
+
+el.reportText.addEventListener('input', renderWorkspaceTabs);
 
 function computeHeader(){
   if (!indicazioneLines.length) return '';
@@ -1022,6 +1121,7 @@ document.getElementById('btn-reset').onclick = () => {
   document.getElementById('btn-urgenza-toggle').classList.remove('active');
   el.reportText.value = '';
   if (state.esame){ insertEsameLine(state.esame); }
+  renderWorkspaceTabs();
 };
 
 document.getElementById('btn-copy').onclick = async () => {
@@ -1296,9 +1396,8 @@ async function showApp(){
   appRoot.classList.remove('hidden');
   document.getElementById('user-badge').textContent = currentUser ? currentUser.email : '';
   DATA = await loadDataFromCloud();
-  state.metodica = null;
-  state.esame = null;
-  renderAll();
+  workspaces = Array.from({ length: WORKSPACE_COUNT }, createEmptyWorkspace);
+  loadWorkspace(0);
 }
 
 document.getElementById('btn-signin').onclick = async () => {
