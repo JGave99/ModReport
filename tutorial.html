@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tutorial — ModReport</title>
+<link rel="icon" type="image/png" href="modreport_logo_bars_m.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0f172a;--panel:#1e293b;--alt:#0b1120;--line:#334155;--ink:#f8fafc;--soft:#94a3b8;--ac:#38bdf8;--acs:#0284c7;--danger:#ef4444;--font:'Inter',-apple-system,sans-serif}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--font);background:var(--bg);color:var(--ink);line-height:1.5}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 28px;background:var(--alt);border-bottom:1px solid var(--line)}
+.brand{font-weight:700;font-size:15px;display:flex;align-items:center;gap:10px}
+.mark{width:20px;height:20px;border-radius:5px;background:url('modreport_logo_bars_m.png') center/cover;display:inline-block}
+.back{font-size:13.5px;color:var(--soft);text-decoration:none;padding:7px 14px;border:1px solid var(--line);border-radius:8px}
+.back:hover{background:var(--panel);color:var(--ink)}
+.wrap{max-width:980px;margin:0 auto;padding:36px 20px 70px}
+h1{font-size:28px;font-weight:800;margin:0 0 6px;text-align:center}
+.sub{text-align:center;color:var(--soft);font-size:14.5px;margin:0 0 26px}
+.player{background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.4)}
+.stage{background:var(--alt);min-height:340px;padding:26px;display:flex;align-items:center;justify-content:center}
+.mock{width:100%;max-width:760px}
+.cap{padding:18px 24px;border-top:1px solid var(--line)}
+.cap .n{font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ac)}
+.cap h2{font-size:19px;margin:4px 0 6px}
+.cap p{margin:0;color:#cbd5e1;font-size:14.5px}
+.prog{height:4px;background:var(--line)}
+.prog i{display:block;height:100%;width:0;background:var(--ac)}
+.ctrl{display:flex;align-items:center;gap:10px;padding:12px 18px;border-top:1px solid var(--line);flex-wrap:wrap}
+.ctrl button{font-family:var(--font);font-size:13px;font-weight:600;background:transparent;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px 14px;cursor:pointer}
+.ctrl button:hover{border-color:var(--ac);background:rgba(56,189,248,.08)}
+.ctrl .play{background:var(--acs);border-color:var(--acs)}
+.dots{display:flex;gap:6px;margin-left:auto;flex-wrap:wrap}
+.dots button{width:28px;height:28px;padding:0;border-radius:50%;color:var(--soft)}
+.dots button.on{background:var(--acs);border-color:var(--ac);color:#fff}
+/* elementi mock */
+.s{animation:pop .5s both;animation-delay:var(--d,0s)}
+@keyframes pop{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.chip{display:inline-block;font-size:12px;padding:6px 12px;border-radius:7px;border:1px solid var(--line);color:var(--soft);background:var(--bg);margin:0 6px 6px 0}
+.chip.hl{animation:pop .5s both,hl .4s both;animation-delay:var(--d),calc(var(--d) + .9s)}
+@keyframes hl{to{background:var(--acs);border-color:var(--ac);color:#fff}}
+.lbl{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);font-weight:700;margin:10px 0 6px}
+.doc{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;font:12.5px/1.7 Consolas,monospace;color:#e2e8f0}
+.two{display:grid;grid-template-columns:1fr 1.2fr;gap:18px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:10px;font-size:12.5px}
+.btn{display:inline-block;font-size:12px;font-weight:600;border:1px solid var(--ac);color:var(--ac);border-radius:6px;padding:6px 12px}
+.btn.hl{animation:pop .5s both,hl .4s both;animation-delay:var(--d),calc(var(--d) + .9s)}
+.type{display:block;overflow:hidden;white-space:nowrap;width:0;animation:typ 2.2s steps(34) both;animation-delay:var(--d)}
+@keyframes typ{to{width:100%}}
+.mic{width:54px;height:54px;border-radius:50%;background:var(--danger);display:flex;align-items:center;justify-content:center;font-size:22px;animation:pulse 1.2s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(239,68,68,.6)}100%{box-shadow:0 0 0 18px rgba(239,68,68,0)}}
+.wave{display:flex;gap:4px;align-items:center;height:40px}
+.wave i{width:5px;background:var(--ac);border-radius:3px;height:100%;animation:w .8s infinite ease-in-out}
+.wave i:nth-child(2n){animation-delay:.2s}.wave i:nth-child(3n){animation-delay:.4s}
+@keyframes w{0%,100%{transform:scaleY(.2)}50%{transform:scaleY(1)}}
+.tabs{display:flex;gap:8px;margin-bottom:12px}
+.tab{position:relative;width:30px;height:30px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--soft);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px}
+.tab.on{background:var(--acs);border-color:var(--ac);color:#fff}
+.tab.dot::after{content:"";position:absolute;top:-3px;right:-3px;width:8px;height:8px;border-radius:50%;background:var(--ac);border:2px solid var(--alt)}
+.bub{max-width:75%;padding:9px 13px;border-radius:12px;font-size:13px;margin-bottom:10px;background:var(--panel);border:1px solid var(--line)}
+.bub.me{margin-left:auto;background:var(--acs);border-color:var(--acs)}
+.paper{background:#fff;color:#0f172a;border-radius:6px;padding:0 0 16px;font-size:12px;max-width:300px;margin:0 auto;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+.paper .head{background:linear-gradient(135deg,#0284c7,#38bdf8);color:#fff;padding:12px 16px;font-weight:700;border-radius:6px 6px 0 0}
+.paper p{margin:10px 16px 0}
+.note{margin-top:14px;font-size:12px;color:#f59e0b;text-align:center}
+@media(max-width:700px){.two{grid-template-columns:1fr}.dots{margin-left:0}}
+</style>
+</head>
+<body>
+<div class="topbar"><div class="brand"><span class="mark"></span> ModReport</div><a class="back" id="back-link" href="index.html">← Indietro</a></div>
+<div class="wrap">
+  <h1>Come funziona ModReport</h1>
+  <p class="sub">Un giro guidato in 7 tappe. Usa i comandi o le frecce della tastiera.</p>
+  <div class="player">
+    <div class="stage"><div class="mock" id="mock"></div></div>
+    <div class="prog"><i id="bar"></i></div>
+    <div class="cap"><div class="n" id="cn"></div><h2 id="ct"></h2><p id="cp"></p></div>
+    <div class="ctrl">
+      <button id="prev">◀</button><button class="play" id="play">⏸ Pausa</button><button id="next">▶</button>
+      <div class="dots" id="dots"></div>
+    </div>
+  </div>
+</div>
+<script>
+const SCENES=[
+{t:'Referto a blocchi',p:'Scegli la metodica, poi l\'esame: le opzioni si filtrano a cascata. Ogni pulsante del referto aggiunge la sua frase al testo.',h:`
+<div class="two"><div>
+<div class="lbl s">Metodica</div><span class="chip">Ecografia</span><span class="chip hl" style="--d:.6s">RX</span><span class="chip">TC</span>
+<div class="lbl s" style="--d:1.6s">Esame</div><span class="chip hl s" style="--d:1.8s">RX TORACE 2PR</span><span class="chip s" style="--d:1.8s">RX ADDOME</span>
+<div class="lbl s" style="--d:2.8s">Referto</div><span class="chip hl" style="--d:3s">Pleura libera</span><span class="chip hl" style="--d:4s">Cuore nella norma</span>
+</div><div class="doc"><div class="s" style="--d:2s">RX TORACE 2PR</div><br><div class="s" style="--d:4s">Non versamento pleurico bilateralmente.</div><div class="s" style="--d:5s">Ombra cardiaca nei limiti della norma.</div></div></div>`},
+{t:'Dettatura vocale',p:'Premi il microfono e parla: indicazioni e referti vengono scritti direttamente nel browser, senza installare nulla.',h:`
+<div style="display:flex;align-items:center;gap:22px;justify-content:center;flex-wrap:wrap">
+<div class="mic s">🎤</div><div class="wave s" style="--d:.3s"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+<div class="doc" style="margin-top:22px"><span class="type" style="--d:.8s">Indicazione: tosse persistente da due settimane</span></div>`},
+{t:'Le 5 schede',p:'Lavora su più referti insieme: ogni scheda conserva testo, esame e indicazioni. I pulsanti a sinistra restano sempre gli stessi.',h:`
+<div class="two"><div><div class="lbl">Pulsanti sempre fissi</div><span class="chip">RX</span><span class="chip">TC</span><span class="chip">RMN</span><span class="chip">Pleura libera</span></div>
+<div><div class="tabs"><div class="tab on">1</div><div class="tab dot">2</div><div class="tab">3</div><div class="tab">4</div><div class="tab">5</div></div>
+<div class="doc s" style="--d:.3s">Scheda 1<br>RX TORACE 2PR<br>Pleura libera…</div>
+<div class="s" style="--d:2.4s;margin-top:10px;font-size:12.5px;color:var(--soft)">Il puntino indica che la scheda contiene già qualcosa.</div></div></div>`},
+{t:'Libreria e importazione',p:'Incolla un referto scritto altrove: ModReport riconosce esame e indicazione e lo divide in frasi. Correggi e premi "Includi" sotto ciascuna per aggiungerla alla tua libreria.',h:`
+<div class="doc s">RX TORACE 2PR — Non addensamenti a focolaio. Non versamento pleurico.</div>
+<div class="s" style="--d:1s;margin:10px 0"><span class="btn">Analizza referto</span></div>
+<div class="card s" style="--d:1.8s">Gruppo: <b>Parenchima</b> · Etichetta: <b>Parenchima nella norma</b><br>Non addensamenti a focolaio.<br><br><span class="btn hl" style="--d:2.6s">+ Includi nella libreria</span></div>
+<div class="card s" style="--d:2.4s">Gruppo: <b>Pleura</b> · Etichetta: <b>Pleura libera</b><br>Non versamento pleurico.<br><br><span class="btn">+ Includi nella libreria</span></div>`},
+{t:'Archivio',p:'Salva i referti composti e ritrovali cercando per esame o testo. Restano visibili solo a te.',h:`
+<div class="card s" style="padding:9px 12px;color:var(--soft)">🔎 Cerca per nome esame o testo…</div>
+<div class="card s" style="--d:.6s;display:flex;justify-content:space-between"><b>RX TORACE 2PR</b><span style="color:var(--soft)">28/09/2026</span></div>
+<div class="card s" style="--d:1.1s;display:flex;justify-content:space-between"><b>ECOGRAFIA TIROIDE</b><span style="color:var(--soft)">27/09/2026</span></div>
+<div class="s" style="--d:1.8s"><span class="btn">Copia negli appunti</span> <span class="btn" style="border-color:var(--danger);color:var(--danger)">Elimina</span></div>`},
+{t:'Carta intestata e stampa',p:'Carica la carta intestata una sola volta: la stampa genera il PDF già impaginato.',h:`
+<div class="paper s"><div class="head">Studio Radiologico</div>
+<p class="s" style="--d:.8s"><b>RX TORACE 2PR</b></p><p class="s" style="--d:1.3s">Non versamento pleurico bilateralmente.</p><p class="s" style="--d:1.8s">Ombra cardiaca nei limiti della norma.</p></div>
+<div class="s" style="--d:2.4s;text-align:center;margin-top:14px"><span class="btn hl" style="--d:2.6s">Genera e stampa</span></div>`},
+{t:'Comunicazione di team',p:'Canali dedicati al tuo reparto, con messaggi in tempo reale, solo per chi lavora con te.',h:`
+<div class="lbl"># reparto-radiologia</div>
+<div class="bub s" style="--d:.4s">Chi è di turno in TC stasera?</div>
+<div class="bub me s" style="--d:1.4s">Ci sono io fino alle 22.</div>
+<div class="bub s" style="--d:2.4s">Perfetto, grazie!</div>
+<div class="note s" style="--d:3.2s">⚠ Non inserire mai dati dei pazienti: né nei referti, né nei messaggi.</div>`}
+];
+const DUR=9000;let cur=0,playing=true,t0=Date.now(),elapsed=0;
+const $=id=>document.getElementById(id);
+$('dots').innerHTML=SCENES.map((_,i)=>`<button data-i="${i}">${i+1}</button>`).join('');
+function go(i){cur=(i+SCENES.length)%SCENES.length;elapsed=0;t0=Date.now();const s=SCENES[cur];
+$('mock').innerHTML=s.h;$('cn').textContent='Passo '+(cur+1)+' di '+SCENES.length;$('ct').textContent=s.t;$('cp').textContent=s.p;
+document.querySelectorAll('.dots button').forEach((b,k)=>b.classList.toggle('on',k===cur));}
+setInterval(()=>{if(playing){elapsed=Date.now()-t0}else{t0=Date.now()-elapsed}
+$('bar').style.width=Math.min(100,elapsed/DUR*100)+'%';
+if(playing&&elapsed>=DUR){if(cur<SCENES.length-1)go(cur+1);else{go(0)}}},100);
+$('prev').onclick=()=>go(cur-1);$('next').onclick=()=>go(cur+1);
+$('play').onclick=()=>{playing=!playing;$('play').textContent=playing?'⏸ Pausa':'▶ Riprendi'};
+$('dots').onclick=e=>{if(e.target.dataset.i)go(+e.target.dataset.i)};
+document.addEventListener('keydown',e=>{if(e.key==='ArrowRight')go(cur+1);if(e.key==='ArrowLeft')go(cur-1);if(e.key===' '){e.preventDefault();$('play').click()}});
+go(0);
+$('back-link').addEventListener('click',e=>{
+  let same=false;try{same=document.referrer&&new URL(document.referrer).origin===location.origin}catch(_){}
+  if(same&&history.length>1){e.preventDefault();history.back()}
+});
+</script>
+</body>
+</html>
