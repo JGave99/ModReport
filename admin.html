@@ -73,6 +73,18 @@
     border-radius:6px; background: var(--bg); color: var(--ink); flex:1; min-width:180px;
   }
   .empty-state{ text-align:center; color: var(--ink-soft); font-size:13.5px; padding:50px 20px; border:1px dashed var(--line); border-radius: var(--radius-lg); }
+  .muted{ color: var(--ink-soft); font-size:12.5px; }
+  .toolbar-row{ display:flex; gap:10px; margin-bottom:14px; }
+  .toolbar-row input{
+    font-family: var(--font); font-size:13px; padding:9px 12px; border:1px solid var(--line);
+    border-radius:6px; background: var(--panel); color: var(--ink); flex:1; min-width:200px;
+  }
+  .toolbar-row input:focus{ outline:none; border-color: var(--accent); }
+  .badge-admin{
+    display:inline-block; padding:2px 9px; border-radius:999px; font-size:10.5px; font-weight:700;
+    text-transform:uppercase; letter-spacing:.04em; background: rgba(56,189,248,0.12); color: var(--accent);
+    margin-left:8px; vertical-align:middle;
+  }
   .gate{ position:fixed; inset:0; background: var(--bg); display:flex; align-items:center; justify-content:center; font-size:13px; color: var(--ink-soft); text-align:center; padding:20px; }
   .hidden{ display:none; }
 </style>
@@ -88,17 +100,32 @@
   </div>
 
   <div class="page">
-    <h1>Richieste di verifica specializzando</h1>
-    <p class="subtitle">Rivedi il documento caricato e approva o rifiuta l'accesso al piano da 5€/mese.</p>
+    <h1>Amministrazione</h1>
+    <p class="subtitle">Gestisci le richieste di verifica specializzando e consulta gli utenti registrati.</p>
 
-    <div class="tabs">
-      <button class="tab-btn active" data-filter="in_attesa">In attesa</button>
-      <button class="tab-btn" data-filter="approvato">Approvate</button>
-      <button class="tab-btn" data-filter="rifiutato">Rifiutate</button>
-      <button class="tab-btn" data-filter="tutte">Tutte</button>
+    <div class="tabs" id="view-tabs">
+      <button class="tab-btn active" data-view="requests">📋 Richieste specializzando</button>
+      <button class="tab-btn" data-view="users">👥 Utenti registrati</button>
     </div>
 
-    <div id="req-list"></div>
+    <div id="view-requests">
+      <p class="subtitle" style="margin-top:0;">Rivedi il documento caricato e approva o rifiuta l'accesso al piano da 5€/mese.</p>
+      <div class="tabs">
+        <button class="tab-btn active" data-filter="in_attesa">In attesa</button>
+        <button class="tab-btn" data-filter="approvato">Approvate</button>
+        <button class="tab-btn" data-filter="rifiutato">Rifiutate</button>
+        <button class="tab-btn" data-filter="tutte">Tutte</button>
+      </div>
+      <div id="req-list"></div>
+    </div>
+
+    <div id="view-users" class="hidden">
+      <div class="toolbar-row">
+        <input type="text" id="user-search" placeholder="Cerca per email…">
+      </div>
+      <div id="users-count" class="muted" style="margin-bottom:10px;"></div>
+      <div id="users-list"></div>
+    </div>
   </div>
 </div>
 
@@ -199,12 +226,72 @@ async function reviewRequest(id, status, note){
   await loadRequests();
 }
 
-document.querySelectorAll('.tab-btn').forEach(btn => {
+document.querySelectorAll('.tab-btn[data-filter]').forEach(btn => {
   btn.onclick = () => {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-btn[data-filter]').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     currentFilter = btn.dataset.filter;
     renderRequests();
+  };
+});
+
+let allUsers = [];
+let usersLoaded = false;
+
+function formatDateOrNever(iso){
+  return iso ? formatDate(iso) : 'Mai';
+}
+
+async function loadUsers(){
+  document.getElementById('users-list').innerHTML = '<div class="empty-state">Caricamento…</div>';
+  const { data, error } = await supabaseClient.rpc('list_app_users');
+  if (error){
+    document.getElementById('users-list').innerHTML = '<div class="empty-state">Errore nel caricamento: ' + escapeHtml(error.message) + '</div>';
+    return;
+  }
+  allUsers = data || [];
+  usersLoaded = true;
+  renderUsers();
+}
+
+function renderUsers(){
+  const search = document.getElementById('user-search').value.trim().toLowerCase();
+  const filtered = search ? allUsers.filter(u => (u.email || '').toLowerCase().includes(search)) : allUsers;
+
+  document.getElementById('users-count').textContent =
+    filtered.length + (filtered.length === 1 ? ' utente registrato' : ' utenti registrati');
+
+  const list = document.getElementById('users-list');
+  if (!filtered.length){
+    list.innerHTML = '<div class="empty-state">Nessun utente trovato.</div>';
+    return;
+  }
+
+  list.innerHTML = '';
+  filtered.forEach(u => {
+    const card = document.createElement('div');
+    card.className = 'req-card';
+    card.innerHTML = `
+      <div class="req-head">
+        <span class="req-email">${escapeHtml(u.email || u.id)}${u.is_admin ? '<span class="badge-admin">Admin</span>' : ''}</span>
+        <span class="req-date">Iscritto il ${formatDate(u.created_at)}</span>
+      </div>
+      <p class="muted" style="margin:0;">Ultimo accesso: ${formatDateOrNever(u.last_sign_in_at)}</p>
+    `;
+    list.appendChild(card);
+  });
+}
+
+document.getElementById('user-search').addEventListener('input', renderUsers);
+
+document.querySelectorAll('.tab-btn[data-view]').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.tab-btn[data-view]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const view = btn.dataset.view;
+    document.getElementById('view-requests').classList.toggle('hidden', view !== 'requests');
+    document.getElementById('view-users').classList.toggle('hidden', view !== 'users');
+    if (view === 'users' && !usersLoaded) loadUsers();
   };
 });
 
