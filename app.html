@@ -255,45 +255,6 @@
     overflow:hidden;
     background: var(--panel-alt);
   }
-  .workspace-tabs{
-    display:flex;
-    gap:8px;
-    margin-bottom:16px;
-    flex:none;
-  }
-  .workspace-tab{
-    font-family: var(--font);
-    font-size:13px;
-    font-weight:700;
-    width:30px;
-    height:30px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    background: var(--bg);
-    color: var(--ink-soft);
-    cursor:pointer;
-    transition: all .15s ease;
-    position:relative;
-    flex:none;
-  }
-  .workspace-tab:hover{ border-color: var(--accent); color: var(--ink); }
-  .workspace-tab.active{
-    background: var(--accent-strong);
-    border-color: var(--accent);
-    color:#fff;
-    box-shadow: 0 4px 12px rgba(2,132,199,.35);
-  }
-  .workspace-tab .dot{
-    position:absolute; top:-3px; right:-3px;
-    width:8px; height:8px; border-radius:50%;
-    background: var(--accent);
-    border: 2px solid var(--panel-alt);
-    display:none;
-  }
-  .workspace-tab.has-content .dot{ display:block; }
   .report-toolbar{
     display:flex;
     align-items:center;
@@ -611,7 +572,6 @@
       <button class="btn-settings" id="btn-logout">Esci</button>
       <a class="btn-settings" href="archivio.html">📁 Archivio</a>
       <a class="btn-settings" href="team.html">💬 Team</a>
-      <a class="btn-settings" href="tutorial.html">🎬 Tutorial</a>
       <a class="btn-settings" href="account.html">👤 Il mio account</a>
     </div>
   </div>
@@ -678,7 +638,6 @@
   </aside>
 
   <main class="report-panel">
-    <div class="workspace-tabs" id="workspace-tabs"></div>
     <div class="report-toolbar">
       <h2 id="i18n-report-preview">Anteprima referto</h2>
       <div class="actions">
@@ -851,13 +810,6 @@ function persist(){
   }, 500);
 }
 
-function createEmptyWorkspace(){
-  return { metodica: null, esame: null, urgenzaMode: false, indicazioneLines: [], lastHeaderText: '', pendingEsameOpen: false, reportText: '' };
-}
-const WORKSPACE_COUNT = 5;
-let workspaces = Array.from({ length: WORKSPACE_COUNT }, createEmptyWorkspace);
-let activeWorkspaceIndex = 0;
-
 const state = { metodica: null, esame: null };
 let urgenzaMode = false;
 let indicazioneLines = [];
@@ -881,7 +833,7 @@ function renderMetodica(){
   DATA.metodiche.forEach(m => {
     const b = document.createElement('button');
     b.className = 'chip' + (state.metodica === m ? ' active' : '');
-    b.textContent = m.toUpperCase();
+    b.textContent = m;
     b.onclick = () => {
       if (state.metodica === m) return;
       state.metodica = m;
@@ -989,11 +941,11 @@ function renderReferto(){
 
 function renderBreadcrumb(){
   el.breadcrumb.innerHTML = `
-    <span class="seg ${state.metodica ? '' : 'empty'}">${state.metodica ? state.metodica.toUpperCase() : 'metodica'}</span>
+    <span class="seg ${state.metodica ? '' : 'empty'}">${state.metodica || 'metodica'}</span>
     <span class="sep">›</span>
     <span class="seg ${state.esame ? '' : 'empty'}">${state.esame || 'esame'}</span>
   `;
-  el.metaMetodica.textContent = state.metodica ? state.metodica.toUpperCase() : '—';
+  el.metaMetodica.textContent = state.metodica || '—';
   el.metaEsame.textContent = state.esame || '—';
 }
 
@@ -1003,59 +955,7 @@ function renderAll(){
   renderIndicazione();
   renderReferto();
   renderBreadcrumb();
-  renderWorkspaceTabs();
 }
-
-function saveActiveWorkspace(){
-  const w = workspaces[activeWorkspaceIndex];
-  w.metodica = state.metodica;
-  w.esame = state.esame;
-  w.urgenzaMode = urgenzaMode;
-  w.indicazioneLines = indicazioneLines;
-  w.lastHeaderText = lastHeaderText;
-  w.pendingEsameOpen = pendingEsameOpen;
-  w.reportText = el.reportText.value;
-}
-
-function loadWorkspace(i){
-  activeWorkspaceIndex = i;
-  const w = workspaces[i];
-  state.metodica = w.metodica;
-  state.esame = w.esame;
-  urgenzaMode = w.urgenzaMode;
-  indicazioneLines = w.indicazioneLines;
-  lastHeaderText = w.lastHeaderText;
-  pendingEsameOpen = w.pendingEsameOpen;
-  el.reportText.value = w.reportText;
-  document.getElementById('btn-urgenza-toggle').classList.toggle('active', urgenzaMode);
-  renderAll();
-}
-
-function switchWorkspace(i){
-  if (i === activeWorkspaceIndex) return;
-  saveActiveWorkspace();
-  loadWorkspace(i);
-}
-
-function renderWorkspaceTabs(){
-  const container = document.getElementById('workspace-tabs');
-  if (!container) return;
-  container.innerHTML = '';
-  workspaces.forEach((w, i) => {
-    const isActive = i === activeWorkspaceIndex;
-    const hasContent = isActive
-      ? !!(el.reportText.value.trim() || state.metodica || state.esame)
-      : !!(w.reportText.trim() || w.metodica || w.esame);
-    const b = document.createElement('button');
-    b.className = 'workspace-tab' + (isActive ? ' active' : '') + (hasContent ? ' has-content' : '');
-    b.innerHTML = (i + 1) + '<span class="dot"></span>';
-    b.title = 'Referto ' + (i + 1) + (hasContent ? '' : ' (vuoto)');
-    b.onclick = () => switchWorkspace(i);
-    container.appendChild(b);
-  });
-}
-
-el.reportText.addEventListener('input', renderWorkspaceTabs);
 
 function computeHeader(){
   if (!indicazioneLines.length) return '';
@@ -1122,7 +1022,6 @@ document.getElementById('btn-reset').onclick = () => {
   document.getElementById('btn-urgenza-toggle').classList.remove('active');
   el.reportText.value = '';
   if (state.esame){ insertEsameLine(state.esame); }
-  renderWorkspaceTabs();
 };
 
 document.getElementById('btn-copy').onclick = async () => {
@@ -1171,21 +1070,40 @@ document.addEventListener('keydown', (e) => {
 });
 
 const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+let activeMicStop = null;
+
+const MIC_ERROR_MESSAGES = {
+  'not-allowed': 'Permesso al microfono negato. Controlla l\'icona del lucchetto/microfono nella barra degli indirizzi del browser e consenti l\'accesso per questo sito, poi riprova.',
+  'service-not-allowed': 'Il browser ha bloccato il servizio di riconoscimento vocale. Controlla le impostazioni del microfono del browser e del sistema operativo.',
+  'no-speech': 'Non ho sentito nessuna voce. Riprova parlando subito dopo aver premuto il microfono.',
+  'audio-capture': 'Nessun microfono trovato o disponibile. Controlla che sia collegato e non in uso da un\'altra app.',
+  'network': 'Problema di rete nel contattare il servizio di riconoscimento vocale. Controlla la connessione a internet.',
+  'aborted': null
+};
 
 function createMicHandler(getTargetEl, btnEl){
   let recognition = null;
   let recording = false;
+  function stop(){
+    if (recognition) recognition.stop();
+  }
   btnEl.addEventListener('click', () => {
     const target = getTargetEl();
     if (!target) return;
     if (!SpeechRecognitionCtor){
-      alert('La dettatura vocale non è supportata da questo browser. Usa Chrome o Edge.');
+      alert('La dettatura vocale non è supportata da questo browser. Usa Chrome o Edge su computer, oppure Chrome su Android.');
+      return;
+    }
+    if (!window.isSecureContext){
+      alert('La dettatura vocale funziona solo su una pagina caricata in HTTPS. Apri il sito dal suo indirizzo web (non da un file sul computer) e riprova.');
       return;
     }
     if (recording){
       recognition && recognition.stop();
       return;
     }
+    if (activeMicStop && activeMicStop !== stop) activeMicStop();
+    activeMicStop = stop;
     recognition = new SpeechRecognitionCtor();
     recognition.lang = 'it-IT';
     recognition.continuous = true;
@@ -1199,21 +1117,30 @@ function createMicHandler(getTargetEl, btnEl){
       if (finalText){
         const needsSpace = target.value && !/[\s\n]$/.test(target.value);
         target.value = target.value + (needsSpace ? ' ' : '') + finalText + ' ';
+        target.dispatchEvent(new Event('input', { bubbles: true }));
       }
     };
-    recognition.onerror = () => {
+    recognition.onerror = (e) => {
       recording = false;
       btnEl.classList.remove('recording');
+      console.error('Errore riconoscimento vocale:', e.error);
+      const msg = MIC_ERROR_MESSAGES.hasOwnProperty(e.error) ? MIC_ERROR_MESSAGES[e.error] : ('Errore del microfono: ' + e.error);
+      if (msg) alert(msg);
     };
     recognition.onend = () => {
       recording = false;
       btnEl.classList.remove('recording');
+      if (activeMicStop === stop) activeMicStop = null;
     };
     try{
       recognition.start();
       recording = true;
       btnEl.classList.add('recording');
-    }catch(err){ recording = false; }
+    }catch(err){
+      recording = false;
+      console.error('Impossibile avviare il riconoscimento vocale:', err);
+      alert('Non sono riuscito ad avviare la dettatura: ' + err.message);
+    }
   });
 }
 
@@ -1397,8 +1324,9 @@ async function showApp(){
   appRoot.classList.remove('hidden');
   document.getElementById('user-badge').textContent = currentUser ? currentUser.email : '';
   DATA = await loadDataFromCloud();
-  workspaces = Array.from({ length: WORKSPACE_COUNT }, createEmptyWorkspace);
-  loadWorkspace(0);
+  state.metodica = null;
+  state.esame = null;
+  renderAll();
 }
 
 document.getElementById('btn-signin').onclick = async () => {
