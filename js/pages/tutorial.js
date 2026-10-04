@@ -6,7 +6,7 @@ const SCENES=[
 <div class="lbl s" style="--d:1.6s">Esame</div><span class="chip hl s" style="--d:1.8s">RX TORACE 2PR</span><span class="chip s" style="--d:1.8s">RX ADDOME</span>
 <div class="lbl s" style="--d:2.8s">Referto</div><span class="chip hl" style="--d:3s">Pleura libera</span><span class="chip hl" style="--d:4s">Cuore nella norma</span>
 </div><div class="doc"><div class="s" style="--d:2s">RX TORACE 2PR</div><br><div class="s" style="--d:4s">Non versamento pleurico bilateralmente.</div><div class="s" style="--d:5s">Ombra cardiaca nei limiti della norma.</div></div></div>`},
-{t:'Dettatura vocale',p:'Premi il microfono e parla: indicazioni e referti vengono scritti direttamente nel browser, senza installare nulla.',h:`
+{t:'Dettatura vocale',p:'Premi il microfono e parla: indicazioni e referti vengono scritti nel testo con il riconoscimento vocale del browser, senza installare nulla.',h:`
 <div style="display:flex;align-items:center;gap:22px;justify-content:center;flex-wrap:wrap">
 <div class="mic s">🎤</div><div class="wave s" style="--d:.3s"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
 <div class="doc" style="margin-top:22px"><span class="type" style="--d:.8s">Indicazione: tosse persistente da due settimane</span></div>`},

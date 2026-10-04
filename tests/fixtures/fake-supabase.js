@@ -201,6 +201,14 @@
       memberOf(p_team, p_user).role = p_role;
       return ok(null);
     },
+    accept_terms({ p_terms_version, p_privacy_version, p_clauses }) {
+      if (!p_clauses) return { data: null, error: err('Serve l\'approvazione specifica delle clausole indicate nei Termini', '22023') };
+      const u = currentUser();
+      let p = db.tables.profiles.find((x) => x.id === u.id);
+      if (!p) { p = { id: u.id }; db.tables.profiles.push(p); }
+      Object.assign(p, { terms_version: p_terms_version, privacy_version: p_privacy_version, terms_accepted_at: now() });
+      return ok(null);
+    },
     my_channels_last_message() {
       const u = currentUser();
       const teams = db.tables.team_members.filter((m) => m.user_id === u.id).map((m) => m.team_id);
@@ -234,11 +242,14 @@
           const session = setSession(u); emit('SIGNED_IN', session);
           return { data: { user: publicUser(u), session }, error: null };
         },
-        async signUp({ email, password }) {
+        async signUp({ email, password, options }) {
           const existing = db.users.find((x) => x.email === email);
           if (existing) return { data: { user: { ...publicUser(existing), identities: [] }, session: null }, error: null };
-          const u = { id: uuid(), email, password, confirmed: false, user_metadata: {}, created_at: now() };
-          db.users.push(u); save();
+          const meta = (options && options.data) || {};
+          const u = { id: uuid(), email, password, confirmed: false, user_metadata: meta, created_at: now() };
+          db.users.push(u);
+          if (meta.clauses_accepted) db.tables.profiles.push({ id: u.id, terms_version: meta.terms_version, privacy_version: meta.privacy_version });
+          save();
           return { data: { user: publicUser(u), session: null }, error: null };
         },
         async signOut() { setSession(null); emit('SIGNED_OUT', null); return { error: null }; },

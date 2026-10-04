@@ -8,6 +8,8 @@
 <title>ModReport — Refertazione modulare per radiologi</title>
 <link rel="icon" type="image/png" href="modreport_logo_bars_m.png">
 <script src="js/auth-redirect.js"></script>
+<script src="js/legal-config.js"></script>
+<script src="js/legal-fill.js" defer></script>
 <link rel="stylesheet" href="css/fonts.css">
 <style>
   :root{
@@ -121,6 +123,7 @@
     color: var(--ink-soft); font-size:12.5px;
   }
   footer a{ color: var(--ink-soft); text-decoration:underline; margin: 0 8px; }
+  .legal-todo{ color:#fca5a5; }
 
   @media (max-width: 860px){
     .hero h1{ font-size:34px; }
@@ -196,7 +199,7 @@ Ombra cardiaca di dimensioni nei limiti della norma.</div>
     <div class="feature-card">
       <div class="feature-icon">🎙️</div>
       <h3>Dettatura vocale</h3>
-      <p>Componi indicazioni e referti parlando, direttamente nel browser — nessun software aggiuntivo da installare.</p>
+      <p>Componi indicazioni e referti parlando, con il riconoscimento vocale del browser: nessun software da installare. L'audio è elaborato dal fornitore del browser, mai da ModReport.</p>
     </div>
     <div class="feature-card">
       <div class="feature-icon">📚</div>
@@ -242,7 +245,8 @@ Ombra cardiaca di dimensioni nei limiti della norma.</div>
 </section>
 
 <footer>
-  <div>ModReport — uno strumento di refertazione modulare per professionisti della radiologia.</div>
+  <div>ModReport — strumento di scrittura per la refertazione radiologica. Non è un dispositivo medico e non fornisce diagnosi.</div>
+  <div style="margin-top:6px;">© <span data-legal="TITOLARE"></span> · P.IVA <span data-legal="PIVA"></span> · <span data-legal="SEDE"></span> · <a data-legal="EMAIL" href="#"></a></div>
   <div style="margin-top:10px;">
     <a href="informativa-privacy.html">Informativa sulla Privacy</a> · <a href="termini-servizio.html">Termini di Servizio</a> · <a href="tutorial.html">Tutorial</a> · <a href="app.html">Accedi</a>
   </div>

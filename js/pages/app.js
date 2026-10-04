@@ -7,6 +7,7 @@ import { attachDictation, stopAllDictation } from '../lib/dictation.js';
 import { buildReportPdf } from '../lib/pdf.js';
 import { passwordProblem } from '../lib/auth-policy.js';
 import { isSharedDevice, setSharedDevice, needsMfa, startIdleLogout } from '../lib/session.js';
+import { addEntry } from '../lib/local-archive.js';
 
 // Il fragment dell'URL va letto prima che supabase-js lo consumi.
 const initialHash = window.location.hash;
@@ -335,14 +336,16 @@ $('btn-archive').onclick = async () => {
   const testo = el.reportText.value.trim();
   if (!testo) { alert('Non c\'è nulla da salvare: il referto è vuoto.'); return; }
   if (testo.length > 20000) { alert('Il referto è troppo lungo per l\'archivio (massimo 20.000 caratteri).'); return; }
-  if (!confirm('Salvare questo referto nell\'archivio? Assicurati che sia privo di dati identificativi del paziente.')) return;
-  if (!sb || !currentUser) { alert('Devi essere connesso per salvare nell\'archivio.'); return; }
+  if (isSharedDevice()) {
+    alert('Su una postazione condivisa l\'archivio non è disponibile: copia o stampa il referto.');
+    return;
+  }
+  if (!confirm('Salvare il referto nell\'archivio di QUESTO computer?\n\nResta solo in questo browser, non viene inviato al cloud. Togli comunque i dati che identificano il paziente.')) return;
   const btn = $('btn-archive');
   btn.disabled = true;
   try {
-    const { error } = await sb.from('report_archive').insert({ user_id: currentUser.id, esame: state.esame || null, testo });
-    if (error) alert('Errore durante il salvataggio: ' + error.message);
-    else flash('Salvato nell\'archivio', 1600);
+    await addEntry(currentUser.id, { esame: state.esame || null, testo });
+    flash('Salvato nell\'archivio di questo computer', 1800);
   } catch (e) {
     alert('Errore durante il salvataggio: ' + e.message);
   }
@@ -512,8 +515,9 @@ $('print-do').onclick = () => {
 // ============================================================
 const loginOverlay = $('login-overlay');
 const appRoot = $('app-root');
-const AUTH_VIEWS = ['login', 'signup', 'forgot', 'recovery', 'mfa', 'check-email'];
-const ERROR_BOX = { login: 'login-error', signup: 'signup-error', forgot: 'forgot-error', recovery: 'recovery-error', mfa: 'mfa-error', 'check-email': 'check-email-error' };
+const AUTH_VIEWS = ['login', 'signup', 'forgot', 'recovery', 'mfa', 'consent', 'check-email'];
+const ERROR_BOX = { login: 'login-error', signup: 'signup-error', forgot: 'forgot-error', recovery: 'recovery-error', mfa: 'mfa-error', consent: 'consent-error', 'check-email': 'check-email-error' };
+const LEGAL = window.MR_LEGAL || {};
 
 function authMessage(view, text, ok) {
   const box = $(ERROR_BOX[view]);
@@ -582,8 +586,40 @@ async function afterSignIn() {
     showAuthView('mfa');
     return;
   }
+  if (await needsConsent()) {
+    showAuthView('consent');
+    return;
+  }
   await showApp();
 }
+
+// Termini o informativa cambiati (o accettazione mai registrata): si chiede di nuovo il consenso.
+async function needsConsent() {
+  if (!LEGAL.TERMS_VERSION || !LEGAL.PRIVACY_VERSION) return false;
+  const { data, error } = await sb.from('profiles').select('terms_version, privacy_version').eq('id', currentUser.id).maybeSingle();
+  if (error) return false; // schema non ancora aggiornato: non si blocca l'uso
+  return !data || data.terms_version !== LEGAL.TERMS_VERSION || data.privacy_version !== LEGAL.PRIVACY_VERSION;
+}
+
+$('view-consent').addEventListener('submit', (e) => {
+  e.preventDefault();
+  withBusy($('btn-consent'), async () => {
+    if (!$('consent-terms').checked || !$('consent-clauses').checked) {
+      authMessage('consent', 'Per continuare spunta entrambe le caselle.');
+      return;
+    }
+    const { error } = await sb.rpc('accept_terms', {
+      p_terms_version: LEGAL.TERMS_VERSION, p_privacy_version: LEGAL.PRIVACY_VERSION, p_clauses: true, p_user_agent: navigator.userAgent,
+    });
+    if (error) { authMessage('consent', 'Accettazione non registrata: ' + error.message); return; }
+    await showApp();
+  });
+});
+
+$('btn-consent-cancel').onclick = async () => {
+  try { await sb.auth.signOut({ scope: 'local' }); } catch (e) { /* si esce comunque */ }
+  window.location.replace(pageUrl('app.html'));
+};
 
 $('view-mfa').addEventListener('submit', (e) => {
   e.preventDefault();
@@ -617,7 +653,17 @@ $('view-signup').addEventListener('submit', (e) => {
     const problem = passwordProblem(password, email);
     if (problem) { authMessage('signup', problem); return; }
     if (password !== password2) { authMessage('signup', 'Le due password non coincidono.'); return; }
-    const { data, error } = await sb.auth.signUp({ email, password, options: { emailRedirectTo: pageUrl('app.html') } });
+    if (!$('signup-terms').checked || !$('signup-clauses').checked) {
+      authMessage('signup', 'Per registrarti accetta i Termini e approva le clausole indicate.');
+      return;
+    }
+    const { data, error } = await sb.auth.signUp({
+      email, password,
+      options: {
+        emailRedirectTo: pageUrl('app.html'),
+        data: { terms_version: LEGAL.TERMS_VERSION, privacy_version: LEGAL.PRIVACY_VERSION, clauses_accepted: true },
+      },
+    });
     if (error) { authMessage('signup', authErrorMessage(error)); return; }
     if (isExistingUserSignup(data)) { authMessage('signup', authErrorMessage({ code: 'user_already_exists' })); return; }
     if (data.user && !data.session) {

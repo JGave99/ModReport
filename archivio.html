@@ -209,6 +209,14 @@
   }
   .hidden{ display:none; }
   [hidden]{ display:none !important; }
+  .cloud-banner{ background: var(--amber-soft); border:1px solid var(--amber); color: var(--ink); border-radius: var(--radius-lg); padding: 14px 16px; margin-bottom: 18px; font-size:13px; }
+  .cloud-banner p{ margin:0 0 10px; line-height:1.55; }
+  .shared-note{ border:1px dashed var(--line); border-radius: var(--radius-lg); padding: 20px; color: var(--ink-soft); font-size:13px; }
+  .field-message{ font-size:12px; min-height:16px; margin-top:6px; }
+  .field-message.ok{ color: var(--accent); }
+  .field-message.error{ color: var(--danger); }
+  .visually-hidden{ position:absolute !important; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+
 
   .copy-flash{
     position:fixed;
@@ -242,16 +250,40 @@
   <div class="page">
     <h1>Archivio referti</h1>
     <p class="subtitle">
-      Qui trovi i referti che hai salvato manualmente dal modulo di refertazione. Restano visibili solo a te, e sono pensati per essere già privi di dati identificativi del paziente — controlla sempre prima di salvarne di nuovi.
+      I referti che salvi restano <strong>solo su questo computer</strong>, nel browser: non vengono inviati al cloud.
+      Per spostarli su un'altra postazione usa "Scarica copia" e poi "Ripristina da file". Prima di salvare togli comunque i dati che identificano il paziente.
     </p>
 
-    <div class="toolbar-row">
-      <input type="text" id="search-input" placeholder="Cerca per nome esame o testo…">
-      <select id="filter-esame"><option value="">Tutti gli esami</option></select>
+    <div class="cloud-banner" id="cloud-banner" role="status" hidden>
+      <p id="cloud-banner-text"></p>
+      <div class="archive-actions" style="justify-content:flex-start;">
+        <button class="btn-sm" id="btn-move-cloud">Sposta su questo computer</button>
+      </div>
+      <div class="field-message" id="cloud-message"></div>
+    </div>
+
+    <div class="shared-note" id="shared-note" hidden>
+      Su una postazione condivisa l'archivio non è disponibile: i referti resterebbero leggibili da chi usa il computer dopo di te.
+    </div>
+
+    <div id="archive-tools">
+      <div class="toolbar-row">
+        <label class="visually-hidden" for="search-input">Cerca</label>
+        <input type="text" id="search-input" placeholder="Cerca per nome esame o testo…">
+        <label class="visually-hidden" for="filter-esame">Filtra per esame</label>
+        <select id="filter-esame"><option value="">Tutti gli esami</option></select>
+      </div>
+      <div class="toolbar-row">
+        <button class="btn-sm" id="btn-export">Scarica copia</button>
+        <label class="btn-sm" for="import-file" style="display:inline-flex; align-items:center;">Ripristina da file</label>
+        <input type="file" id="import-file" accept="application/json,.json" class="visually-hidden">
+        <button class="btn-sm danger" id="btn-clear">Svuota archivio</button>
+      </div>
+      <div class="field-message" id="tools-message"></div>
     </div>
 
     <div id="archive-list"></div>
-    <div id="empty-state" class="empty-state hidden">Nessun referto archiviato per ora. Da "Anteprima referto", una volta composto, usa "Salva nell'archivio" per iniziare a costruire il tuo archivio.</div>
+    <div id="empty-state" class="empty-state hidden">Nessun referto archiviato su questo computer.</div>
   </div>
 </div>
 

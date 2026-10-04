@@ -5,9 +5,12 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://umejthggxihtyqvcszgm.supabase.co wss://umejthggxihtyqvcszgm.supabase.co; frame-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; worker-src 'self' blob:; manifest-src 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Termini di Servizio — ModReport</title>
+<title>Termini di servizio — ModReport</title>
+<meta name="description" content="Condizioni d'uso di ModReport: destinazione d'uso, account, contenuti, responsabilità, modifiche e legge applicabile.">
 <link rel="icon" type="image/png" href="modreport_logo_bars_m.png">
 <link rel="stylesheet" href="css/fonts.css">
+<script src="js/legal-config.js"></script>
+<script src="js/legal-fill.js" defer></script>
 <style>
   :root{
     --bg: #0f172a; --panel: #1e293b; --panel-alt: #0b1120; --line: #334155;
@@ -15,103 +18,114 @@
     --font: 'Inter', -apple-system, sans-serif;
   }
   *{box-sizing:border-box;}
+  [hidden]{ display:none !important; }
   body{ margin:0; font-family: var(--font); background: var(--bg); color: var(--ink); line-height:1.65; }
-  .topbar{
-    display:flex; align-items:center; justify-content:space-between; padding: 14px 28px;
-    background: var(--panel-alt); border-bottom: 1px solid var(--line); position:sticky; top:0;
-  }
-  .brand{ font-weight:700; font-size:15px; display:flex; align-items:center; gap:10px; }
-  .brand .mark{
-    width:20px; height:20px; border-radius:5px;
-    background: url('modreport_logo_bars_m.png') no-repeat center / cover;
-    display:inline-block; flex:none;
-  }
+  .topbar{ display:flex; align-items:center; justify-content:space-between; padding: 14px 28px; background: var(--panel-alt); border-bottom: 1px solid var(--line); position:sticky; top:0; }
+  .brand{ font-weight:700; font-size:15px; display:flex; align-items:center; gap:10px; color:inherit; text-decoration:none; }
+  .brand .mark{ width:20px; height:20px; border-radius:5px; background: url('modreport_logo_bars_m.png') no-repeat center / cover; display:inline-block; flex:none; }
   .back{ font-size:13.5px; color: var(--ink-soft); text-decoration:none; padding:7px 14px; border:1px solid var(--line); border-radius:8px; }
   .back:hover{ background: var(--panel); color: var(--ink); }
-
-  .doc{ max-width: 760px; margin: 0 auto; padding: 56px 24px 100px; }
-  .doc h1{ font-size:30px; font-weight:800; margin:0 0 8px; }
-  .doc .updated{ color: var(--ink-soft); font-size:13px; margin-bottom:36px; }
-  .note{
-    background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--accent);
-    border-radius:8px; padding:14px 18px; font-size:13.5px; color: var(--ink-soft); margin-bottom:40px;
-  }
-  .doc h2{ font-size:19px; font-weight:700; margin:38px 0 12px; color: var(--ink); }
-  .doc p{ font-size:15px; color:#cbd5e1; margin:0 0 14px; }
+  .doc{ max-width: 760px; margin: 0 auto; padding: 48px 24px 100px; }
+  .doc h1{ font-size:30px; font-weight:800; margin:0 0 8px; line-height:1.2; }
+  .doc .updated{ color: var(--ink-soft); font-size:13px; margin-bottom:28px; }
+  .note{ background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius:8px; padding:14px 18px; font-size:14px; color:#cbd5e1; margin-bottom:32px; }
+  .note ul{ margin:6px 0 0; }
+  .doc h2{ font-size:19px; font-weight:700; margin:36px 0 12px; color: var(--ink); }
+  .doc p, .doc li{ font-size:15px; color:#cbd5e1; }
+  .doc p{ margin:0 0 14px; }
   .doc ul{ margin:0 0 14px; padding-left:22px; }
-  .doc li{ font-size:15px; color:#cbd5e1; margin-bottom:6px; }
+  .doc li{ margin-bottom:6px; }
   .doc a{ color: var(--accent); }
-  .placeholder{ color: var(--accent); font-weight:600; }
   .doc strong{ color: var(--ink); }
+  .clauses{ border:1px solid var(--line); border-radius:8px; padding:14px 18px; margin-top:24px; }
+  .legal-todo{ color:#fca5a5; font-weight:600; }
+  @media (max-width: 640px){ .doc h1{ font-size:24px; } }
+  @media print{ body{ background:#fff; color:#000; } .topbar{ display:none; } .doc p, .doc li, .note{ color:#000; } .note{ background:#fff; } }
 </style>
 </head>
 <body>
 
 <div class="topbar">
-  <div class="brand"><span class="mark"></span> ModReport</div>
+  <a class="brand" href="index.html"><span class="mark"></span> ModReport</a>
   <a class="back" href="index.html">← Torna al sito</a>
 </div>
 
-<div class="doc">
-  <h1>Termini di Servizio</h1>
-  <p class="updated">Ultimo aggiornamento: <span class="placeholder">[inserire data]</span></p>
+<main class="doc">
+  <h1>Termini di servizio</h1>
+  <p class="updated">Versione del <span data-legal="TERMS_VERSION"></span></p>
 
   <div class="note">
-    Usando questo sito accetti le regole descritte qui sotto. Il punto più importante: questo è uno strumento per organizzare i tuoi testi, non un archivio per dati di pazienti — non inserirne mai, in nessuna sezione del sito.
+    <strong>In sintesi</strong>
+    <ul>
+      <li>ModReport è uno strumento di scrittura per comporre referti: non fa diagnosi e non è un dispositivo medico.</li>
+      <li>Il contenuto del referto è responsabilità del medico che lo firma; le frasi predefinite sono esempi da verificare.</li>
+      <li>Non inserire dati dei pazienti nella libreria o nei messaggi di team.</li>
+      <li>Oggi il servizio è gratuito (fase beta); eventuali piani a pagamento avranno condizioni di vendita separate.</li>
+      <li>Puoi eliminare l'account e scaricare i tuoi contenuti quando vuoi.</li>
+    </ul>
   </div>
 
-  <h2>1. Cosa offriamo</h2>
-  <p>Il sito <span class="placeholder">ModReport</span> (il "Servizio") è uno strumento che ti aiuta a comporre e organizzare referti tramite una libreria di modelli di testo personalizzabili, con dettatura vocale, archiviazione, stampa e canali di comunicazione di team.</p>
+  <h2 id="art1">1. Chi fornisce il servizio</h2>
+  <p>Il servizio ModReport (il "Servizio") è fornito da <strong><span data-legal="TITOLARE"></span></strong> (<span data-legal="FORMA"></span>), con sede in <span data-legal="SEDE"></span>, P.IVA <span data-legal="PIVA"></span>, email <a data-legal="EMAIL" href="#"></a> (il "Fornitore").</p>
 
-  <h2>2. Accettazione dei termini</h2>
-  <p>Registrandoti e usando il Servizio accetti questi Termini e la nostra <a href="informativa-privacy.html">Informativa sulla Privacy</a>. Se non li accetti, non usare il Servizio.</p>
+  <h2 id="art2">2. Che cos'è ModReport e destinazione d'uso</h2>
+  <p>ModReport è uno strumento di scrittura e organizzazione di testi destinato a professionisti della radiologia. Consente di comporre testi a partire da frasi personalizzabili, dettarli con il riconoscimento vocale del browser, copiarli o stamparli su carta intestata e condividere frasi e messaggi all'interno di un team.</p>
+  <p><strong>ModReport non è un dispositivo medico</strong> ai sensi del Regolamento (UE) 2017/745: non elabora immagini né dati clinici per fornire diagnosi, misure, punteggi, classificazioni o raccomandazioni e non sostituisce il giudizio del medico. Eventuali proposte automatiche (ad esempio la classificazione delle frasi importate) riguardano solo l'organizzazione del testo e vanno sempre verificate.</p>
+  <p>Le frasi predefinite fornite con il Servizio sono <strong>esempi</strong> che l'utente deve verificare e adattare alla propria pratica. Il contenuto di ogni referto, anche se composto con frasi predefinite, è responsabilità esclusiva del medico che lo redige e lo firma.</p>
 
-  <h2>3. Registrazione</h2>
+  <h2 id="art3">3. Account</h2>
   <ul>
-    <li>Devi avere almeno 18 anni</li>
-    <li>Devi fornire un'email valida</li>
-    <li>Sei responsabile della sicurezza delle tue credenziali e di ciò che accade con il tuo account</li>
+    <li>Il Servizio è riservato a maggiorenni che operano in ambito sanitario o sono in formazione specialistica.</li>
+    <li>L'account è personale: non condividere le credenziali. Ti consigliamo di attivare la verifica in due passaggi e, sulle postazioni condivise, la relativa modalità di accesso.</li>
+    <li>Avvisaci subito se sospetti un accesso non autorizzato al tuo account.</li>
   </ul>
 
-  <h2>4. Cosa non puoi fare</h2>
-  <p>Usando il Servizio, ti impegni a non:</p>
+  <h2 id="art4">4. Uso consentito</h2>
+  <p>Usando il Servizio ti impegni a:</p>
   <ul>
-    <li><strong>Inserire dati che identificano una persona reale non tua</strong> (nome, data di nascita, codice fiscale, o qualsiasi altro dato che la renda riconoscibile) in nessuna parte del sito — referti, indicazioni, messaggi di team o altro. Il Servizio è pensato solo per modelli di testo generici.</li>
-    <li>Usare il Servizio per scopi illegali, molesti o lesivi verso terzi, anche nei canali di team</li>
-    <li>Provare ad accedere senza autorizzazione a dati o account di altri utenti</li>
+    <li><strong>non inserire dati che identificano i pazienti</strong> (nomi, date di nascita, codici fiscali, numeri di accettazione o altri dati che li rendano riconoscibili) nella libreria, nei nomi di esami e gruppi, nei messaggi e nei canali di team;</li>
+    <li>rispettare la deontologia professionale e le regole della struttura in cui lavori, comprese quelle sull'uso di strumenti informatici e della dettatura;</li>
+    <li>non usare il Servizio per scopi illeciti, molesti o lesivi dei diritti di terzi;</li>
+    <li>non tentare di accedere senza autorizzazione ad account, dati o sistemi, di aggirare le misure di sicurezza o di sovraccaricare il Servizio.</li>
   </ul>
-  <p>Violare queste regole può comportare la sospensione o chiusura dell'account.</p>
 
-  <h2>5. I tuoi contenuti</h2>
-  <p>Il Servizio è uno strumento di scrittura: sei tu il responsabile di ciò che scrivi, incolli o generi tramite di esso. Se lo usi per scopi professionali, resta a te la responsabilità di verificarne l'accuratezza prima di qualunque utilizzo.</p>
+  <h2 id="art5">5. I tuoi contenuti</h2>
+  <p>Frasi, libreria, carte intestate e messaggi che inserisci restano tuoi. Ci concedi solo il permesso, non esclusivo e gratuito, di conservarli e trattarli nella misura necessaria a fornirti il Servizio. Puoi scaricare la libreria e l'archivio in qualsiasi momento. Sei responsabile della liceità dei contenuti che carichi (ad esempio dei diritti sui loghi presenti nelle carte intestate).</p>
+  <p>Il codice, il design e il marchio ModReport restano del Fornitore.</p>
 
-  <h2>6. Proprietà dei contenuti</h2>
-  <p>I contenuti che crei (modelli di testo, documenti archiviati, file caricati) restano tuoi. Usando il Servizio ci dai solo il permesso di conservarli ed elaborarli per farteli usare. Il codice, il design e il marchio del Servizio restano invece di nostra proprietà.</p>
+  <h2 id="art6">6. Team</h2>
+  <p>I messaggi e i canali di un team sono visibili a tutti i suoi membri. Il proprietario e gli amministratori del team gestiscono inviti e membri e sono responsabili di invitare solo persone autorizzate. Il proprietario può eliminare il team con tutti i suoi contenuti.</p>
 
-  <h2>7. Canali di team</h2>
-  <p>I messaggi che scrivi in un canale sono visibili a tutti i membri di quel canale. Anche qui vale la regla dell'Art. 4: nessun dato che identifichi persone reali non coinvolte direttamente nella conversazione.</p>
+  <h2 id="art7">7. Disponibilità del Servizio</h2>
+  <p>Facciamo il possibile per mantenere il Servizio attivo e sicuro, ma non possiamo garantirne il funzionamento ininterrotto o privo di errori: possono esserci interruzioni per manutenzione o cause esterne. Ti consigliamo di conservare una copia della libreria e dell'archivio con le funzioni di esportazione.</p>
 
-  <h2>8. Disponibilità del servizio</h2>
-  <p>Facciamo il possibile per tenerlo sempre attivo, ma non garantiamo un servizio ininterrotto o privo di errori, e possiamo modificarlo o sospenderlo. Ti consigliamo di non affidarti al Servizio come unico posto dove conservi contenuti importanti.</p>
+  <h2 id="art8">8. Piani e pagamenti</h2>
+  <p>Oggi il Servizio è gratuito (fase beta). Eventuali piani a pagamento saranno regolati da condizioni di vendita separate, che ti verranno presentate e che dovrai accettare espressamente prima di qualsiasi addebito.</p>
 
-  <h2>9. Piano gratuito e futuri piani a pagamento</h2>
-  <p>Oggi il Servizio è gratuito. In futuro potremmo introdurre piani a pagamento con funzioni aggiuntive: te lo comunicheremo in anticipo, e userai le funzioni a pagamento solo se le accetti esplicitamente.</p>
+  <h2 id="art9">9. Durata, sospensione e chiusura</h2>
+  <ul>
+    <li>Puoi eliminare il tuo account in ogni momento da "Il mio account".</li>
+    <li>Il Fornitore può sospendere o chiudere un account in caso di violazione grave di questi Termini (ad esempio inserimento sistematico di dati dei pazienti, accessi abusivi, uso illecito), con comunicazione motivata; nei casi meno gravi invierà prima un avviso.</li>
+    <li>In caso di cessazione del Servizio il Fornitore darà un preavviso di almeno 60 giorni, durante i quali potrai scaricare i tuoi contenuti.</li>
+  </ul>
 
-  <h2>10. Limiti di responsabilità</h2>
-  <p>Nei limiti consentiti dalla legge, non siamo responsabili per danni diretti o indiretti derivanti dall'uso (o mancato uso) del Servizio, inclusa l'eventuale perdita di contenuti.</p>
+  <h2 id="art10">10. Limitazione di responsabilità</h2>
+  <p>Il Servizio è uno strumento di scrittura: il Fornitore non risponde del contenuto clinico dei referti, delle scelte diagnostiche o terapeutiche né dell'uso che dei testi viene fatto. Nei limiti consentiti dalla legge il Fornitore non risponde di danni indiretti o della perdita di contenuti non esportati. Resta ferma la responsabilità del Fornitore per dolo o colpa grave (art. 1229 c.c.) e quanto previsto in modo inderogabile a tutela dei consumatori.</p>
 
-  <h2>11. Sospensione dell'account</h2>
-  <p>Possiamo sospendere o chiudere il tuo account in caso di violazione di questi Termini. Puoi in qualsiasi momento eliminare tu stesso il tuo account dalla pagina "Il mio account".</p>
+  <h2 id="art11">11. Modifiche dei Termini</h2>
+  <p>Il Fornitore può aggiornare questi Termini per esigenze legali, tecniche o di evoluzione del Servizio. Le modifiche ti saranno comunicate nell'app o via email almeno 30 giorni prima dell'entrata in vigore; le modifiche sostanziali richiedono una nuova accettazione. Se non le accetti puoi eliminare l'account prima che entrino in vigore.</p>
 
-  <h2>12. Modifiche a questi termini</h2>
-  <p>Possiamo aggiornare questi Termini; le modifiche importanti ti saranno comunicate. Continuare a usare il Servizio dopo un aggiornamento vale come accettazione.</p>
+  <h2 id="art12">12. Legge applicabile e foro competente</h2>
+  <p>Questi Termini sono regolati dalla legge italiana. Per le controversie con utenti che agiscono come professionisti è competente in via esclusiva il Foro di <span data-legal="FORO"></span>. Se agisci come consumatore è competente il giudice del luogo della tua residenza o del tuo domicilio.</p>
 
-  <h2>13. Legge applicabile</h2>
-  <p>Questi Termini sono regolati dalla legge italiana. Per eventuali controversie è competente il Foro di <span class="placeholder">[città]</span>, salvo diversa previsione inderogabile di legge.</p>
+  <h2 id="art13">13. Contatti</h2>
+  <p>Per domande su questi Termini scrivi a <a data-legal="EMAIL" href="#"></a>. Per il trattamento dei dati personali vedi l'<a href="informativa-privacy.html">Informativa sulla privacy</a>.</p>
 
-  <h2>14. Contatti</h2>
-  <p>Per domande su questi Termini: <span class="placeholder">[email di contatto]</span></p>
-</div>
+  <div class="clauses">
+    <p><strong>Approvazione specifica (artt. 1341 e 1342 del codice civile)</strong></p>
+    <p style="margin:0;">In fase di registrazione l'utente approva specificamente le seguenti clausole: art. 9 (sospensione e chiusura dell'account), art. 10 (limitazione di responsabilità), art. 11 (modifiche dei Termini), art. 12 (legge applicabile e foro competente).</p>
+  </div>
+</main>
 
 </body>
 </html>

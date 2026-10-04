@@ -90,8 +90,11 @@ test('user_data: ognuno legge e modifica solo la propria libreria', async () => 
 });
 
 test('archivio e carte intestate isolati; percorso del file nella propria cartella', async () => {
+  await q(`insert into public.report_archive (user_id, testo) values ('${A}', 'referto A (versioni precedenti)')`);
   await as(A, async () => {
-    await q(`insert into public.report_archive (user_id, testo) values ('${A}', 'referto A')`);
+    // L'archivio ora è solo locale: niente nuovi referti nel cloud, ma si possono leggere quelli vecchi.
+    await assert.rejects(q(`insert into public.report_archive (user_id, testo) values ('${A}', 'nuovo')`), /row-level security/);
+    assert.equal((await q('select * from public.report_archive')).length, 1);
     await q(`insert into public.letterheads (user_id, nome, storage_path) values ('${A}', 'Studio', '${A}/carta.pdf')`);
     await assert.rejects(q(`insert into public.letterheads (user_id, nome, storage_path) values ('${A}', 'Furbo', '${B}/carta.pdf')`), /row-level security/);
   });
@@ -200,6 +203,24 @@ test('MFA: con un fattore verificato serve una sessione aal2', async () => {
   await q(`delete from auth.mfa_factors where user_id = '${A}'`);
 });
 
+test('consensi: li scrive solo il server; registrazione e accettazione tracciate', async () => {
+  await as(B, async () => {
+    await q(`update public.profiles set terms_version = 'falsa', terms_accepted_at = '2000-01-01' where id = '${B}'`);
+    const [p] = await q(`select terms_version, terms_accepted_at from public.profiles where id = '${B}'`);
+    assert.equal(p.terms_version, null);
+    await assert.rejects(q("select public.accept_terms('2026-10-04', '2026-10-04', false)"), /approvazione specifica/);
+    await q("select public.accept_terms('2026-10-04', '2026-10-04', true, 'test')");
+    const [p2] = await q(`select terms_version, privacy_version, clauses_accepted_at is not null as clauses from public.profiles where id = '${B}'`);
+    assert.deepEqual([p2.terms_version, p2.privacy_version, p2.clauses], ['2026-10-04', '2026-10-04', true]);
+    assert.equal((await q('select * from public.consent_log')).length, 3);
+    await assert.rejects(q(`select public.record_consent('${B}', 'x', 'y', 'z')`), /permission denied/);
+  });
+  const D = 'd0000000-0000-4000-8000-00000000000d';
+  await q(`insert into auth.users (id, email, raw_user_meta_data) values ('${D}', 'dario@studio.it', '{"terms_version":"2026-10-04","privacy_version":"2026-10-04","clauses_accepted":true}')`);
+  const [pd] = await q(`select terms_version, clauses_accepted_at is not null as clauses from public.profiles where id = '${D}'`);
+  assert.deepEqual([pd.terms_version, pd.clauses], ['2026-10-04', true]);
+});
+
 test('eliminazione account: servono prima i file rimossi; poi dati cancellati e proprietà trasferita', async () => {
   // A è proprietaria del "Team ModReport" con B ancora membro.
   await as(A, () => assert.rejects(q('select public.delete_my_account()'), /Elimina prima i file/));
@@ -209,4 +230,14 @@ test('eliminazione account: servono prima i file rimossi; poi dati cancellati e 
   assert.equal((await q(`select * from public.user_data where user_id = '${A}'`)).length, 0);
   const [heir] = await q(`select user_id, role from public.team_members where role = 'owner' and team_id = (select id from public.teams where nome = 'Team ModReport')`);
   assert.equal(heir.user_id, B);
+});
+
+test('dopo l\'eliminazione resta solo la prova pseudonima dei consensi', async () => {
+  await as(B, async () => {
+    await q(`delete from storage.objects where name like '${B}/%'`).catch(() => {});
+    await q('select public.delete_my_account()');
+  });
+  const rows = await q(`select user_id, user_ref from public.consent_log where user_ref = '${B}'`);
+  assert.equal(rows.length, 3);
+  assert.ok(rows.every((r) => r.user_id === null));
 });

@@ -9,6 +9,7 @@
 <link rel="icon" type="image/png" href="modreport_logo_bars_m.png">
 <script src="assets/vendor/supabase.js"></script>
 <script src="js/config.js"></script>
+<script src="js/legal-config.js"></script>
 <script type="module" src="js/pages/app.js"></script>
 <link rel="stylesheet" href="css/fonts.css">
 <style>
@@ -584,6 +585,9 @@
   .field-message.error{ color: var(--danger); }
   .field-message.ok{ color: var(--accent); }
   .field-message.warn{ color: var(--amber); }
+  .consent-row{ display:flex; gap:8px; align-items:flex-start; font-size:12px; color: var(--ink-soft); margin:8px 0; line-height:1.45; cursor:pointer; }
+  .consent-row input{ margin-top:2px; flex:none; }
+  .consent-row a{ color: var(--accent); }
   .shared-device{ display:flex; gap:8px; align-items:flex-start; font-size:12px; color: var(--ink-soft); margin:4px 0 6px; line-height:1.4; cursor:pointer; }
   .shared-device input{ margin-top:2px; }
   .visually-hidden{ position:absolute !important; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
@@ -635,11 +639,18 @@
         <label for="signup-password2">Ripeti la password</label>
         <input type="password" id="signup-password2" autocomplete="new-password" required>
       </div>
+      <label class="consent-row">
+        <input type="checkbox" id="signup-terms">
+        <span>Ho letto e accetto i <a href="termini-servizio.html" target="_blank" rel="noopener">Termini di servizio</a> e ho letto l'<a href="informativa-privacy.html" target="_blank" rel="noopener">Informativa sulla privacy</a>.</span>
+      </label>
+      <label class="consent-row">
+        <input type="checkbox" id="signup-clauses">
+        <span>Approvo specificamente, ai sensi degli artt. 1341 e 1342 c.c., gli articoli 9 (sospensione e chiusura), 10 (limitazione di responsabilità), 11 (modifiche) e 12 (foro competente) dei Termini.</span>
+      </label>
       <div class="login-error" id="signup-error" role="alert"></div>
       <div class="login-actions">
         <button type="submit" class="btn primary" id="btn-signup">Registrati</button>
       </div>
-      <div class="login-hint">Registrandoti accetti i <a href="termini-servizio.html" style="color:var(--accent);">Termini di Servizio</a> e l'<a href="informativa-privacy.html" style="color:var(--accent);">Informativa sulla Privacy</a>.</div>
       <div class="auth-links">
         <span>Hai già un account?</span>
         <button type="button" class="link-btn" data-auth-view="login">Accedi</button>
@@ -691,6 +702,26 @@
       </div>
       <div class="auth-links">
         <button type="button" class="link-btn" id="btn-mfa-cancel">Annulla ed esci</button>
+      </div>
+    </form>
+
+    <form id="view-consent" class="auth-view" novalidate hidden>
+      <h1>Termini e informativa aggiornati</h1>
+      <p class="login-hint">Per continuare a usare ModReport leggi e accetta la versione aggiornata dei documenti.</p>
+      <label class="consent-row">
+        <input type="checkbox" id="consent-terms">
+        <span>Ho letto e accetto i <a href="termini-servizio.html" target="_blank" rel="noopener">Termini di servizio</a> e ho letto l'<a href="informativa-privacy.html" target="_blank" rel="noopener">Informativa sulla privacy</a>.</span>
+      </label>
+      <label class="consent-row">
+        <input type="checkbox" id="consent-clauses">
+        <span>Approvo specificamente, ai sensi degli artt. 1341 e 1342 c.c., gli articoli 9, 10, 11 e 12 dei Termini.</span>
+      </label>
+      <div class="login-error" id="consent-error" role="alert"></div>
+      <div class="login-actions">
+        <button type="submit" class="btn primary" id="btn-consent">Accetta e continua</button>
+      </div>
+      <div class="auth-links">
+        <button type="button" class="link-btn" id="btn-consent-cancel">Esci</button>
       </div>
     </form>
 

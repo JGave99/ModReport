@@ -4,7 +4,7 @@ import { $, escapeHtml, setMessage } from '../lib/dom.js';
 import { authErrorMessage } from '../lib/auth-messages.js';
 import { LibraryStore, cloneDefaults } from '../lib/library.js';
 import { DEFAULT_LIBRARY } from '../lib/default-library.js';
-import { attachDictation, stopAllDictation } from '../lib/dictation.js';
+import { attachDictation, stopAllDictation, dictationDisabled, setDictationDisabled } from '../lib/dictation.js';
 import { passwordProblem } from '../lib/auth-policy.js';
 import { requireSession, needsMfa } from '../lib/session.js';
 import { detectPII, splitIntoSentences, classifyFinding } from '../lib/import-analysis.js';
@@ -552,6 +552,12 @@ $('ai-add-indicazione-btn').onclick = () => {
     setMessage(msg, 'Questa indicazione è già presente in libreria per questo esame.');
   }
 };
+
+$('pref-dictation-off').checked = dictationDisabled();
+$('pref-dictation-off').addEventListener('change', (e) => {
+  setDictationDisabled(e.target.checked);
+  window.location.reload();
+});
 
 const dictationOpts = { onError: (m) => alert(m) };
 [

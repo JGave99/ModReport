@@ -28,13 +28,13 @@ Origine: audit del 03-04/10/2026. Legenda: `[x]` fatto · `[ ]` da fare · 👤 
 - 👤 [ ] Applicare le migrazioni (dopo backup e confronto con `supabase db pull`); attivare MFA e regole password nella dashboard (vedi `supabase/README.md`)
 
 ## Step 3 — Privacy e legale
-- [ ] Archivio referti solo locale (nel browser) + spostamento dell'archivio cloud esistente
-- [ ] Dettatura: avviso al primo uso (Google/Microsoft/Apple), disattivabile, testi corretti
-- [ ] Informativa privacy completa (art. 13) e Termini riscritti (artt. 1341-1342 c.c., destinazione d'uso non-MDR)
-- [ ] Accettazione di Termini/Privacy registrata (versione e data)
-- [ ] Documenti interni: registro trattamenti, procedura data breach, bozza DPIA, modello DPA per strutture
-- [ ] Cookie e localStorage dichiarati
-- 👤 [ ] Dati del titolare (ragione sociale, P.IVA, sede, email, foro) e revisione legale dei testi
+- [x] Archivio referti solo locale (nel browser) + spostamento dell'archivio cloud esistente
+- [x] Dettatura: avviso al primo uso (Google/Microsoft/Apple), disattivabile, testi corretti
+- [x] Informativa privacy completa (art. 13) e Termini riscritti (artt. 1341-1342 c.c., destinazione d'uso non-MDR)
+- [x] Accettazione di Termini/Privacy registrata (versione e data)
+- [x] Documenti interni: registro trattamenti, procedura data breach, bozza DPIA, modello DPA per strutture
+- [x] Cookie e localStorage dichiarati
+- 👤 [ ] Dati del titolare in `js/legal-config.js` (ragione sociale, P.IVA, sede, email, foro) e revisione legale dei testi — verifica con `npm run check:lancio`
 - 👤 [ ] Hosting fuori da GitHub Pages (Cloudflare Pages o Netlify) e dominio proprio
 - 👤 [ ] Regione UE del progetto Supabase e DPA accettato
 
