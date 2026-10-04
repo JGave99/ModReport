@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Sintassi
+        run: npm run lint
+      - name: Test unitari e SQL (RLS su PGlite)
+        run: npm test
+      - name: Browser per i test end-to-end
+        run: npx playwright install --with-deps chromium
+      - name: Test end-to-end (backend finto, mai Supabase reale)
+        run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: test-results/
+          retention-days: 7

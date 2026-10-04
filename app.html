@@ -585,11 +585,15 @@
   .field-message.error{ color: var(--danger); }
   .field-message.ok{ color: var(--accent); }
   .field-message.warn{ color: var(--amber); }
+  .local-try{ margin-top:18px; padding-top:14px; border-top:1px solid var(--line); display:flex; flex-direction:column; gap:6px; font-size:12px; color: var(--ink-soft); }
+  .mode-badge{ font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color: var(--amber); border:1px solid var(--amber); border-radius:999px; padding:3px 9px; }
   .consent-row{ display:flex; gap:8px; align-items:flex-start; font-size:12px; color: var(--ink-soft); margin:8px 0; line-height:1.45; cursor:pointer; }
   .consent-row input{ margin-top:2px; flex:none; }
   .consent-row a{ color: var(--accent); }
   .shared-device{ display:flex; gap:8px; align-items:flex-start; font-size:12px; color: var(--ink-soft); margin:4px 0 6px; line-height:1.4; cursor:pointer; }
   .shared-device input{ margin-top:2px; }
+  .copy-flash.with-action{ pointer-events:auto; }
+  .copy-flash button{ background:none; border:0; color:#fff; font: inherit; font-weight:700; text-decoration:underline; cursor:pointer; padding:0; }
   .visually-hidden{ position:absolute !important; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 </style>
 </head>
@@ -621,6 +625,10 @@
         <button type="button" class="link-btn" data-auth-view="forgot">Password dimenticata?</button>
         <span aria-hidden="true">·</span>
         <button type="button" class="link-btn" data-auth-view="signup">Crea un account</button>
+      </div>
+      <div class="local-try">
+        <button type="button" class="btn ghost" id="btn-local-mode">Prova senza account</button>
+        <span>I dati restano solo su questo computer; potrai creare un account in seguito.</span>
       </div>
     </form>
 
@@ -746,10 +754,11 @@
     <div class="brand"><span class="mark"></span> <span>ModReport — Bozza di lavoro</span></div>
     <div class="breadcrumb" id="breadcrumb"></div>
     <div class="topbar-right">
+      <span class="mode-badge" id="local-badge" hidden title="I dati restano su questo computer">Modalità locale</span>
       <span class="user-badge" id="user-badge"></span>
       <button class="btn-settings" id="btn-logout">Esci</button>
       <a class="btn-settings" href="archivio.html">📁 Archivio</a>
-      <a class="btn-settings" href="team.html">💬 Team</a>
+      <a class="btn-settings" href="team.html" id="link-team">💬 Team</a>
       <a class="btn-settings" href="tutorial.html">🎬 Tutorial</a>
       <a class="btn-settings" href="account.html">👤 Il mio account</a>
     </div>

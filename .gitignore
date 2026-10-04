@@ -1,7 +1,7 @@
-node_modules/
 .DS_Store
-test-results/
-playwright-report/
 .env
 .env.*
+node_modules/
+playwright-report/
 supabase/.temp/
+test-results/

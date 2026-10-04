@@ -8,6 +8,8 @@ import { buildReportPdf } from '../lib/pdf.js';
 import { passwordProblem } from '../lib/auth-policy.js';
 import { isSharedDevice, setSharedDevice, needsMfa, startIdleLogout } from '../lib/session.js';
 import { addEntry } from '../lib/local-archive.js';
+import { appendText, replaceRange, insertAtCursor, clearField } from '../lib/text-insert.js';
+import { isLocalMode, setLocalMode } from '../lib/local-backend.js';
 
 // Il fragment dell'URL va letto prima che supabase-js lo consumi.
 const initialHash = window.location.hash;
@@ -50,11 +52,41 @@ const el = {
   tabs: $('workspace-tabs'),
 };
 
-function flash(text, ms = 1500) {
+function flash(text, ms = 1500, action = null) {
   el.copyFlash.textContent = text;
+  el.copyFlash.classList.toggle('with-action', !!action);
+  if (action) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = action.label;
+    b.onclick = () => { el.copyFlash.classList.remove('show'); action.run(); };
+    el.copyFlash.append(' · ', b);
+  }
   el.copyFlash.classList.add('show');
   clearTimeout(flash.t);
   flash.t = setTimeout(() => el.copyFlash.classList.remove('show'), ms);
+}
+
+// ---- Bozza: le schede sopravvivono a ricaricamenti e cambi di pagina (solo in questa scheda del browser).
+const draftKey = () => 'mr-draft-' + (currentUser ? currentUser.id : 'anon');
+function saveDraft() {
+  if (!currentUser) return;
+  clearTimeout(saveDraft.t);
+  saveDraft.t = setTimeout(() => {
+    try {
+      saveActiveWorkspace();
+      const hasContent = workspaces.some((w) => w.reportText.trim() || w.esame);
+      if (hasContent) sessionStorage.setItem(draftKey(), JSON.stringify({ workspaces, activeWorkspace }));
+      else sessionStorage.removeItem(draftKey());
+    } catch (e) { /* spazio non disponibile: si continua senza bozza */ }
+  }, 300);
+}
+function readDraft() {
+  try {
+    const d = JSON.parse(sessionStorage.getItem(draftKey()));
+    if (d && Array.isArray(d.workspaces) && d.workspaces.length === WORKSPACE_COUNT) return d;
+  } catch (e) { /* bozza illeggibile */ }
+  return null;
 }
 
 function saveActiveWorkspace() {
@@ -74,6 +106,7 @@ function loadWorkspace(i) {
   lastHeaderText = w.lastHeaderText;
   pendingEsameOpen = w.pendingEsameOpen;
   el.reportText.value = w.reportText;
+  caret = null;
   setUrgenzaButton();
   renderAll();
 }
@@ -82,6 +115,7 @@ function switchWorkspace(i) {
   if (i === activeWorkspace) return;
   saveActiveWorkspace();
   loadWorkspace(i);
+  saveDraft();
 }
 
 function renderWorkspaceTabs() {
@@ -137,9 +171,10 @@ function renderEsame() {
     b.textContent = e;
     b.onclick = () => {
       if (state.esame === e) return;
+      const previous = state.esame;
       state.esame = e;
       renderAll();
-      insertEsameLine(e);
+      insertEsameLine(e, previous);
     };
     row.appendChild(b);
   });
@@ -246,7 +281,17 @@ function renderAll() {
   renderWorkspaceTabs();
 }
 
-el.reportText.addEventListener('input', renderWorkspaceTabs);
+el.reportText.addEventListener('input', () => { renderWorkspaceTabs(); saveDraft(); });
+
+// Inserimento alla posizione del cursore: se l'utente ha messo il cursore nel testo (non in fondo),
+// le frasi scelte dai pulsanti entrano lì; altrimenti in coda.
+let caret = null;
+function rememberCaret() {
+  const ta = el.reportText;
+  caret = ta.selectionStart < ta.value.length ? { start: ta.selectionStart, end: ta.selectionEnd } : null;
+}
+el.reportText.addEventListener('click', rememberCaret);
+el.reportText.addEventListener('keyup', rememberCaret);
 
 // ============================================================
 // COMPOSIZIONE DEL TESTO
@@ -257,31 +302,62 @@ function computeHeader() {
   return label + indicazioneLines.join('; ') + '\n\n';
 }
 
+// L'intestazione è la prima riga se inizia con "Indicazione" o con la formula d'urgenza,
+// anche se l'utente l'ha modificata a mano: così non si duplica mai.
+const HEADER_RE = /^(Indicazion[ei]\b|Esame eseguito in regime d'urgenza)[^\n]*(\n\n?|$)/i;
+
 function rebuildHeader() {
-  const current = el.reportText.value;
-  const body = (lastHeaderText && current.startsWith(lastHeaderText)) ? current.slice(lastHeaderText.length) : current;
+  const ta = el.reportText;
+  const m = ta.value.match(HEADER_RE);
+  const oldLength = m ? m[0].length : 0;
   const newHeader = computeHeader();
-  el.reportText.value = newHeader + body;
+  if (m || newHeader) replaceRange(ta, 0, oldLength, newHeader);
   lastHeaderText = newHeader;
+  caret = null;
   renderWorkspaceTabs();
+  saveDraft();
 }
 
 function appendToReport(text, trailingNewlines) {
-  let value = el.reportText.value;
-  if (value.length && !value.endsWith('\n')) value += '\n';
-  value += text + (trailingNewlines !== undefined ? trailingNewlines : '\n');
-  el.reportText.value = value;
-  el.reportText.scrollTop = el.reportText.scrollHeight;
+  const ta = el.reportText;
+  const tail = text + (trailingNewlines !== undefined ? trailingNewlines : '\n');
+  if (caret && caret.start <= ta.value.length) {
+    const before = ta.value.slice(0, caret.start);
+    const after = ta.value.slice(caret.end);
+    const prefix = before && !before.endsWith('\n') ? '\n' : '';
+    const suffix = after && !after.startsWith('\n') && !tail.endsWith('\n') ? '\n' : '';
+    insertAtCursor(ta, prefix + tail + suffix, caret.start, caret.end);
+    caret = { start: ta.selectionStart, end: ta.selectionStart };
+    if (caret.start >= ta.value.length) caret = null;
+  } else {
+    const prefix = ta.value.length && !ta.value.endsWith('\n') ? '\n' : '';
+    appendText(ta, prefix + tail);
+  }
   renderWorkspaceTabs();
+  saveDraft();
 }
 
 function insertIndicazione(txt) {
-  indicazioneLines.push(txt);
+  if (!indicazioneLines.includes(txt)) indicazioneLines.push(txt);
   rebuildHeader();
 }
 
-function insertEsameLine(esameName) {
-  if (el.reportText.value.length && !el.reportText.value.endsWith('\n\n')) appendToReport('', '\n');
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+// Cambiando esame prima di scrivere il referto, la riga dell'esame precedente viene sostituita.
+function insertEsameLine(esameName, previous = null) {
+  const ta = el.reportText;
+  if (previous) {
+    const m = ta.value.match(new RegExp('(^|\\n)' + escapeRe(previous) + '\\n*$'));
+    if (m) {
+      replaceRange(ta, m.index + m[1].length, ta.value.length, esameName + '\n');
+      pendingEsameOpen = true;
+      renderWorkspaceTabs();
+      saveDraft();
+      return;
+    }
+  }
+  if (ta.value.length && !ta.value.endsWith('\n\n')) appendToReport('', '\n');
   appendToReport(esameName, '\n');
   pendingEsameOpen = true;
 }
@@ -312,17 +388,26 @@ $('btn-urgenza-toggle').onclick = () => {
 };
 
 $('btn-reset').onclick = () => {
+  saveActiveWorkspace();
+  const snapshot = JSON.parse(JSON.stringify(workspaces[activeWorkspace]));
   urgenzaMode = false;
   indicazioneLines = [];
   lastHeaderText = '';
   pendingEsameOpen = false;
+  caret = null;
   setUrgenzaButton();
-  el.reportText.value = '';
+  clearField(el.reportText);
   if (state.esame) insertEsameLine(state.esame);
   renderWorkspaceTabs();
+  saveDraft();
+  flash('Referto svuotato', 8000, {
+    label: 'Annulla',
+    run: () => { workspaces[activeWorkspace] = snapshot; loadWorkspace(activeWorkspace); saveDraft(); },
+  });
 };
 
 $('btn-copy').onclick = async () => {
+  if (!el.reportText.value.trim()) { flash('Il referto è vuoto: niente da copiare', 1800); return; }
   try {
     await navigator.clipboard.writeText(el.reportText.value);
   } catch (e) {
@@ -595,7 +680,7 @@ async function afterSignIn() {
 
 // Termini o informativa cambiati (o accettazione mai registrata): si chiede di nuovo il consenso.
 async function needsConsent() {
-  if (!LEGAL.TERMS_VERSION || !LEGAL.PRIVACY_VERSION) return false;
+  if (isLocalMode() || !LEGAL.TERMS_VERSION || !LEGAL.PRIVACY_VERSION) return false;
   const { data, error } = await sb.from('profiles').select('terms_version, privacy_version').eq('id', currentUser.id).maybeSingle();
   if (error) return false; // schema non ancora aggiornato: non si blocca l'uso
   return !data || data.terms_version !== LEGAL.TERMS_VERSION || data.privacy_version !== LEGAL.PRIVACY_VERSION;
@@ -744,19 +829,33 @@ async function showApp() {
     return;
   }
   startIdleLogout(sb, { beforeLogout: stopAllDictation });
+  if (isLocalMode()) {
+    $('local-badge').hidden = false;
+    $('link-team').hidden = true;
+    $('btn-logout').textContent = 'Esci dalla modalità locale';
+  }
   loginOverlay.classList.add('hidden');
   appRoot.classList.remove('hidden');
   const meta = currentUser.user_metadata || {};
   $('user-badge').textContent = (meta.nome || meta.cognome) ? [meta.nome, meta.cognome].filter(Boolean).join(' ') : (currentUser.email || '');
   await loadLibrary();
-  workspaces = Array.from({ length: WORKSPACE_COUNT }, emptyWorkspace);
-  loadWorkspace(0);
+  const draft = readDraft();
+  workspaces = draft ? draft.workspaces : Array.from({ length: WORKSPACE_COUNT }, emptyWorkspace);
+  loadWorkspace(draft ? draft.activeWorkspace : 0);
+  if (draft) flash('Bozza ripristinata', 2500);
 }
 
 // "Esci": ferma la dettatura e ricarica la pagina, così nessun dato del referto resta in memoria
 // per chi usa la postazione dopo (PC condivisi).
+$('btn-local-mode').onclick = () => {
+  setLocalMode(true);
+  window.location.replace(pageUrl('app.html'));
+};
+
 $('btn-logout').onclick = async () => {
   stopAllDictation();
+  if (isLocalMode()) setLocalMode(false);
+  try { sessionStorage.removeItem(draftKey()); } catch (e) { /* ignora */ }
   el.reportText.value = '';
   workspaces = [];
   try { if (sb) await sb.auth.signOut({ scope: 'local' }); } catch (e) { /* si esce comunque */ }

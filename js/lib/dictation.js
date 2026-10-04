@@ -2,6 +2,7 @@
 // L'audio è elaborato dal servizio vocale del browser (Google, Microsoft o Apple): al primo uso
 // lo si spiega all'utente, che può anche disattivare la dettatura su questo computer.
 import { confirmDialog } from './dialog.js';
+import { appendText, insertAtCursor } from './text-insert.js';
 
 const ACK_KEY = 'mr-dictation-ack-v1';
 const OFF_KEY = 'mr-dictation-off';
@@ -90,9 +91,11 @@ export function attachDictation(button, getTarget, { onError = (m) => alert(m), 
       }
       finalText = finalText.trim();
       if (!finalText) return;
-      const needsSpace = target.value && !/\s$/.test(target.value);
-      target.value = target.value + (needsSpace ? ' ' : '') + finalText + ' ';
-      target.dispatchEvent(new Event('input', { bubbles: true }));
+      // Inserimento annullabile (Ctrl+Z), alla posizione del cursore se non è in fondo.
+      const atEnd = typeof target.selectionStart !== 'number' || target.selectionStart >= target.value.length;
+      const before = atEnd ? target.value : target.value.slice(0, target.selectionStart);
+      const text = (before && !/\s$/.test(before) ? ' ' : '') + finalText + ' ';
+      if (atEnd) appendText(target, text); else insertAtCursor(target, text);
     };
     recognition.onerror = (e) => {
       setRecording(false);

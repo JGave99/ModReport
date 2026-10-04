@@ -384,7 +384,7 @@
       <div class="field-message" id="name-message"></div>
     </div>
 
-    <div class="card">
+    <div class="card" id="credentials-card">
       <div class="field-row">
         <div class="field">
           <label>Email</label>
@@ -416,8 +416,8 @@
       <p class="muted" style="margin:8px 0 0;">La dettatura usa il servizio vocale del browser (Google, Microsoft o Apple), che riceve l'audio. Se in ospedale non è consentito, disattivala qui.</p>
     </div>
 
-    <h2>Verifica in due passaggi</h2>
-    <div class="card" id="mfa-card">
+    <h2 data-cloud-only>Verifica in due passaggi</h2>
+    <div class="card" id="mfa-card" data-cloud-only>
       <p class="muted" style="margin-top:0;" id="mfa-status">Protegge l'account con un codice generato da un'app di autenticazione sul telefono.</p>
       <div id="mfa-enroll" hidden>
         <p class="muted">Inquadra il codice QR con un'app di autenticazione (Google Authenticator, Microsoft Authenticator, 1Password…), poi inserisci il codice a 6 cifre che compare.</p>
@@ -438,8 +438,14 @@
       <div class="field-message" id="mfa-message"></div>
     </div>
 
-    <h2>Zona pericolosa</h2>
-    <div class="card" style="border-color:var(--danger);">
+    <div class="card" id="local-card" hidden>
+      <p class="muted" style="margin-top:0;"><strong>Modalità locale:</strong> libreria, carte intestate e archivio restano solo in questo browser. Per usarli su altre postazioni crea un account e importa la libreria.</p>
+      <div class="field-row"><button class="btn-sm danger" id="clear-local-btn">Cancella tutti i dati locali</button></div>
+      <div class="field-message" id="local-message"></div>
+    </div>
+
+    <h2 data-cloud-only>Zona pericolosa</h2>
+    <div class="card" style="border-color:var(--danger);" data-cloud-only>
       <p class="muted" style="margin-top:0;">
         Elimina definitivamente il tuo account. Verranno cancellati in modo permanente: la tua libreria personalizzata, i referti archiviati, le carte intestate caricate, la tua appartenenza a eventuali team e i messaggi che hai scritto. L'operazione non è reversibile.
       </p>

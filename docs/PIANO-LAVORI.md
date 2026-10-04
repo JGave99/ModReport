@@ -39,16 +39,16 @@ Origine: audit del 03-04/10/2026. Legenda: `[x]` fatto · `[ ]` da fare · 👤 
 - 👤 [ ] Regione UE del progetto Supabase e DPA accettato
 
 ## Step 4 — Bug e architettura
-- [ ] Codice in moduli condivisi (`js/`, `css/`), niente duplicazioni
-- [ ] Livello dati con modalità cloud e modalità locale/demo
+- [x] Codice JavaScript in moduli condivisi (`js/`), niente duplicazioni (CSS condiviso: vedi Step 5)
+- [x] Livello dati con modalità cloud e modalità locale/demo
 - [x] Chat: ultimi messaggi, niente N+1, cambio canale senza race, messaggio non perso se l'invio fallisce
-- [ ] Editor: intestazione senza duplicati, bozza salvata, Svuota annullabile, Ctrl+Z, inserimento al cursore, Copia su referto vuoto
-- [ ] Test automatici (unit + e2e) e CI su GitHub Actions
-- [ ] README, CONTRIBUTING (branch + PR), CHANGELOG
+- [x] Editor: intestazione senza duplicati, bozza salvata, Svuota annullabile, Ctrl+Z, inserimento al cursore, Copia su referto vuoto
+- [x] Test automatici (unit + e2e) e CI su GitHub Actions
+- [x] README, CONTRIBUTING (branch + PR), CHANGELOG
 - 👤 [ ] Proteggere `main` (solo PR) e creare un progetto Supabase di staging
 
 ## Step 5 — Grafica e UX
-- [ ] Design system unico (token, componenti) e icone SVG al posto delle emoji
+- [ ] Design system unico in CSS condiviso (`css/`: token, componenti) e icone SVG al posto delle emoji
 - [ ] Bug visivi: anteprima della landing senza a capo, campi login bianchi
 - [ ] Layout responsive (editor, team, account)
 - [ ] Editor: topbar riordinata, stato del microfono, normale/patologico con icona, frasi inserite evidenziate

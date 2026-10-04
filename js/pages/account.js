@@ -9,6 +9,7 @@ import { passwordProblem } from '../lib/auth-policy.js';
 import { requireSession, needsMfa } from '../lib/session.js';
 import { detectPII, splitIntoSentences, classifyFinding } from '../lib/import-analysis.js';
 import { alertDialog, confirmDialog, promptDialog } from '../lib/dialog.js';
+import { isLocalMode, setLocalMode, clearLocalData } from '../lib/local-backend.js';
 
 const LETTERHEAD_MAX_BYTES = 5 * 1024 * 1024;
 const sb = getSupabase();
@@ -826,8 +827,16 @@ $('delete-account-btn').onclick = async () => {
   }
 };
 
+$('clear-local-btn').onclick = async () => {
+  if (!await confirmDialog('Cancellare i dati locali?', 'Libreria, carte intestate e impostazioni salvate in questo browser verranno eliminate. Se ti servono, esporta prima la libreria.', { okText: 'Cancella', danger: true })) return;
+  await clearLocalData();
+  setLocalMode(false);
+  window.location.replace(pageUrl('app.html'));
+};
+
 $('btn-logout').onclick = async () => {
   stopAllDictation();
+  if (isLocalMode()) setLocalMode(false);
   if (store) await store.flush();
   try { await sb.auth.signOut({ scope: 'local' }); } catch (e) { /* si esce comunque */ }
   window.location.replace(pageUrl('app.html'));
@@ -855,7 +864,13 @@ document.querySelectorAll('.nav-item[data-tab]').forEach((btn) => {
   await loadLibrary();
   refreshAllSettingsSelects();
   await loadLetterheads();
-  await refreshMfa();
+  if (isLocalMode()) {
+    document.querySelectorAll('[data-cloud-only]').forEach((n) => { n.hidden = true; });
+    $('credentials-card').hidden = true;
+    $('local-card').hidden = false;
+  } else {
+    await refreshMfa();
+  }
   $('gate').classList.add('hidden');
   $('page-root').classList.remove('hidden');
 })();

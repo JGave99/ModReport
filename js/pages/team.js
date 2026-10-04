@@ -4,6 +4,7 @@ import { getSupabase, pageUrl } from '../lib/supabase.js';
 import { $ } from '../lib/dom.js';
 import { requireSession } from '../lib/session.js';
 import { confirmDialog, promptDialog, alertDialog } from '../lib/dialog.js';
+import { isLocalMode } from '../lib/local-backend.js';
 
 const sb = getSupabase();
 const ROLE_LABEL = { owner: 'Proprietario', admin: 'Amministratore', member: 'Membro' };
@@ -504,6 +505,10 @@ document.querySelectorAll('dialog [data-close]').forEach((b) => b.addEventListen
 // ============================================================
 (async function init() {
   if (!sb) { $('gate').textContent = 'Configurazione cloud mancante.'; return; }
+  if (isLocalMode()) {
+    $('gate').innerHTML = '<div class="setup-card"><h2>Team non disponibile</h2><p>In modalità locale i dati restano su questo computer: per lavorare in team serve un account.</p><a class="btn-settings" href="app.html">← Torna al referto</a></div>';
+    return;
+  }
   const invite = new URLSearchParams(window.location.search).get('invite');
   const { data: { session } } = await sb.auth.getSession();
   if (invite && !session) {

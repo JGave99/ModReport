@@ -1,10 +1,16 @@
 // Client Supabase condiviso. Richiede assets/vendor/supabase.js e js/config.js caricati prima.
 import { authStorage } from './session.js';
+import { isLocalMode, createLocalClient } from './local-backend.js';
 
 let client = null;
 
+// In modalità locale restituisce un client che salva tutto nel browser (nessun account, nessun cloud).
 export function getSupabase() {
   if (client) return client;
+  if (isLocalMode()) {
+    client = createLocalClient();
+    return client;
+  }
   const cfg = window.MR_CONFIG;
   if (!window.supabase || !cfg || !cfg.SUPABASE_URL || !cfg.SUPABASE_KEY) return null;
   client = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_KEY, {
