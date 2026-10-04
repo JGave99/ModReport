@@ -5,8 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ModReport — Composizione modulare</title>
 <link rel="icon" type="image/png" href="modreport_logo_bars_m.png">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="assets/vendor/supabase.js"></script>
+<script src="js/config.js"></script>
+<script type="module" src="js/pages/app.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -415,7 +416,7 @@
     flex:1;
     min-width:160px;
   }
-  select, input[type=text], textarea{
+  select, input[type=text], input[type=email], input[type=password], input[type=number], textarea{
     width:100%;
     font-family: var(--font);
     font-size:13px;
@@ -426,7 +427,7 @@
     color: var(--ink);
     transition: border-color .2s;
   }
-  select:focus, input[type=text]:focus, textarea:focus{ outline:none; border-color: var(--accent); }
+  select:focus, input[type=text]:focus, input[type=email]:focus, input[type=password]:focus, input[type=number]:focus, textarea:focus{ outline:none; border-color: var(--accent); }
   textarea{ resize: vertical; min-height:46px; }
   .btn-sm{
     font-family: var(--font);
@@ -538,51 +539,179 @@
     50%{ opacity:.55; }
     100%{ opacity:1; }
   }
+  [hidden]{ display:none !important; }
+  a.btn, a.btn-settings{ display:inline-flex; align-items:center; gap:6px; text-decoration:none; }
+
+  /* Schede: più referti in parallelo */
+  .workspace-tabs{ display:flex; gap:8px; margin-bottom:16px; flex:none; }
+  .workspace-tab{
+    font-family: var(--font); font-size:13px; font-weight:700; width:30px; height:30px;
+    display:flex; align-items:center; justify-content:center; border:1px solid var(--line);
+    border-radius:8px; background: var(--bg); color: var(--ink-soft); cursor:pointer;
+    transition: all .15s ease; position:relative; flex:none;
+  }
+  .workspace-tab:hover{ border-color: var(--accent); color: var(--ink); }
+  .workspace-tab.active{ background: var(--accent-strong); border-color: var(--accent); color:#fff; box-shadow: 0 4px 12px rgba(2,132,199,.35); }
+  .workspace-tab .dot{
+    position:absolute; top:-3px; right:-3px; width:8px; height:8px; border-radius:50%;
+    background: var(--accent); border:2px solid var(--panel-alt); display:none;
+  }
+  .workspace-tab.has-content .dot{ display:block; }
+
+  /* Accesso, registrazione, recupero password */
+  .login-card h1{ font-size:18px; font-weight:700; margin:18px 0 16px; }
+  .login-error.ok{ color: var(--accent); }
+  .auth-links{ margin-top:14px; font-size:12.5px; color: var(--ink-soft); display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+  .link-btn{ background:none; border:0; padding:0; color: var(--accent); font: inherit; cursor:pointer; text-decoration:underline; }
+  .btn:disabled, .btn-sm:disabled{ opacity:.6; cursor:progress; }
+
+  /* Avvisi nel builder */
+  .lib-banner{
+    background: var(--amber-soft); border:1px solid var(--amber); color: var(--amber);
+    border-radius: var(--radius); padding:10px 12px; font-size:12.5px; margin-bottom:14px;
+    display:flex; gap:10px; align-items:center; justify-content:space-between;
+  }
+  .lib-banner button{ flex:none; }
+  .sample-note{ font-size:11.5px; color: var(--ink-soft); margin:0 0 12px; }
+
+  /* Anteprima di stampa */
+  .print-preview{ display:flex; flex-direction:column; gap:10px; }
+  .print-preview iframe{ width:100%; height:62vh; border:1px solid var(--line); border-radius:6px; background:#fff; }
+  .print-actions{ display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap; }
+  .settings-section .hint{ font-size:12px; color: var(--ink-soft); margin:6px 0 0; }
+  .field-message{ font-size:12px; min-height:16px; }
+  .field-message.error{ color: var(--danger); }
+  .field-message.ok{ color: var(--accent); }
+  .field-message.warn{ color: var(--amber); }
+  .visually-hidden{ position:absolute !important; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 </style>
 </head>
 <body>
 
 <div class="login-overlay" id="login-overlay">
   <div class="login-card">
-    <div class="brand-login"><span class="mark"></span> ModReport — Accedi</div>
-    <div class="login-field">
-      <label>Email</label>
-      <input type="email" id="login-email" placeholder="nome@ospedale.it">
+    <div class="brand-login"><span class="mark"></span> ModReport</div>
+
+    <form id="view-login" class="auth-view" novalidate>
+      <h1>Accedi</h1>
+      <div class="login-field">
+        <label for="login-email">Email</label>
+        <input type="email" id="login-email" name="email" autocomplete="username" placeholder="nome@ospedale.it" required>
+      </div>
+      <div class="login-field">
+        <label for="login-password">Password</label>
+        <input type="password" id="login-password" name="password" autocomplete="current-password" required>
+      </div>
+      <div class="login-error" id="login-error" role="alert"></div>
+      <div class="login-actions">
+        <button type="submit" class="btn primary" id="btn-signin">Accedi</button>
+      </div>
+      <div class="auth-links">
+        <button type="button" class="link-btn" data-auth-view="forgot">Password dimenticata?</button>
+        <span aria-hidden="true">·</span>
+        <button type="button" class="link-btn" data-auth-view="signup">Crea un account</button>
+      </div>
+    </form>
+
+    <form id="view-signup" class="auth-view" novalidate hidden>
+      <h1>Crea un account</h1>
+      <div class="login-field">
+        <label for="signup-email">Email</label>
+        <input type="email" id="signup-email" name="email" autocomplete="email" placeholder="nome@ospedale.it" required>
+      </div>
+      <div class="login-field">
+        <label for="signup-password">Password</label>
+        <input type="password" id="signup-password" name="new-password" autocomplete="new-password" required>
+      </div>
+      <div class="login-field">
+        <label for="signup-password2">Ripeti la password</label>
+        <input type="password" id="signup-password2" autocomplete="new-password" required>
+      </div>
+      <div class="login-error" id="signup-error" role="alert"></div>
+      <div class="login-actions">
+        <button type="submit" class="btn primary" id="btn-signup">Registrati</button>
+      </div>
+      <div class="login-hint">Registrandoti accetti i <a href="termini-servizio.html" style="color:var(--accent);">Termini di Servizio</a> e l'<a href="informativa-privacy.html" style="color:var(--accent);">Informativa sulla Privacy</a>.</div>
+      <div class="auth-links">
+        <span>Hai già un account?</span>
+        <button type="button" class="link-btn" data-auth-view="login">Accedi</button>
+      </div>
+    </form>
+
+    <form id="view-forgot" class="auth-view" novalidate hidden>
+      <h1>Recupera la password</h1>
+      <p class="login-hint">Inserisci l'email del tuo account: ti invieremo un link per impostare una nuova password.</p>
+      <div class="login-field">
+        <label for="forgot-email">Email</label>
+        <input type="email" id="forgot-email" autocomplete="username" required>
+      </div>
+      <div class="login-error" id="forgot-error" role="alert"></div>
+      <div class="login-actions">
+        <button type="submit" class="btn primary" id="btn-forgot">Invia il link</button>
+      </div>
+      <div class="auth-links">
+        <button type="button" class="link-btn" data-auth-view="login">Torna all'accesso</button>
+      </div>
+    </form>
+
+    <form id="view-recovery" class="auth-view" novalidate hidden>
+      <h1>Imposta una nuova password</h1>
+      <div class="login-field">
+        <label for="recovery-password">Nuova password</label>
+        <input type="password" id="recovery-password" autocomplete="new-password" required>
+      </div>
+      <div class="login-field">
+        <label for="recovery-password2">Ripeti la nuova password</label>
+        <input type="password" id="recovery-password2" autocomplete="new-password" required>
+      </div>
+      <div class="login-error" id="recovery-error" role="alert"></div>
+      <div class="login-actions">
+        <button type="submit" class="btn primary" id="btn-recovery">Salva la nuova password</button>
+      </div>
+    </form>
+
+    <div id="view-check-email" class="auth-view" hidden>
+      <h1>Controlla la tua email</h1>
+      <p class="login-hint" id="check-email-text">Ti abbiamo inviato un link di conferma: aprilo per attivare l'account (controlla anche lo spam).</p>
+      <div class="login-error" id="check-email-error" role="status"></div>
+      <div class="login-actions">
+        <button type="button" class="btn ghost" id="btn-resend">Reinvia l'email</button>
+      </div>
+      <div class="auth-links">
+        <button type="button" class="link-btn" data-auth-view="login">Torna all'accesso</button>
+      </div>
     </div>
-    <div class="login-field">
-      <label>Password</label>
-      <input type="password" id="login-password" placeholder="••••••••">
-    </div>
-    <div class="login-error" id="login-error"></div>
-    <div class="login-actions">
-      <button class="btn ghost" id="btn-signup">Registrati</button>
-      <button class="btn primary" id="btn-signin">Accedi</button>
-    </div>
-    <div class="login-hint">Ogni utente ha il proprio account e i propri dati, sincronizzati automaticamente su ogni postazione.</div>
-    <div class="login-hint" style="margin-top:8px;">Registrandoti accetti i <a href="termini-servizio.html" style="color:var(--accent);">Termini di Servizio</a> e l'<a href="informativa-privacy.html" style="color:var(--accent);">Informativa sulla Privacy</a>.</div>
+
+    <div class="login-hint" style="margin-top:16px;">Ogni utente ha il proprio account e la propria libreria, sincronizzata su ogni postazione.</div>
   </div>
 </div>
 
 <div class="app hidden" id="app-root">
   <div class="topbar">
-    <div class="brand"><span class="mark"></span> <span id="i18n-app-title">ModReport — Bozza di lavoro</span></div>
+    <div class="brand"><span class="mark"></span> <span>ModReport — Bozza di lavoro</span></div>
     <div class="breadcrumb" id="breadcrumb"></div>
     <div class="topbar-right">
       <span class="user-badge" id="user-badge"></span>
       <button class="btn-settings" id="btn-logout">Esci</button>
       <a class="btn-settings" href="archivio.html">📁 Archivio</a>
       <a class="btn-settings" href="team.html">💬 Team</a>
+      <a class="btn-settings" href="tutorial.html">🎬 Tutorial</a>
       <a class="btn-settings" href="account.html">👤 Il mio account</a>
     </div>
   </div>
 
   <aside class="builder">
 
+    <div class="lib-banner" id="lib-banner" role="alert" hidden>
+      <span>La tua libreria personale non è stata caricata (problema di connessione): stai vedendo le frasi predefinite.</span>
+      <button class="btn-sm" id="btn-lib-retry">Riprova</button>
+    </div>
+
     <!-- BLOCCO 1: METODICA -->
     <div class="block">
       <div class="block-head">
         <span class="block-num">01</span>
-        <span class="block-title" id="i18n-block-metodica">Metodica</span>
+        <span class="block-title">Metodica</span>
       </div>
       <div class="block-body">
         <div class="chip-row" id="metodica-row"></div>
@@ -593,8 +722,8 @@
     <div class="block">
       <div class="block-head">
         <span class="block-num">02</span>
-        <span class="block-title" id="i18n-block-esame">Esame</span>
-        <span class="block-hint" id="esame-hint">filtrato per metodica</span>
+        <span class="block-title">Esame</span>
+        <span class="block-hint">filtrato per metodica</span>
       </div>
       <div class="block-body" id="esame-body"></div>
     </div>
@@ -603,9 +732,9 @@
     <div class="block">
       <div class="block-head">
         <span class="block-num">03</span>
-        <span class="block-title" id="i18n-block-indicazione">Indicazione</span>
-        <span class="block-hint" id="indicazione-hint">filtrata per esame</span>
-        <button class="mini-toggle" id="btn-urgenza-toggle" title="Attiva/disattiva intestazione urgenza">Urgenza</button>
+        <span class="block-title">Indicazione</span>
+        <span class="block-hint">filtrata per esame</span>
+        <button class="mini-toggle" id="btn-urgenza-toggle" title="Attiva/disattiva intestazione urgenza" aria-pressed="false">Urgenza</button>
       </div>
       <div class="block-body" id="indicazione-body"></div>
     </div>
@@ -614,7 +743,7 @@
     <div class="block">
       <div class="block-head">
         <span class="block-num">04</span>
-        <span class="block-title" id="i18n-block-confronto">Confronto con precedenti</span>
+        <span class="block-title">Confronto con precedenti</span>
       </div>
       <div class="block-body">
         <div class="chip-row">
@@ -629,8 +758,8 @@
     <div class="block">
       <div class="block-head">
         <span class="block-num">05</span>
-        <span class="block-title" id="i18n-block-referto">Referto</span>
-        <span class="block-hint" id="referto-hint">filtrato per esame</span>
+        <span class="block-title">Referto</span>
+        <span class="block-hint">filtrato per esame</span>
       </div>
       <div class="block-body" id="referto-body"></div>
     </div>
@@ -638,10 +767,11 @@
   </aside>
 
   <main class="report-panel">
+    <div class="workspace-tabs" id="workspace-tabs" aria-label="Referti aperti"></div>
     <div class="report-toolbar">
-      <h2 id="i18n-report-preview">Anteprima referto</h2>
+      <h2>Anteprima referto</h2>
       <div class="actions">
-        <button class="btn ghost" id="btn-mic-report" title="Detta nel referto" aria-label="Detta nel referto">🎤</button>
+        <button class="btn ghost" id="btn-mic-report" title="Detta nel referto" aria-label="Detta nel referto" aria-pressed="false">🎤</button>
         <button class="btn ghost" id="btn-reset">Svuota</button>
         <button class="btn ghost" id="btn-archive">Salva nell'archivio</button>
         <button class="btn primary" id="btn-copy">Copia negli appunti</button>
@@ -649,10 +779,10 @@
     </div>
     <div class="report-doc">
       <div class="doc-meta">
-        <div class="row"><b id="i18n-meta-metodica-label">METODICA:</b> <span id="meta-metodica">—</span></div>
-        <div class="row"><b id="i18n-meta-esame-label">ESAME:</b> <span id="meta-esame">—</span></div>
+        <div class="row"><b>METODICA:</b> <span id="meta-metodica">—</span></div>
+        <div class="row"><b>ESAME:</b> <span id="meta-esame">—</span></div>
       </div>
-      <textarea class="report-text" id="report-text" placeholder="Il referto composto apparirà qui. Puoi anche scrivere o correggere liberamente."></textarea>
+      <textarea class="report-text" id="report-text" autocomplete="off" spellcheck="true" placeholder="Il referto composto apparirà qui. Puoi anche scrivere o correggere liberamente."></textarea>
     </div>
     <div class="print-row">
       <button class="btn ghost" id="btn-open-print">🖨 Stampa</button>
@@ -660,722 +790,64 @@
   </main>
 </div>
 
-<div class="copy-flash" id="copy-flash">Copiato negli appunti</div>
+<div class="copy-flash" id="copy-flash" role="status" aria-live="polite">Copiato negli appunti</div>
 
-<div class="settings-overlay" id="print-overlay">
-  <div class="settings-panel" style="width:min(480px, 92vw);">
+<div class="settings-overlay" id="print-overlay" role="dialog" aria-modal="true" aria-labelledby="print-title">
+  <div class="settings-panel" style="width:min(780px, 94vw);">
     <div class="settings-head">
-      <h2>Stampa referto</h2>
-      <button class="settings-close" id="print-close">×</button>
+      <h2 id="print-title">Stampa referto</h2>
+      <button class="settings-close" id="print-close" aria-label="Chiudi">×</button>
     </div>
     <div class="settings-body">
-      <div class="settings-section">
-        <h3>Carta intestata</h3>
-        <div class="field-row">
-          <div class="field">
-            <label>Seleziona</label>
-            <select id="print-letterhead-select">
-              <option value="">Nessuna (pagina bianca)</option>
-            </select>
+      <div id="print-setup">
+        <div class="settings-section">
+          <h3>Carta intestata</h3>
+          <div class="field-row">
+            <div class="field">
+              <label for="print-letterhead-select">Seleziona</label>
+              <select id="print-letterhead-select">
+                <option value="">Nessuna (pagina bianca)</option>
+              </select>
+            </div>
+          </div>
+          <p class="hint" id="print-letterhead-hint"></p>
+        </div>
+        <div class="settings-section" id="print-manual-margins">
+          <h3>Posizione del testo</h3>
+          <div class="field-row">
+            <div class="field">
+              <label for="margin-top">Margine superiore (mm)</label>
+              <input type="number" id="margin-top" value="40" min="0" max="200" step="1" inputmode="decimal">
+            </div>
+            <div class="field">
+              <label for="margin-left">Margine sinistro (mm)</label>
+              <input type="number" id="margin-left" value="20" min="0" max="100" step="1" inputmode="decimal">
+            </div>
+            <div class="field">
+              <label for="margin-right">Margine destro (mm)</label>
+              <input type="number" id="margin-right" value="20" min="0" max="100" step="1" inputmode="decimal">
+            </div>
           </div>
         </div>
-        <p style="font-size:12px; color:var(--ink-soft); margin-top:4px;" id="print-letterhead-hint">
-          Nessuna carta intestata salvata — puoi aggiungerne una da "Il mio account → Gestione stampa".
-        </p>
+        <p class="field-message" id="print-signature-info"></p>
+        <div class="field-message" id="print-message" role="status"></div>
+        <div class="field-row" style="justify-content:flex-end;">
+          <button class="btn-sm" id="print-generate-btn">Genera anteprima</button>
+        </div>
       </div>
-      <div class="settings-section" id="print-manual-margins">
-        <h3>Posizione del testo</h3>
-        <div class="field-row">
-          <div class="field">
-            <label>Margine superiore (mm)</label>
-            <input type="text" id="margin-top" value="40">
-          </div>
+      <div class="print-preview" id="print-preview" hidden>
+        <iframe id="print-frame" title="Anteprima del PDF"></iframe>
+        <div class="field-message warn" id="print-warning"></div>
+        <div class="print-actions">
+          <button class="btn ghost" id="print-back">← Modifica impostazioni</button>
+          <a class="btn ghost" id="print-open" target="_blank" rel="noopener">Apri in una nuova scheda</a>
+          <a class="btn ghost" id="print-download" download="referto.pdf">Scarica PDF</a>
+          <button class="btn primary" id="print-do">Stampa</button>
         </div>
-        <div class="field-row">
-          <div class="field">
-            <label>Margine sinistro (mm)</label>
-            <input type="text" id="margin-left" value="20">
-          </div>
-          <div class="field">
-            <label>Margine destro (mm)</label>
-            <input type="text" id="margin-right" value="20">
-          </div>
-        </div>
-      </div>
-      <div class="field-message" id="print-message" style="font-size:12px; min-height:16px;"></div>
-      <div class="field-row" style="justify-content:flex-end;">
-        <button class="btn-sm" id="print-generate-btn">Genera e stampa</button>
       </div>
     </div>
   </div>
 </div>
 
-<script>
-const DEFAULT_DATA = {
-  metodiche: ['Ecografia', 'RX', 'TC', 'RMN'],
-  esamiByMetodica: {
-    'RX': ['RX TORACE 2PR', 'RX TORACE AP supino', 'RX ADDOME', 'RX RACHIDE LOMBOSACRALE', 'RX BACINO', 'RX GINOCCHIO', 'RX SPALLA', 'RX POLSO', 'RX CAVIGLIA', 'RX RACHIDE CERVICALE'],
-    'Ecografia': ['ECOGRAFIA ADDOME COMPLETO', 'ECOGRAFIA TIROIDE', 'ECOGRAFIA ADDOME SUPERIORE', 'ECOGRAFIA RENALE E VESCICALE', 'ECOGRAFIA PARTI MOLLI', 'ECOCOLORDOPPLER ARTI INFERIORI VENOSO', 'ECOGRAFIA SCROTALE', 'ECOGRAFIA MAMMARIA'],
-    'TC': ['TC TORACE', 'TC ADDOME COMPLETO', 'TC ADDOME SENZA E CON MDC', 'TC TORACE ADDOME PELVI (STADIAZIONE)', 'TC RACHIDE LOMBOSACRALE', 'TC BACINO', 'TC COLONNA CERVICALE', 'TC ANGIOGRAFIA AORTA'],
-    'RMN': ['RMN RACHIDE LOMBOSACRALE', 'RMN GINOCCHIO', 'RMN SPALLA', 'RMN ADDOME SUPERIORE', 'RMN BACINO', 'RMN RACHIDE CERVICALE', 'RMN ENCEFALO']
-  },
-  indicazioniByEsame: {
-    'RX TORACE 2PR': ['Tosse persistente', 'Dispnea', 'Dolore toracico', 'Follow-up oncologico', 'Inquadramento preoperatorio'],
-    'RX TORACE AP supino': ['Controllo post-procedurale', 'Paziente non collaborante', 'Monitoraggio in reparto'],
-    'RX ADDOME': ['Dolore addominale', 'Sospetta occlusione', 'Ricerca corpo estraneo'],
-    'RX RACHIDE LOMBOSACRALE': ['Lombalgia', 'Trauma', 'Sospetto cedimento vertebrale'],
-    'RX BACINO': ['Trauma', 'Coxalgia'],
-    'RX GINOCCHIO': ['Trauma', 'Gonalgia', 'Sospetta gonartrosi'],
-    'RX SPALLA': ['Trauma', 'Dolore', 'Limitazione funzionale'],
-    'RX POLSO': ['Trauma', 'Dolore'],
-    'RX CAVIGLIA': ['Trauma', 'Dolore'],
-    'RX RACHIDE CERVICALE': ['Trauma', 'Cervicalgia'],
-    'ECOGRAFIA ADDOME COMPLETO': ['Dolore addominale', 'Alterazione indici epatici', 'Follow-up'],
-    'ECOGRAFIA TIROIDE': ['Riscontro di nodulo palpabile', 'Controllo periodico', 'Familiarità per patologia tiroidea'],
-    'ECOGRAFIA ADDOME SUPERIORE': ['Dolore ipocondrio destro', 'Alterazione indici epatici'],
-    'ECOGRAFIA RENALE E VESCICALE': ['Dolore lombare', 'Ematuria', 'Controllo'],
-    'ECOGRAFIA PARTI MOLLI': ['Tumefazione palpabile', 'Dolore localizzato'],
-    'ECOCOLORDOPPLER ARTI INFERIORI VENOSO': ['Sospetta trombosi venosa profonda', 'Edema arto'],
-    'ECOGRAFIA SCROTALE': ['Dolore scrotale', 'Tumefazione palpabile'],
-    'ECOGRAFIA MAMMARIA': ['Riscontro di nodulo palpabile', 'Controllo'],
-    'TC TORACE': ['Stadiazione oncologica', 'Sospetta embolia polmonare', 'Dispnea ingravescente'],
-    'TC ADDOME COMPLETO': ['Dolore addominale acuto', 'Stadiazione neoplastica', 'Follow-up post-chirurgico'],
-    'TC ADDOME SENZA E CON MDC': ['Dolore addominale', 'Sospetta neoplasia'],
-    'TC TORACE ADDOME PELVI (STADIAZIONE)': ['Stadiazione oncologica', 'Follow-up oncologico'],
-    'TC RACHIDE LOMBOSACRALE': ['Lombalgia', 'Sospetta ernia discale'],
-    'TC BACINO': ['Trauma', 'Coxalgia'],
-    'TC COLONNA CERVICALE': ['Trauma'],
-    'TC ANGIOGRAFIA AORTA': ['Sospetta dissezione aortica', 'Follow-up aneurisma'],
-    'RMN RACHIDE LOMBOSACRALE': ['Lombalgia', 'Sciatalgia', 'Sospetta ernia discale'],
-    'RMN GINOCCHIO': ['Gonalgia', 'Trauma', 'Sospetta lesione meniscale'],
-    'RMN SPALLA': ['Dolore', 'Sospetta lesione della cuffia dei rotatori'],
-    'RMN ADDOME SUPERIORE': ['Riscontro incidentale di lesione epatica', 'Studio delle vie biliari'],
-    'RMN BACINO': ['Coxalgia', 'Sospetta necrosi avascolare'],
-    'RMN RACHIDE CERVICALE': ['Cervicalgia', 'Cervicobrachialgia'],
-    'RMN ENCEFALO': ['Cefalea persistente', 'Sospetta lesione ischemica', 'Vertigini']
-  },
-  refertoByEsame: {
-    'RX TORACE 2PR': {
-      'Parenchima': [
-        { label: 'Parenchima nella norma', text: 'Non addensamenti parenchimali a focolaio.', neg: false },
-        { label: 'Addensamento', text: 'Addensamento parenchimale in sede da definire con approfondimento clinico-radiologico.', neg: true }
-      ],
-      'Pleura': [{ label: 'Pleura libera', text: 'Non versamento pleurico bilateralmente.', neg: false }],
-      'Cuore e mediastino': [
-        { label: 'Cuore nella norma', text: 'Ombra cardiaca di dimensioni e morfologia nei limiti della norma.', neg: false },
-        { label: 'Mediastino nella norma', text: 'Mediastino in asse, di ampiezza regolare.', neg: false }
-      ],
-      'Scheletro': [{ label: 'Scheletro indenne', text: 'Non evidenti lesioni ossee focali a carico dello scheletro toracico in esame.', neg: false }]
-    }
-  }
-};
-
-const SUPABASE_URL = 'https://umejthggxihtyqvcszgm.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVtZWp0aGdneGlodHlxdmNzemdtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg4NzI0MzEsImV4cCI6MjEwNDQ0ODQzMX0.BPaujgB70aLpWSifk5nH93fuyyyfOe8Uw4RupV1YQQE';
-const supabaseClient = (window.supabase && SUPABASE_URL.indexOf('INSERISCI') === -1)
-  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-  : null;
-
-let DATA = JSON.parse(JSON.stringify(DEFAULT_DATA));
-let currentUser = null;
-let persistTimer = null;
-
-function localCloneDefault(){ return JSON.parse(JSON.stringify(DEFAULT_DATA)); }
-
-async function loadDataFromCloud(){
-  if (!supabaseClient || !currentUser) return localCloneDefault();
-  try{
-    const { data, error } = await supabaseClient
-      .from('user_data')
-      .select('data')
-      .eq('user_id', currentUser.id)
-      .maybeSingle();
-    if (error) throw error;
-    if (data && data.data) return data.data;
-  }catch(e){ console.warn('Impossibile caricare i dati dal cloud, uso i default.', e); }
-  return localCloneDefault();
-}
-
-function persist(){
-  if (!supabaseClient || !currentUser) return;
-  clearTimeout(persistTimer);
-  persistTimer = setTimeout(async () => {
-    try{
-      await supabaseClient.from('user_data').upsert({
-        user_id: currentUser.id,
-        data: DATA,
-        updated_at: new Date().toISOString()
-      });
-    }catch(e){ console.warn('Impossibile salvare i dati sul cloud.', e); }
-  }, 500);
-}
-
-const state = { metodica: null, esame: null };
-let urgenzaMode = false;
-let indicazioneLines = [];
-let lastHeaderText = '';
-let pendingEsameOpen = false;
-
-const el = {
-  metodicaRow: document.getElementById('metodica-row'),
-  esameBody: document.getElementById('esame-body'),
-  indicazioneBody: document.getElementById('indicazione-body'),
-  refertoBody: document.getElementById('referto-body'),
-  reportText: document.getElementById('report-text'),
-  metaMetodica: document.getElementById('meta-metodica'),
-  metaEsame: document.getElementById('meta-esame'),
-  breadcrumb: document.getElementById('breadcrumb'),
-  copyFlash: document.getElementById('copy-flash')
-};
-
-function renderMetodica(){
-  el.metodicaRow.innerHTML = '';
-  DATA.metodiche.forEach(m => {
-    const b = document.createElement('button');
-    b.className = 'chip' + (state.metodica === m ? ' active' : '');
-    b.textContent = m;
-    b.onclick = () => {
-      if (state.metodica === m) return;
-      state.metodica = m;
-      state.esame = null;
-      renderAll();
-    };
-    el.metodicaRow.appendChild(b);
-  });
-}
-
-function renderEsame(){
-  el.esameBody.innerHTML = '';
-  if (!state.metodica){
-    el.esameBody.innerHTML = '<div class="empty-state">Seleziona prima una metodica.</div>';
-    return;
-  }
-  const row = document.createElement('div');
-  row.className = 'chip-row';
-  const esami = DATA.esamiByMetodica[state.metodica] || [];
-  esami.forEach(e => {
-    const b = document.createElement('button');
-    b.className = 'chip' + (state.esame === e ? ' active' : '');
-    b.textContent = e;
-    b.onclick = () => {
-      if (state.esame === e) return;
-      state.esame = e;
-      renderAll();
-      insertEsameLine(e);
-    };
-    row.appendChild(b);
-  });
-  el.esameBody.appendChild(row);
-}
-
-function renderIndicazione(){
-  el.indicazioneBody.innerHTML = '';
-  if (!state.esame){
-    el.indicazioneBody.innerHTML = '<div class="empty-state">Seleziona prima un esame.</div>';
-    return;
-  }
-  const list = DATA.indicazioniByEsame[state.esame] || [];
-  const row = document.createElement('div');
-  row.className = 'chip-row';
-  list.forEach(txt => {
-    const b = document.createElement('button');
-    b.className = 'chip';
-    b.textContent = txt;
-    b.onclick = () => insertIndicazione(txt);
-    row.appendChild(b);
-  });
-  el.indicazioneBody.appendChild(row);
-
-  const freeWrap = document.createElement('div');
-  freeWrap.style.marginTop = '12px';
-  freeWrap.innerHTML = `
-    <textarea class="free-text" id="indicazione-free" placeholder="…oppure scrivi o detta un'indicazione libera"></textarea>
-    <div style="display:flex; gap:8px; margin-top:8px; align-items:center;">
-      <button class="mic-btn" id="mic-indicazione-free" title="Detta" aria-label="Detta indicazione libera">🎤</button>
-      <button class="add-free" id="add-indicazione-free">Aggiungi</button>
-    </div>
-  `;
-  el.indicazioneBody.appendChild(freeWrap);
-  document.getElementById('add-indicazione-free').onclick = () => {
-    const ta = document.getElementById('indicazione-free');
-    if (ta.value.trim()){
-      insertIndicazione(ta.value.trim());
-      ta.value = '';
-    }
-  };
-  attachMicToIndicazioneFree();
-}
-
-function renderReferto(){
-  el.refertoBody.innerHTML = '';
-  if (!state.esame){
-    el.refertoBody.innerHTML = '<div class="empty-state">Seleziona prima un esame.</div>';
-    return;
-  }
-  const groups = DATA.refertoByEsame[state.esame];
-  if (!groups || Object.keys(groups).length === 0){
-    el.refertoBody.innerHTML = '<div class="empty-state">Nessun blocco di referto ancora definito per questo esame. puoi aggiungerne uno da "Personalizza".</div>';
-    return;
-  }
-  Object.entries(groups).forEach(([groupName, buttons]) => {
-    const g = document.createElement('div');
-    g.className = 'subgroup';
-    const label = document.createElement('div');
-    label.className = 'subgroup-label';
-    label.textContent = groupName;
-    g.appendChild(label);
-
-    const row = document.createElement('div');
-    row.className = 'chip-row';
-    buttons.forEach(btnData => {
-      const b = document.createElement('button');
-      b.className = 'btn-report' + (btnData.neg ? ' neg' : '');
-      b.textContent = btnData.label;
-      b.onclick = () => insertReferto(btnData.text);
-      row.appendChild(b);
-    });
-    g.appendChild(row);
-    el.refertoBody.appendChild(g);
-  });
-}
-
-function renderBreadcrumb(){
-  el.breadcrumb.innerHTML = `
-    <span class="seg ${state.metodica ? '' : 'empty'}">${state.metodica || 'metodica'}</span>
-    <span class="sep">›</span>
-    <span class="seg ${state.esame ? '' : 'empty'}">${state.esame || 'esame'}</span>
-  `;
-  el.metaMetodica.textContent = state.metodica || '—';
-  el.metaEsame.textContent = state.esame || '—';
-}
-
-function renderAll(){
-  renderMetodica();
-  renderEsame();
-  renderIndicazione();
-  renderReferto();
-  renderBreadcrumb();
-}
-
-function computeHeader(){
-  if (!indicazioneLines.length) return '';
-  const label = urgenzaMode ? "Esame eseguito in regime d'urgenza con indicazione clinica: " : 'Indicazione: ';
-  return label + indicazioneLines.join('; ') + '\n\n';
-}
-
-function rebuildHeader(){
-  const ta = el.reportText;
-  const current = ta.value;
-  const body = (lastHeaderText && current.startsWith(lastHeaderText)) ? current.slice(lastHeaderText.length) : current;
-  const newHeader = computeHeader();
-  ta.value = newHeader + body;
-  lastHeaderText = newHeader;
-}
-
-function appendToReport(text, trailingNewlines){
-  const ta = el.reportText;
-  let value = ta.value;
-  if (value.length && !value.endsWith('\n')) value += '\n';
-  value += text + (trailingNewlines !== undefined ? trailingNewlines : '\n');
-  ta.value = value;
-  ta.scrollTop = ta.scrollHeight;
-}
-
-function insertIndicazione(txt){
-  indicazioneLines.push(txt);
-  rebuildHeader();
-}
-
-function insertEsameLine(esameName){
-  const ta = el.reportText;
-  if (ta.value.length && !ta.value.endsWith('\n\n')){
-    appendToReport('', '\n');
-  }
-  appendToReport(esameName, '\n');
-  pendingEsameOpen = true;
-}
-
-function insertConfronto(txt){
-  appendToReport(txt, '\n\n');
-  pendingEsameOpen = false;
-}
-
-function insertReferto(txt){
-  if (pendingEsameOpen){
-    appendToReport('', '\n');
-    pendingEsameOpen = false;
-  }
-  appendToReport(txt, '\n');
-}
-
-document.getElementById('btn-urgenza-toggle').onclick = () => {
-  urgenzaMode = !urgenzaMode;
-  document.getElementById('btn-urgenza-toggle').classList.toggle('active', urgenzaMode);
-  rebuildHeader();
-};
-
-document.getElementById('btn-reset').onclick = () => {
-  urgenzaMode = false;
-  indicazioneLines = [];
-  lastHeaderText = '';
-  pendingEsameOpen = false;
-  document.getElementById('btn-urgenza-toggle').classList.remove('active');
-  el.reportText.value = '';
-  if (state.esame){ insertEsameLine(state.esame); }
-};
-
-document.getElementById('btn-copy').onclick = async () => {
-  try{
-    await navigator.clipboard.writeText(el.reportText.value);
-  } catch(e){
-    el.reportText.select();
-    document.execCommand('copy');
-  }
-  el.copyFlash.classList.add('show');
-  setTimeout(() => el.copyFlash.classList.remove('show'), 1400);
-};
-
-document.getElementById('btn-archive').onclick = async () => {
-  const testo = el.reportText.value.trim();
-  if (!testo){ alert('Non c\'è nulla da salvare: il referto è vuoto.'); return; }
-  if (!confirm('Salvare questo referto nell\'archivio? Assicurati che sia privo di dati identificativi del paziente.')){ return; }
-  if (!supabaseClient || !currentUser){ alert('Devi essere connesso per salvare nell\'archivio.'); return; }
-  
-  const btn = document.getElementById('btn-archive');
-  btn.disabled = true;
-  try{
-    const { error } = await supabaseClient.from('report_archive').insert({
-      user_id: currentUser.id,
-      esame: state.esame || null,
-      testo: testo
-    });
-    if (error){ alert('Errore durante il salvataggio: ' + error.message); }
-    else {
-      el.copyFlash.textContent = 'Salvato nell\'archivio';
-      el.copyFlash.classList.add('show');
-      setTimeout(() => {
-        el.copyFlash.classList.remove('show');
-        el.copyFlash.textContent = 'Copiato negli appunti';
-      }, 1600);
-    }
-  }catch(e){ alert('Errore durante il salvataggio: ' + e.message); }
-  btn.disabled = false;
-};
-
-document.addEventListener('keydown', (e) => {
-  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-    e.preventDefault();
-    document.getElementById('btn-copy').click();
-  }
-});
-
-const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition || null;
-let activeMicStop = null;
-
-const MIC_ERROR_MESSAGES = {
-  'not-allowed': 'Permesso al microfono negato. Controlla l\'icona del lucchetto/microfono nella barra degli indirizzi del browser e consenti l\'accesso per questo sito, poi riprova.',
-  'service-not-allowed': 'Il browser ha bloccato il servizio di riconoscimento vocale. Controlla le impostazioni del microfono del browser e del sistema operativo.',
-  'no-speech': 'Non ho sentito nessuna voce. Riprova parlando subito dopo aver premuto il microfono.',
-  'audio-capture': 'Nessun microfono trovato o disponibile. Controlla che sia collegato e non in uso da un\'altra app.',
-  'network': 'Problema di rete nel contattare il servizio di riconoscimento vocale. Controlla la connessione a internet.',
-  'aborted': null
-};
-
-function createMicHandler(getTargetEl, btnEl){
-  let recognition = null;
-  let recording = false;
-  function stop(){
-    if (recognition) recognition.stop();
-  }
-  btnEl.addEventListener('click', () => {
-    const target = getTargetEl();
-    if (!target) return;
-    if (!SpeechRecognitionCtor){
-      alert('La dettatura vocale non è supportata da questo browser. Usa Chrome o Edge su computer, oppure Chrome su Android.');
-      return;
-    }
-    if (!window.isSecureContext){
-      alert('La dettatura vocale funziona solo su una pagina caricata in HTTPS. Apri il sito dal suo indirizzo web (non da un file sul computer) e riprova.');
-      return;
-    }
-    if (recording){
-      recognition && recognition.stop();
-      return;
-    }
-    if (activeMicStop && activeMicStop !== stop) activeMicStop();
-    activeMicStop = stop;
-    recognition = new SpeechRecognitionCtor();
-    recognition.lang = 'it-IT';
-    recognition.continuous = true;
-    recognition.interimResults = false;
-    recognition.onresult = (e) => {
-      let finalText = '';
-      for (let i = e.resultIndex; i < e.results.length; i++){
-        if (e.results[i].isFinal) finalText += e.results[i][0].transcript;
-      }
-      finalText = finalText.trim();
-      if (finalText){
-        const needsSpace = target.value && !/[\s\n]$/.test(target.value);
-        target.value = target.value + (needsSpace ? ' ' : '') + finalText + ' ';
-        target.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-    };
-    recognition.onerror = (e) => {
-      recording = false;
-      btnEl.classList.remove('recording');
-      console.error('Errore riconoscimento vocale:', e.error);
-      const msg = MIC_ERROR_MESSAGES.hasOwnProperty(e.error) ? MIC_ERROR_MESSAGES[e.error] : ('Errore del microfono: ' + e.error);
-      if (msg) alert(msg);
-    };
-    recognition.onend = () => {
-      recording = false;
-      btnEl.classList.remove('recording');
-      if (activeMicStop === stop) activeMicStop = null;
-    };
-    try{
-      recognition.start();
-      recording = true;
-      btnEl.classList.add('recording');
-    }catch(err){
-      recording = false;
-      console.error('Impossibile avviare il riconoscimento vocale:', err);
-      alert('Non sono riuscito ad avviare la dettatura: ' + err.message);
-    }
-  });
-}
-
-createMicHandler(() => el.reportText, document.getElementById('btn-mic-report'));
-
-function attachMicToIndicazioneFree(){
-  const input = document.getElementById('indicazione-free');
-  const micBtn = document.getElementById('mic-indicazione-free');
-  if (input && micBtn){ createMicHandler(() => input, micBtn); }
-}
-
-document.getElementById('btn-confronto').onclick = () => insertConfronto('Confronto con precedente analogo del ');
-document.getElementById('btn-presa-visione').onclick = () => insertConfronto('Presa visione di precedente analogo del ');
-document.getElementById('btn-non-precedenti').onclick = () => insertConfronto('Non disponibili precedenti per confronto.');
-
-// --- GESTIONE OVERLAY E STAMPA PDF ---
-
-const printOverlay = document.getElementById('print-overlay');
-const printSelect = document.getElementById('print-letterhead-select');
-
-document.getElementById('btn-open-print').onclick = async () => {
-  if (!el.reportText.value.trim()) {
-    alert('Il referto è vuoto. Componi o scrivi del testo prima di stampare.');
-    return;
-  }
-  
-  printSelect.innerHTML = '<option value="">Nessuna (pagina bianca)</option>';
-  if (currentUser && supabaseClient) {
-    try {
-      const { data } = await supabaseClient
-        .from('letterheads')
-        .select('id, nome, storage_path, margine_top, margine_left, margine_right')
-        .eq('user_id', currentUser.id);
-      
-      if (data && data.length) {
-        data.forEach(lh => {
-          const opt = document.createElement('option');
-          opt.value = lh.id;
-          opt.textContent = lh.nome;
-          opt.dataset.path = lh.storage_path;
-          opt.dataset.top = lh.margine_top;
-          opt.dataset.left = lh.margine_left;
-          opt.dataset.right = lh.margine_right;
-          printSelect.appendChild(opt);
-        });
-      }
-    } catch(e) {
-      console.warn('Errore nel caricamento carte intestate:', e);
-    }
-  }
-  
-  printOverlay.classList.add('open');
-};
-
-document.getElementById('print-close').onclick = () => {
-  printOverlay.classList.remove('open');
-};
-
-printSelect.onchange = () => {
-  const selectedOpt = printSelect.options[printSelect.selectedIndex];
-  if (selectedOpt && selectedOpt.value) {
-    document.getElementById('margin-top').value = selectedOpt.dataset.top || 40;
-    document.getElementById('margin-left').value = selectedOpt.dataset.left || 20;
-    document.getElementById('margin-right').value = selectedOpt.dataset.right || 20;
-  }
-};
-
-document.getElementById('print-generate-btn').onclick = async () => {
-  const btn = document.getElementById('print-generate-btn');
-  const msg = document.getElementById('print-message');
-  btn.disabled = true;
-  msg.textContent = 'Generazione PDF in corso…';
-
-  try {
-    const { PDFDocument, rgb, StandardFonts } = PDFLib;
-    let pdfDoc;
-
-    const selectedOpt = printSelect.options[printSelect.selectedIndex];
-    
-    if (selectedOpt && selectedOpt.value && selectedOpt.dataset.path) {
-      const { data: fileData, error } = await supabaseClient.storage
-        .from('letterheads')
-        .download(selectedOpt.dataset.path);
-      
-      if (error) throw error;
-      const arrayBuffer = await fileData.arrayBuffer();
-      pdfDoc = await PDFDocument.load(arrayBuffer);
-    } else {
-      pdfDoc = await PDFDocument.create();
-      pdfDoc.addPage([595.28, 841.89]);
-    }
-
-    const page = pdfDoc.getPages()[0];
-    const { width, height } = page.getSize();
-
-    const mmToPt = 2.83465;
-    const marginTop = (parseFloat(document.getElementById('margin-top').value) || 40) * mmToPt;
-    const marginLeft = (parseFloat(document.getElementById('margin-left').value) || 20) * mmToPt;
-    const marginRight = (parseFloat(document.getElementById('margin-right').value) || 20) * mmToPt;
-
-    const fontSize = 11;
-    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-    const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-    const textWidth = width - marginLeft - marginRight;
-    
-    const text = el.reportText.value;
-    const lines = text.split('\n');
-    let currentY = height - marginTop;
-
-    for (const line of lines) {
-      if (currentY < 60) break;
-      
-      page.drawText(line, {
-        x: marginLeft,
-        y: currentY,
-        size: fontSize,
-        font: font,
-        color: rgb(0, 0, 0),
-        maxWidth: textWidth
-      });
-      
-      currentY -= (fontSize * 1.4);
-    }
-
-    // --- REPERIMENTO NOME MEDICO E FIRMA IN CALCE ---
-    let doctorName = '';
-    if (currentUser) {
-      const meta = currentUser.user_metadata || {};
-      if (meta.nome && meta.cognome) {
-        doctorName = `Dott. ${meta.nome} ${meta.cognome}`;
-      } else if (meta.nome) {
-        doctorName = `Dott. ${meta.nome}`;
-      } else {
-        const emailPrefix = (currentUser.email || '').split('@')[0];
-        doctorName = `Dott. ${emailPrefix}`;
-      }
-    }
-
-    if (doctorName) {
-      const doctorFontSize = 11;
-      const doctorTextWidth = fontBold.widthOfTextAtSize(doctorName, doctorFontSize);
-      const doctorX = width - marginRight - doctorTextWidth;
-      const doctorY = Math.max(currentY - 30, 40);
-
-      page.drawText(doctorName, {
-        x: doctorX,
-        y: doctorY,
-        size: doctorFontSize,
-        font: fontBold,
-        color: rgb(0, 0, 0)
-      });
-    }
-
-    const pdfBytes = await pdfDoc.save();
-    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-    const url = URL.createObjectURL(blob);
-    
-    window.open(url, '_blank');
-    printOverlay.classList.remove('open');
-    msg.textContent = '';
-  } catch (e) {
-    msg.textContent = 'Errore nella generazione del PDF: ' + e.message;
-  }
-  
-  btn.disabled = false;
-};
-
-// --- AUTENTICAZIONE E INIZIALIZZAZIONE ---
-
-const loginOverlay = document.getElementById('login-overlay');
-const appRoot = document.getElementById('app-root');
-
-function showLogin(message){
-  loginOverlay.classList.remove('hidden');
-  appRoot.classList.add('hidden');
-  document.getElementById('login-error').textContent = message || '';
-}
-
-async function showApp(){
-  loginOverlay.classList.add('hidden');
-  appRoot.classList.remove('hidden');
-  document.getElementById('user-badge').textContent = currentUser ? currentUser.email : '';
-  DATA = await loadDataFromCloud();
-  state.metodica = null;
-  state.esame = null;
-  renderAll();
-}
-
-document.getElementById('btn-signin').onclick = async () => {
-  if (!supabaseClient) return;
-  const email = document.getElementById('login-email').value.trim();
-  const password = document.getElementById('login-password').value;
-  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-  if (error){ document.getElementById('login-error').textContent = error.message; return; }
-  currentUser = data.user;
-  await showApp();
-};
-
-document.getElementById('btn-signup').onclick = async () => {
-  if (!supabaseClient) return;
-  const email = document.getElementById('login-email').value.trim();
-  const password = document.getElementById('login-password').value;
-  if (!email || password.length < 6){
-    document.getElementById('login-error').textContent = 'Inserisci email e password valida (min 6 caratteri).';
-    return;
-  }
-  const { data, error } = await supabaseClient.auth.signUp({ email, password });
-  if (error){ document.getElementById('login-error').textContent = error.message; return; }
-  if (data.user && !data.session){
-    document.getElementById('login-error').textContent = 'Conferma l\'account tramite email, poi accedi.';
-    return;
-  }
-  currentUser = data.user;
-  await showApp();
-};
-
-document.getElementById('btn-logout').onclick = async () => {
-  if (supabaseClient) await supabaseClient.auth.signOut();
-  currentUser = null;
-  showLogin();
-};
-
-(async function init(){
-  if (!supabaseClient){
-    showLogin('Configurazione cloud non ancora impostata.');
-    return;
-  }
-  const { data: { session } } = await supabaseClient.auth.getSession();
-  if (session && session.user){
-    currentUser = session.user;
-    await showApp();
-  } else {
-    showLogin();
-  }
-})();
-</script>
 </body>
 </html>

@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Archivio — ModReport</title>
 <link rel="icon" type="image/png" href="modreport_logo_bars_m.png">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="assets/vendor/supabase.js"></script>
+<script src="js/config.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -254,10 +255,8 @@
 <div class="copy-flash" id="copy-flash">Copiato negli appunti</div>
 
 <script>
-const SUPABASE_URL = 'https://umejthggxihtyqvcszgm.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVtZWp0aGdneGlodHlxdmNzemdtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg4NzI0MzEsImV4cCI6MjEwNDQ0ODQzMX0.BPaujgB70aLpWSifk5nH93fuyyyfOe8Uw4RupV1YQQE';
-const supabaseClient = (window.supabase && SUPABASE_URL.indexOf('INSERISCI') === -1)
-  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+const supabaseClient = (window.supabase && window.MR_CONFIG)
+  ? window.supabase.createClient(window.MR_CONFIG.SUPABASE_URL, window.MR_CONFIG.SUPABASE_KEY)
   : null;
 
 let currentUser = null;
