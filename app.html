@@ -191,14 +191,44 @@
     margin-bottom: 14px;
   }
   .subgroup:last-child{ margin-bottom:0; }
+  .subgroup-label-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    margin-bottom:8px;
+  }
   .subgroup-label{
     font-size:11px;
     font-weight:700;
     text-transform:uppercase;
     letter-spacing:.05em;
     color: var(--ink-soft);
-    margin-bottom:8px;
   }
+  .subgroup-order{
+    display:flex;
+    gap:3px;
+    flex:none;
+  }
+  .order-btn{
+    font-family: var(--font);
+    font-size:10px;
+    width:20px;
+    height:20px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:0;
+    border: 1px solid var(--line);
+    background: var(--bg);
+    color: var(--ink-soft);
+    border-radius:4px;
+    cursor:pointer;
+    line-height:1;
+    transition: all .15s ease;
+  }
+  .order-btn:hover:not(:disabled){ border-color: var(--accent); color: var(--ink); }
+  .order-btn:disabled{ opacity:.3; cursor:default; }
   .btn-report{
     font-family: var(--font);
     font-size:13px;
@@ -917,13 +947,42 @@ function renderReferto(){
     el.refertoBody.innerHTML = '<div class="empty-state">Nessun blocco di referto ancora definito per questo esame. puoi aggiungerne uno da "Personalizza".</div>';
     return;
   }
-  Object.entries(groups).forEach(([groupName, buttons]) => {
+  const groupNames = Object.keys(groups);
+  groupNames.forEach((groupName, idx) => {
+    const buttons = groups[groupName];
     const g = document.createElement('div');
     g.className = 'subgroup';
-    const label = document.createElement('div');
+
+    const labelRow = document.createElement('div');
+    labelRow.className = 'subgroup-label-row';
+    const label = document.createElement('span');
     label.className = 'subgroup-label';
     label.textContent = groupName;
-    g.appendChild(label);
+    labelRow.appendChild(label);
+
+    if (groupNames.length > 1){
+      const orderBox = document.createElement('div');
+      orderBox.className = 'subgroup-order';
+      const upBtn = document.createElement('button');
+      upBtn.type = 'button';
+      upBtn.className = 'order-btn';
+      upBtn.textContent = '▲';
+      upBtn.title = 'Sposta su';
+      upBtn.disabled = idx === 0;
+      upBtn.onclick = () => moveRefertoGroup(state.esame, idx, idx - 1);
+      const downBtn = document.createElement('button');
+      downBtn.type = 'button';
+      downBtn.className = 'order-btn';
+      downBtn.textContent = '▼';
+      downBtn.title = 'Sposta giù';
+      downBtn.disabled = idx === groupNames.length - 1;
+      downBtn.onclick = () => moveRefertoGroup(state.esame, idx, idx + 1);
+      orderBox.appendChild(upBtn);
+      orderBox.appendChild(downBtn);
+      labelRow.appendChild(orderBox);
+    }
+
+    g.appendChild(labelRow);
 
     const row = document.createElement('div');
     row.className = 'chip-row';
@@ -937,6 +996,20 @@ function renderReferto(){
     g.appendChild(row);
     el.refertoBody.appendChild(g);
   });
+}
+
+function moveRefertoGroup(esame, fromIdx, toIdx){
+  const groups = DATA.refertoByEsame[esame];
+  if (!groups) return;
+  const entries = Object.entries(groups);
+  if (toIdx < 0 || toIdx >= entries.length) return;
+  const [moved] = entries.splice(fromIdx, 1);
+  entries.splice(toIdx, 0, moved);
+  const reordered = {};
+  entries.forEach(([k, v]) => { reordered[k] = v; });
+  DATA.refertoByEsame[esame] = reordered;
+  persist();
+  renderReferto();
 }
 
 function renderBreadcrumb(){
@@ -1070,40 +1143,21 @@ document.addEventListener('keydown', (e) => {
 });
 
 const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition || null;
-let activeMicStop = null;
-
-const MIC_ERROR_MESSAGES = {
-  'not-allowed': 'Permesso al microfono negato. Controlla l\'icona del lucchetto/microfono nella barra degli indirizzi del browser e consenti l\'accesso per questo sito, poi riprova.',
-  'service-not-allowed': 'Il browser ha bloccato il servizio di riconoscimento vocale. Controlla le impostazioni del microfono del browser e del sistema operativo.',
-  'no-speech': 'Non ho sentito nessuna voce. Riprova parlando subito dopo aver premuto il microfono.',
-  'audio-capture': 'Nessun microfono trovato o disponibile. Controlla che sia collegato e non in uso da un\'altra app.',
-  'network': 'Problema di rete nel contattare il servizio di riconoscimento vocale. Controlla la connessione a internet.',
-  'aborted': null
-};
 
 function createMicHandler(getTargetEl, btnEl){
   let recognition = null;
   let recording = false;
-  function stop(){
-    if (recognition) recognition.stop();
-  }
   btnEl.addEventListener('click', () => {
     const target = getTargetEl();
     if (!target) return;
     if (!SpeechRecognitionCtor){
-      alert('La dettatura vocale non è supportata da questo browser. Usa Chrome o Edge su computer, oppure Chrome su Android.');
-      return;
-    }
-    if (!window.isSecureContext){
-      alert('La dettatura vocale funziona solo su una pagina caricata in HTTPS. Apri il sito dal suo indirizzo web (non da un file sul computer) e riprova.');
+      alert('La dettatura vocale non è supportata da questo browser. Usa Chrome o Edge.');
       return;
     }
     if (recording){
       recognition && recognition.stop();
       return;
     }
-    if (activeMicStop && activeMicStop !== stop) activeMicStop();
-    activeMicStop = stop;
     recognition = new SpeechRecognitionCtor();
     recognition.lang = 'it-IT';
     recognition.continuous = true;
@@ -1117,30 +1171,21 @@ function createMicHandler(getTargetEl, btnEl){
       if (finalText){
         const needsSpace = target.value && !/[\s\n]$/.test(target.value);
         target.value = target.value + (needsSpace ? ' ' : '') + finalText + ' ';
-        target.dispatchEvent(new Event('input', { bubbles: true }));
       }
     };
-    recognition.onerror = (e) => {
+    recognition.onerror = () => {
       recording = false;
       btnEl.classList.remove('recording');
-      console.error('Errore riconoscimento vocale:', e.error);
-      const msg = MIC_ERROR_MESSAGES.hasOwnProperty(e.error) ? MIC_ERROR_MESSAGES[e.error] : ('Errore del microfono: ' + e.error);
-      if (msg) alert(msg);
     };
     recognition.onend = () => {
       recording = false;
       btnEl.classList.remove('recording');
-      if (activeMicStop === stop) activeMicStop = null;
     };
     try{
       recognition.start();
       recording = true;
       btnEl.classList.add('recording');
-    }catch(err){
-      recording = false;
-      console.error('Impossibile avviare il riconoscimento vocale:', err);
-      alert('Non sono riuscito ad avviare la dettatura: ' + err.message);
-    }
+    }catch(err){ recording = false; }
   });
 }
 
