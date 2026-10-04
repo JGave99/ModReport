@@ -1,6 +1,6 @@
 // Archivio referti (archivio.html): solo locale (IndexedDB), con spostamento dell'archivio cloud.
 import { getSupabase } from '../lib/supabase.js';
-import { $, escapeHtml, formatDateTime, setMessage } from '../lib/dom.js';
+import { $, escapeHtml, formatDateTime, setMessage, iconHtml } from '../lib/dom.js';
 import { requireSession, isSharedDevice } from '../lib/session.js';
 import { confirmDialog, alertDialog } from '../lib/dialog.js';
 import { listEntries, addEntry, deleteEntry, clearEntries, exportEntries, importEntries } from '../lib/local-archive.js';
@@ -13,7 +13,7 @@ async function loadEntries() {
   try {
     allEntries = await listEntries(currentUser.id);
   } catch (e) {
-    $('archive-list').innerHTML = '<div class="empty-state">Archivio locale non disponibile: ' + escapeHtml(e.message) + '</div>';
+    $('archive-list').innerHTML = '<div class="empty">Archivio locale non disponibile: ' + escapeHtml(e.message) + '</div>';
     allEntries = [];
     return;
   }
@@ -52,16 +52,16 @@ function renderList() {
     const item = document.createElement('div');
     item.className = 'archive-item';
     item.innerHTML = `
-      <button class="archive-head" aria-expanded="false" style="width:100%; background:none; border:0; color:inherit; font:inherit; text-align:left;">
-        <span class="chevron" aria-hidden="true">▶</span>
+      <button class="archive-head" aria-expanded="false">
+        ${iconHtml('chevron-right', 'chevron')}
         <span class="esame-name ${entry.esame ? '' : 'empty'}">${entry.esame ? escapeHtml(entry.esame) : 'Esame non specificato'}</span>
         <span class="date">${escapeHtml(formatDateTime(entry.createdAt))}</span>
       </button>
       <div class="archive-body">
         <pre class="archive-text">${escapeHtml(entry.testo)}</pre>
         <div class="archive-actions">
-          <button class="btn-sm danger" data-action="elimina">Elimina</button>
-          <button class="btn-sm" data-action="copia">Copia negli appunti</button>
+          <button class="btn btn--sm btn--danger" data-action="elimina">Elimina</button>
+          <button class="btn btn--sm" data-action="copia">Copia negli appunti</button>
         </div>
       </div>`;
     const head = item.querySelector('.archive-head');

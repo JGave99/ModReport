@@ -13,7 +13,9 @@ Strumento di scrittura per la refertazione radiologica: si compone il referto da
 | `js/lib/` | Moduli condivisi: client Supabase, libreria, PDF, dettatura, sessione, archivio locale, modalità locale… |
 | `js/config.js` | Configurazione Supabase (unico punto con URL e chiave) |
 | `js/legal-config.js` | Dati legali del titolare (informativa, termini, piè di pagina) |
-| `css/`, `assets/` | Stili condivisi, font e librerie di terze parti in locale |
+| `js/site-config.js`, `js/pricing-config.js` | Contenuti della landing: fondatori, testimonianze, listino (nascosto finché non è pubblicato) |
+| `css/` | Design system: `tokens.css` (colori, tipografia, spaziature, tema chiaro), `base.css`, `components.css`, `pages/` |
+| `assets/` | Logo, icone Lucide (`icons.svg`), immagini della landing, font e librerie di terze parti in locale |
 | `supabase/` | Schema, regole di accesso (RLS) e funzioni del database — vedi `supabase/README.md` |
 | `tests/` | Test unitari, SQL (PGlite) ed end-to-end (Playwright) |
 | `docs/` | Piano lavori, configurazione delle dashboard, documenti legali |
@@ -26,7 +28,8 @@ npm run serve        # sito su http://127.0.0.1:8765 (senza cache)
 ```
 
 - `http://127.0.0.1:8765/app.html?fake=1` usa un **backend finto in memoria** (utente `demo@modreport.test` / `password-demo-123`): si sviluppa senza toccare i dati reali. `?fake=0` lo disattiva. Funziona solo su localhost.
-- "Prova senza account" nella schermata di accesso attiva la **modalità locale**: tutto resta nel browser.
+- "Prova senza account" nella schermata di accesso (o `app.html?local=1`) attiva la **modalità locale**: tutto resta nel browser.
+- `npm run icons` rigenera lo sprite `assets/icons.svg` (elenco in `scripts/icons.mjs`); `npm run render-icons` le icone PNG e il favicon; `npm run screenshots` le immagini della landing e quella per le anteprime dei link, dall'editor vero con il backend finto.
 
 ## Test
 

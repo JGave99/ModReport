@@ -12,5 +12,11 @@
 /tests/*
   X-Robots-Tag: noindex
 
+/docs/*
+  X-Robots-Tag: noindex
+
+/supabase/*
+  X-Robots-Tag: noindex
+
 /assets/*
   Cache-Control: public, max-age=86400

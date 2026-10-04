@@ -7,49 +7,26 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Informativa sulla privacy — ModReport</title>
 <meta name="description" content="Come ModReport tratta i dati personali: titolare, finalità, basi giuridiche, fornitori, conservazione e diritti.">
-<link rel="icon" type="image/png" href="modreport_logo_bars_m.png">
+<link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+<link rel="icon" href="assets/icons/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+<script src="js/theme.js"></script>
 <link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/pages/legal.css">
 <script src="js/legal-config.js"></script>
 <script src="js/legal-fill.js" defer></script>
-<style>
-  :root{
-    --bg: #0f172a; --panel: #1e293b; --panel-alt: #0b1120; --line: #334155;
-    --ink: #f8fafc; --ink-soft: #94a3b8; --accent: #38bdf8; --accent-soft: rgba(56,189,248,0.08);
-    --font: 'Inter', -apple-system, sans-serif;
-  }
-  *{box-sizing:border-box;}
-  [hidden]{ display:none !important; }
-  body{ margin:0; font-family: var(--font); background: var(--bg); color: var(--ink); line-height:1.65; }
-  .topbar{ display:flex; align-items:center; justify-content:space-between; padding: 14px 28px; background: var(--panel-alt); border-bottom: 1px solid var(--line); position:sticky; top:0; }
-  .brand{ font-weight:700; font-size:15px; display:flex; align-items:center; gap:10px; color:inherit; text-decoration:none; }
-  .brand .mark{ width:20px; height:20px; border-radius:5px; background: url('modreport_logo_bars_m.png') no-repeat center / cover; display:inline-block; flex:none; }
-  .back{ font-size:13.5px; color: var(--ink-soft); text-decoration:none; padding:7px 14px; border:1px solid var(--line); border-radius:8px; }
-  .back:hover{ background: var(--panel); color: var(--ink); }
-  .doc{ max-width: 760px; margin: 0 auto; padding: 48px 24px 100px; }
-  .doc h1{ font-size:30px; font-weight:800; margin:0 0 8px; line-height:1.2; }
-  .doc .updated{ color: var(--ink-soft); font-size:13px; margin-bottom:28px; }
-  .note{ background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius:8px; padding:14px 18px; font-size:14px; color:#cbd5e1; margin-bottom:32px; }
-  .note ul{ margin:6px 0 0; }
-  .doc h2{ font-size:19px; font-weight:700; margin:36px 0 12px; color: var(--ink); }
-  .doc p, .doc li{ font-size:15px; color:#cbd5e1; }
-  .doc p{ margin:0 0 14px; }
-  .doc ul{ margin:0 0 14px; padding-left:22px; }
-  .doc li{ margin-bottom:6px; }
-  .doc a{ color: var(--accent); }
-  .doc strong{ color: var(--ink); }
-  .doc code{ font-size:13px; background: var(--panel); padding:1px 5px; border-radius:4px; }
-  .legal-todo{ color:#fca5a5; font-weight:600; }
-  .toc{ font-size:14px; columns:2; column-gap:28px; margin:0 0 8px; padding-left:20px; }
-  @media (max-width: 640px){ .toc{ columns:1; } .doc h1{ font-size:24px; } }
-  @media print{ body{ background:#fff; color:#000; } .topbar{ display:none; } .doc p, .doc li, .note{ color:#000; } .note{ background:#fff; } }
-</style>
 </head>
 <body>
 
-<div class="topbar">
-  <a class="brand" href="index.html"><span class="mark"></span> ModReport</a>
-  <a class="back" href="index.html">← Torna al sito</a>
-</div>
+<header class="topbar">
+  <a class="brand" href="index.html"><img src="assets/logo.svg" alt="" width="26" height="26"> ModReport</a>
+  <div class="topbar__end">
+    <a class="btn btn--ghost" href="index.html"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#arrow-left"></use></svg>Torna al sito</a>
+  </div>
+</header>
 
 <main class="doc">
   <h1>Informativa sul trattamento dei dati personali</h1>

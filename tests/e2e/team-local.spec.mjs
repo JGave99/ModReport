@@ -10,7 +10,7 @@ test('team: creazione, messaggio con nome deciso dal server, invito con scadenza
   await expect(page.locator('.channel-item .chname')).toHaveText(['generale']);
   await page.fill('#msg-input', 'Buongiorno');
   await page.click('#btn-send');
-  await expect(page.locator('.msg .msg-name')).toHaveText('Maria Rossi');
+  await expect(page.locator('.chat-msg .msg-name')).toHaveText('Maria Rossi');
   await page.click('#btn-invite');
   await page.click('#invite-generate');
   await expect(page.locator('#invite-link')).toContainText('team.html?invite=');

@@ -6,285 +6,73 @@
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Archivio — ModReport</title>
-<link rel="icon" type="image/png" href="modreport_logo_bars_m.png">
+<link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+<link rel="icon" href="assets/icons/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="robots" content="noindex">
 <script src="assets/vendor/supabase.js"></script>
 <script src="js/config.js"></script>
 <script type="module" src="js/pages/archivio.js"></script>
+<script src="js/theme.js"></script>
 <link rel="stylesheet" href="css/fonts.css">
-<style>
-  :root{
-    --bg: #0f172a;
-    --panel: #1e293b;
-    --panel-alt: #0b1120;
-    --line: #334155;
-    --line-soft: #334155;
-    --ink: #f8fafc;
-    --ink-soft: #94a3b8;
-    --accent: #38bdf8;
-    --accent-soft: rgba(56,189,248,0.08);
-    --accent-strong: #0284c7;
-    --accent-dim: #0369a1;
-    --amber: #f59e0b;
-    --amber-soft: rgba(245,158,11,0.12);
-    --danger: #ef4444;
-    --font: 'Inter', -apple-system, sans-serif;
-    --radius: 8px;
-    --radius-lg: 10px;
-  }
-  *{box-sizing:border-box;}
-  body{
-    margin:0;
-    font-family: var(--font);
-    background: var(--bg);
-    color: var(--ink);
-    min-height:100vh;
-  }
-  .topbar{
-    position:sticky;
-    top:0;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    padding: 12px 24px;
-    background: var(--panel-alt);
-    border-bottom: 1px solid var(--line);
-    font-size:13px;
-    z-index:10;
-  }
-  .brand{
-    font-weight:600;
-    font-size:15px;
-    display:flex;
-    align-items:center;
-    gap:10px;
-  }
-  .brand .mark{
-    width:20px; height:20px; border-radius:5px;
-    background: url('modreport_logo_bars_m.png') no-repeat center / cover;
-    display:inline-block; flex:none;
-  }
-  .topbar-right{ display:flex; align-items:center; gap:10px; }
-  .btn-settings{
-    background: transparent;
-    border: 1px solid var(--line);
-    color: var(--ink);
-    font-family: var(--font);
-    font-size:13px;
-    padding: 7px 14px;
-    border-radius: 6px;
-    cursor:pointer;
-    text-decoration:none;
-    display:inline-flex;
-    align-items:center;
-    gap:6px;
-    transition: all .2s ease;
-  }
-  .btn-settings:hover{ background-color: var(--line); border-color: var(--ink-soft); }
-
-  .page{
-    max-width: 860px;
-    margin: 0 auto;
-    padding: 32px 24px 80px;
-  }
-  .page h1{
-    font-size:19px;
-    font-weight:700;
-    margin: 4px 0 6px;
-  }
-  .page .subtitle{
-    font-size:12.5px;
-    color: var(--ink-soft);
-    margin: 0 0 22px;
-    line-height:1.6;
-  }
-
-  .toolbar-row{
-    display:flex;
-    gap:10px;
-    margin-bottom:18px;
-    flex-wrap:wrap;
-  }
-  .toolbar-row input, .toolbar-row select{
-    font-family: var(--font);
-    font-size:13px;
-    padding: 9px 12px;
-    border: 1px solid var(--line);
-    border-radius: 6px;
-    background: var(--panel);
-    color: var(--ink);
-    transition: border-color .2s;
-  }
-  .toolbar-row input:focus, .toolbar-row select:focus{ outline:none; border-color: var(--accent); }
-  .toolbar-row input{ flex:1; min-width:200px; }
-
-  .empty-state{
-    text-align:center;
-    color: var(--ink-soft);
-    font-size:13px;
-    padding: 60px 20px;
-    border: 1px dashed var(--line);
-    border-radius: var(--radius-lg);
-  }
-
-  .archive-item{
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: var(--radius-lg);
-    margin-bottom: 12px;
-    overflow:hidden;
-    transition: border-color .2s;
-  }
-  .archive-item:hover{ border-color: var(--ink-soft); }
-  .archive-head{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    padding: 14px 16px;
-    cursor:pointer;
-  }
-  .archive-head .esame-name{
-    font-weight:600;
-    font-size:13.5px;
-    flex:1;
-  }
-  .archive-head .esame-name.empty{
-    font-style:italic;
-    color: var(--ink-soft);
-    font-weight:normal;
-  }
-  .archive-head .date{
-    font-size:11.5px;
-    color: var(--ink-soft);
-  }
-  .archive-head .chevron{
-    color: var(--accent);
-    font-size:11px;
-    transition: transform .15s ease;
-  }
-  .archive-item.open .chevron{ transform: rotate(90deg); }
-  .archive-body{
-    display:none;
-    padding: 0 16px 16px;
-    border-top: 1px solid var(--line);
-  }
-  .archive-item.open .archive-body{ display:block; padding-top:14px; }
-  .archive-text{
-    white-space: pre-wrap;
-    font-family: 'SFMono-Regular', Consolas, monospace;
-    font-size:13px;
-    line-height:1.6;
-    background: var(--bg);
-    border: 1px solid var(--line-soft);
-    border-radius: var(--radius);
-    padding: 12px 14px;
-    margin: 0 0 10px;
-    color: #e2e8f0;
-  }
-  .archive-actions{
-    display:flex;
-    gap:8px;
-    justify-content:flex-end;
-  }
-  .btn-sm{
-    font-family: var(--font);
-    font-size:12.5px;
-    font-weight:600;
-    padding: 7px 14px;
-    border-radius: 6px;
-    cursor:pointer;
-    border:1px solid var(--accent);
-    background: transparent;
-    color: var(--accent);
-    transition: all .2s ease;
-  }
-  .btn-sm:hover{ background: var(--accent-soft); }
-  .btn-sm.danger{ border-color: var(--danger); color: var(--danger); }
-  .btn-sm.danger:hover{ background: rgba(239,68,68,0.1); }
-
-  .gate{
-    position:fixed; inset:0;
-    background: var(--bg);
-    display:flex; align-items:center; justify-content:center;
-    font-size:13px; color: var(--ink-soft);
-  }
-  .hidden{ display:none; }
-  [hidden]{ display:none !important; }
-  .cloud-banner{ background: var(--amber-soft); border:1px solid var(--amber); color: var(--ink); border-radius: var(--radius-lg); padding: 14px 16px; margin-bottom: 18px; font-size:13px; }
-  .cloud-banner p{ margin:0 0 10px; line-height:1.55; }
-  .shared-note{ border:1px dashed var(--line); border-radius: var(--radius-lg); padding: 20px; color: var(--ink-soft); font-size:13px; }
-  .field-message{ font-size:12px; min-height:16px; margin-top:6px; }
-  .field-message.ok{ color: var(--accent); }
-  .field-message.error{ color: var(--danger); }
-  .visually-hidden{ position:absolute !important; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
-
-
-  .copy-flash{
-    position:fixed;
-    bottom:22px; right:22px;
-    background: var(--accent-strong);
-    color:#fff;
-    padding:10px 18px;
-    border-radius: var(--radius);
-    font-size:13px;
-    opacity:0;
-    transform: translateY(6px);
-    transition: all .18s ease;
-    pointer-events:none;
-    box-shadow: 0 8px 20px rgba(0,0,0,.3);
-  }
-  .copy-flash.show{ opacity:1; transform:translateY(0); }
-</style>
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/pages/archivio.css">
 </head>
 <body>
 
 <div class="gate" id="gate">Verifica accesso in corso…</div>
 
 <div id="page-root" class="hidden">
-  <div class="topbar">
-    <div class="brand"><span class="mark"></span> Archivio referti</div>
-    <div class="topbar-right">
-      <a class="btn-settings" href="app.html">← Torna al referto</a>
-    </div>
-  </div>
+  <header class="topbar">
+    <a class="brand" href="index.html"><img src="assets/logo.svg" alt="" width="26" height="26"> ModReport</a>
+    <nav class="topnav" aria-label="Sezioni">
+      <a href="app.html"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#file-text"></use></svg><span>Referto</span></a>
+      <a href="archivio.html" aria-current="page"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#archive"></use></svg><span>Archivio</span></a>
+      <a href="team.html"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#messages-square"></use></svg><span>Team</span></a>
+    </nav>
+  </header>
 
-  <div class="page">
-    <h1>Archivio referti</h1>
-    <p class="subtitle">
+  <main class="page">
+    <h1 class="page-title">Archivio referti</h1>
+    <p class="page-lead">
       I referti che salvi restano <strong>solo su questo computer</strong>, nel browser: non vengono inviati al cloud.
       Per spostarli su un'altra postazione usa "Scarica copia" e poi "Ripristina da file". Prima di salvare togli comunque i dati che identificano il paziente.
     </p>
 
-    <div class="cloud-banner" id="cloud-banner" role="status" hidden>
+    <div class="banner banner--warn" style="flex-direction:column; align-items:flex-start;" id="cloud-banner" role="status" hidden>
       <p id="cloud-banner-text"></p>
       <div class="archive-actions" style="justify-content:flex-start;">
-        <button class="btn-sm" id="btn-move-cloud">Sposta su questo computer</button>
+        <button class="btn btn--sm" id="btn-move-cloud">Sposta su questo computer</button>
       </div>
-      <div class="field-message" id="cloud-message"></div>
+      <div class="msg" id="cloud-message"></div>
     </div>
 
-    <div class="shared-note" id="shared-note" hidden>
+    <div class="empty" id="shared-note" hidden>
       Su una postazione condivisa l'archivio non è disponibile: i referti resterebbero leggibili da chi usa il computer dopo di te.
     </div>
 
     <div id="archive-tools">
-      <div class="toolbar-row">
+      <div class="toolbar">
         <label class="visually-hidden" for="search-input">Cerca</label>
-        <input type="text" id="search-input" placeholder="Cerca per nome esame o testo…">
+        <input type="text" class="input" id="search-input" placeholder="Cerca per nome esame o testo…">
         <label class="visually-hidden" for="filter-esame">Filtra per esame</label>
-        <select id="filter-esame"><option value="">Tutti gli esami</option></select>
+        <select class="input" id="filter-esame" style="width:auto;"><option value="">Tutti gli esami</option></select>
       </div>
-      <div class="toolbar-row">
-        <button class="btn-sm" id="btn-export">Scarica copia</button>
-        <label class="btn-sm" for="import-file" style="display:inline-flex; align-items:center;">Ripristina da file</label>
+      <div class="toolbar">
+        <button class="btn btn--sm" id="btn-export">Scarica copia</button>
+        <label class="btn btn--sm" for="import-file" style="display:inline-flex; align-items:center;">Ripristina da file</label>
         <input type="file" id="import-file" accept="application/json,.json" class="visually-hidden">
-        <button class="btn-sm danger" id="btn-clear">Svuota archivio</button>
+        <button class="btn btn--sm btn--danger" id="btn-clear">Svuota archivio</button>
       </div>
-      <div class="field-message" id="tools-message"></div>
+      <div class="msg" id="tools-message"></div>
     </div>
 
     <div id="archive-list"></div>
-    <div id="empty-state" class="empty-state hidden">Nessun referto archiviato su questo computer.</div>
-  </div>
+    <div id="empty-state" class="empty hidden">Nessun referto archiviato su questo computer.</div>
+  </main>
 </div>
 
 <div class="copy-flash" id="copy-flash">Copiato negli appunti</div>

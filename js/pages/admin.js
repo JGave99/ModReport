@@ -18,7 +18,7 @@ async function loadRequests() {
     .select('id, user_id, email, storage_path, status, note_admin, submitted_at')
     .order('submitted_at', { ascending: false });
   if (error) {
-    $('req-list').innerHTML = '<div class="empty-state">Errore nel caricamento: ' + escapeHtml(error.message) + '</div>';
+    $('req-list').innerHTML = '<div class="empty">Errore nel caricamento: ' + escapeHtml(error.message) + '</div>';
     return;
   }
   allRequests = data || [];
@@ -28,7 +28,7 @@ async function loadRequests() {
 function renderRequests() {
   const list = $('req-list');
   const filtered = currentFilter === 'tutte' ? allRequests : allRequests.filter((r) => r.status === currentFilter);
-  if (!filtered.length) { list.innerHTML = '<div class="empty-state">Nessuna richiesta in questa categoria.</div>'; return; }
+  if (!filtered.length) { list.innerHTML = '<div class="empty">Nessuna richiesta in questa categoria.</div>'; return; }
   list.innerHTML = '';
   filtered.forEach((req) => {
     const status = STATUS_LABEL[req.status] ? req.status : 'in_attesa';
@@ -42,10 +42,10 @@ function renderRequests() {
       <div class="req-status ${status}">${escapeHtml(STATUS_LABEL[status])}</div>
       ${req.note_admin ? '<p style="font-size:12.5px; color:var(--ink-soft); margin:0 0 10px;">Nota: ' + escapeHtml(req.note_admin) + '</p>' : ''}
       <div class="req-actions">
-        <button class="btn-sm" data-action="view">Vedi documento</button>
-        ${status !== 'approvato' ? '<button class="btn-sm primary" data-action="approve">Approva</button>' : ''}
+        <button class="btn btn--sm" data-action="view">Vedi documento</button>
+        ${status !== 'approvato' ? '<button class="btn btn--sm btn--primary" data-action="approve">Approva</button>' : ''}
         ${status !== 'rifiutato' ? '<input type="text" class="req-note" maxlength="500" placeholder="Motivo del rifiuto (opzionale)" aria-label="Motivo del rifiuto" data-note>' : ''}
-        ${status !== 'rifiutato' ? '<button class="btn-sm danger" data-action="reject">Rifiuta</button>' : ''}
+        ${status !== 'rifiutato' ? '<button class="btn btn--sm btn--danger" data-action="reject">Rifiuta</button>' : ''}
       </div>`;
     card.querySelector('[data-action="view"]').onclick = () => viewDocument(req.storage_path);
     const approveBtn = card.querySelector('[data-action="approve"]');
@@ -90,10 +90,10 @@ document.querySelectorAll('.tab-btn[data-filter]').forEach((btn) => {
 });
 
 async function loadUsers() {
-  $('users-list').innerHTML = '<div class="empty-state">Caricamento…</div>';
+  $('users-list').innerHTML = '<div class="empty">Caricamento…</div>';
   const { data, error } = await sb.rpc('list_app_users');
   if (error) {
-    $('users-list').innerHTML = '<div class="empty-state">Errore nel caricamento: ' + escapeHtml(error.message) + '</div>';
+    $('users-list').innerHTML = '<div class="empty">Errore nel caricamento: ' + escapeHtml(error.message) + '</div>';
     return;
   }
   allUsers = data || [];
@@ -106,7 +106,7 @@ function renderUsers() {
   const filtered = search ? allUsers.filter((u) => (u.email || '').toLowerCase().includes(search)) : allUsers;
   $('users-count').textContent = filtered.length + (filtered.length === 1 ? ' utente registrato' : ' utenti registrati');
   const list = $('users-list');
-  if (!filtered.length) { list.innerHTML = '<div class="empty-state">Nessun utente trovato.</div>'; return; }
+  if (!filtered.length) { list.innerHTML = '<div class="empty">Nessun utente trovato.</div>'; return; }
   list.innerHTML = '';
   filtered.forEach((u) => {
     const card = document.createElement('div');

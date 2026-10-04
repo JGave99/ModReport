@@ -9,6 +9,7 @@ test('accesso: password sbagliata, poi uscita che azzera referto e campi', async
   await expect(page.locator('#login-error')).toHaveText('Email o password non corretti.');
   await login(page);
   await page.fill('#report-text', 'Referto del collega');
+  await page.click('#user-menu-btn');
   await page.click('#btn-logout');
   await expect(page.locator('#login-overlay')).not.toHaveClass(/hidden/);
   await expect(page.locator('#login-email')).toHaveValue('');
@@ -41,11 +42,11 @@ test('Svuota si può annullare; la bozza sopravvive al ricaricamento', async ({ 
   await login(page);
   await chip(page, '#metodica-row', 'RX');
   await chip(page, '#esame-body', 'RX TORACE 2PR');
-  await page.locator('#referto-body .btn-report', { hasText: 'Pleura libera' }).click();
+  await page.locator('#referto-body .phrase', { hasText: 'Pleura libera' }).click();
   const full = await page.inputValue('#report-text');
   await page.click('#btn-reset');
   await expect(page.locator('#report-text')).toHaveValue('RX TORACE 2PR\n');
-  await page.locator('#copy-flash button', { hasText: 'Annulla' }).click();
+  await page.locator('.toast button', { hasText: 'Annulla' }).click();
   await expect(page.locator('#report-text')).toHaveValue(full);
   await page.waitForTimeout(500);
   await page.reload();
@@ -67,10 +68,10 @@ test('stampa: anteprima PDF su più pagine con caratteri speciali', async ({ pag
 
 test('archivio: il referto si salva solo su questo computer', async ({ page }) => {
   await login(page);
-  page.on('dialog', (d) => d.accept());
   await page.fill('#report-text', 'RX TORACE 2PR\nNon addensamenti parenchimali a focolaio.');
   await page.click('#btn-archive');
-  await expect(page.locator('#copy-flash')).toContainText('archivio di questo computer');
+  await page.locator('dialog[open] button', { hasText: 'Salva' }).click();
+  await expect(page.locator('.toast')).toContainText('archivio di questo computer');
   await page.goto('archivio.html');
   await expect(page.locator('.archive-item')).toHaveCount(1);
   const cloud = await page.evaluate(() => window.__fakeSupabase.db.tables.report_archive.length);

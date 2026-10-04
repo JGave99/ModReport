@@ -5,913 +5,271 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://umejthggxihtyqvcszgm.supabase.co wss://umejthggxihtyqvcszgm.supabase.co; frame-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; worker-src 'self' blob:; manifest-src 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ModReport — Composizione modulare</title>
-<link rel="icon" type="image/png" href="modreport_logo_bars_m.png">
+<meta name="robots" content="noindex">
+<title>Referto — ModReport</title>
+<link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+<link rel="icon" href="assets/icons/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<script src="js/theme.js"></script>
+<link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/pages/app.css">
 <script src="assets/vendor/supabase.js"></script>
 <script src="js/config.js"></script>
 <script src="js/legal-config.js"></script>
 <script type="module" src="js/pages/app.js"></script>
-<link rel="stylesheet" href="css/fonts.css">
-<style>
-  :root{
-    --bg: #0f172a;
-    --panel: #1e293b;
-    --panel-alt: #0b1120;
-    --line: #334155;
-    --line-soft: #334155;
-    --ink: #f8fafc;
-    --ink-soft: #94a3b8;
-    --accent: #38bdf8;
-    --accent-soft: rgba(56,189,248,0.08);
-    --accent-strong: #0284c7;
-    --accent-dim: #0369a1;
-    --amber: #f59e0b;
-    --amber-soft: rgba(245,158,11,0.12);
-    --danger: #ef4444;
-    --font: 'Inter', -apple-system, sans-serif;
-    --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
-    --radius: 8px;
-    --radius-lg: 10px;
-  }
-  *{box-sizing:border-box;}
-  body{
-    margin:0;
-    font-family: var(--font);
-    background: var(--bg);
-    color: var(--ink);
-    height:100vh;
-    overflow:hidden;
-  }
-  .app{
-    display:grid;
-    grid-template-columns: 44% 56%;
-    height:100vh;
-  }
-  .topbar{
-    grid-column: 1 / -1;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    padding: 12px 24px;
-    background: var(--panel-alt);
-    border-bottom: 1px solid var(--line);
-    color: var(--ink);
-    font-size:13px;
-  }
-  .topbar .brand, .brand-login{
-    font-weight:600;
-    font-size:15px;
-    display:flex;
-    align-items:center;
-    gap:10px;
-  }
-  .brand .mark, .brand-login .mark{
-    width:20px; height:20px; border-radius:5px;
-    background: url('modreport_logo_bars_m.png') no-repeat center / cover;
-    display:inline-block; flex:none;
-  }
-  .topbar-right{
-    display:flex;
-    align-items:center;
-    gap:12px;
-  }
-  .breadcrumb{
-    font-size:13px;
-    color: var(--ink-soft);
-    display:flex;
-    gap:6px;
-    align-items:center;
-  }
-  .breadcrumb .seg{
-    padding:2px 8px;
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: 6px;
-    color: var(--ink);
-  }
-  .breadcrumb .seg.empty{
-    opacity:.5;
-    font-style:italic;
-    color: var(--ink-soft);
-  }
-  .breadcrumb .sep{ opacity:.5; }
-  .btn-settings{
-    background: transparent;
-    border: 1px solid var(--line);
-    color: var(--ink);
-    font-family: var(--font);
-    font-size:13px;
-    padding: 7px 14px;
-    border-radius: 6px;
-    cursor:pointer;
-    display:flex;
-    align-items:center;
-    gap:6px;
-    transition: all .2s ease;
-  }
-  .btn-settings:hover{ background-color: var(--line); border-color: var(--ink-soft); }
-
-  .builder{
-    grid-row:2;
-    overflow-y:auto;
-    padding: 20px 22px 60px;
-    border-right: 1px solid var(--line);
-  }
-  .builder::-webkit-scrollbar{ width:6px; }
-  .builder::-webkit-scrollbar-track{ background:transparent; }
-  .builder::-webkit-scrollbar-thumb{ background: var(--line); border-radius:4px; }
-  .block{
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: var(--radius-lg);
-    overflow:hidden;
-    margin-bottom: 16px;
-  }
-  .block-head{
-    display:flex;
-    align-items:baseline;
-    gap:8px;
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--line);
-  }
-  .block-num{
-    font-size:11px;
-    color: var(--accent);
-    font-weight:700;
-  }
-  .block-title{
-    font-size:12px;
-    font-weight:700;
-    text-transform:uppercase;
-    letter-spacing:.05em;
-    color: var(--accent);
-  }
-  .block-hint{
-    margin-left:auto;
-    font-size:11px;
-    color: var(--ink-soft);
-  }
-  .block-body{
-    padding: 16px;
-  }
-  .chip-row{
-    display:flex;
-    flex-wrap:wrap;
-    gap:8px;
-  }
-  .chip{
-    font-family: var(--font);
-    font-size:13px;
-    font-weight:500;
-    padding: 8px 14px;
-    border: 1px solid var(--line);
-    background: var(--bg);
-    border-radius: var(--radius);
-    cursor:pointer;
-    color: var(--ink-soft);
-    transition: all .2s cubic-bezier(.4,0,.2,1);
-  }
-  .chip:hover{
-    border-color: var(--accent);
-    background: var(--accent-soft);
-    color: var(--ink);
-    transform: translateY(-1px);
-  }
-  .chip.active{
-    background: var(--accent-strong);
-    border-color: var(--accent);
-    color:#fff;
-    font-weight:600;
-    box-shadow: 0 4px 12px rgba(2,132,199,.35);
-  }
-  .empty-state{
-    font-size:12.5px;
-    color: var(--ink-soft);
-    font-style:italic;
-    padding: 4px 0;
-  }
-  .subgroup{
-    margin-bottom: 14px;
-  }
-  .subgroup:last-child{ margin-bottom:0; }
-  .subgroup-label{
-    font-size:11px;
-    font-weight:700;
-    text-transform:uppercase;
-    letter-spacing:.05em;
-    color: var(--ink-soft);
-    margin-bottom:8px;
-  }
-  .btn-report{
-    font-family: var(--font);
-    font-size:13px;
-    font-weight:500;
-    padding: 8px 12px;
-    border: 1px solid var(--line);
-    border-left: 3px solid var(--accent);
-    background: var(--bg);
-    border-radius: var(--radius);
-    cursor:pointer;
-    color: var(--ink);
-    text-align:left;
-    transition: all .15s ease;
-  }
-  .btn-report:hover{
-    background: var(--accent-soft);
-    transform: translateY(-1px);
-  }
-  .btn-report.neg{ border-left-color: var(--amber); }
-  .btn-report.neg:hover{ background: var(--amber-soft); }
-  .free-text{
-    width:100%;
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    padding: 10px;
-    font-family: var(--font);
-    font-size:13px;
-    resize: vertical;
-    min-height:60px;
-    background: var(--bg);
-    color: var(--ink);
-    transition: border-color .2s;
-  }
-  .free-text:focus{ outline:none; border-color: var(--accent); }
-  .add-free{
-    font-size:12.5px;
-    padding:7px 14px;
-    border:1px solid var(--accent);
-    color: var(--accent);
-    background: transparent;
-    border-radius: 6px;
-    cursor:pointer;
-    font-weight:600;
-    font-family: var(--font);
-    transition: all .2s ease;
-  }
-  .add-free:hover{ background: var(--accent-soft); }
-
-  .report-panel{
-    grid-row:2;
-    display:flex;
-    flex-direction:column;
-    padding: 20px 24px;
-    overflow:hidden;
-    background: var(--panel-alt);
-  }
-  .report-toolbar{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    margin-bottom:16px;
-  }
-  .report-toolbar h2{
-    font-size:13px;
-    text-transform:uppercase;
-    letter-spacing:.06em;
-    margin:0;
-    color: var(--ink-soft);
-  }
-  .actions{ display:flex; gap:8px; }
-  .btn{
-    font-family: var(--font);
-    font-size:13px;
-    font-weight:600;
-    padding: 8px 16px;
-    border-radius: 6px;
-    cursor:pointer;
-    border:1px solid var(--line);
-    background: transparent;
-    color: var(--ink);
-    transition: all .2s ease;
-  }
-  .btn.primary{
-    background: var(--accent-strong);
-    border-color: var(--accent-strong);
-    color:#fff;
-  }
-  .btn.primary:hover{ background: var(--accent-dim); box-shadow: 0 4px 12px rgba(2,132,199,.3); }
-  .btn.ghost:hover{ background: var(--panel); }
-  .report-doc{
-    flex:1;
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: var(--radius-lg);
-    display:flex;
-    flex-direction:column;
-    overflow:hidden;
-  }
-  .print-row{
-    display:flex;
-    justify-content:flex-end;
-    margin-top:12px;
-  }
-  .doc-meta{
-    padding: 16px 20px 12px;
-    border-bottom: 1px dashed var(--line);
-    font-size:12.5px;
-    color: var(--ink-soft);
-  }
-  .doc-meta .row{ margin-bottom:3px; }
-  .doc-meta b{ color: var(--ink); }
-  textarea.report-text{
-    flex:1;
-    border:0;
-    outline:none;
-    resize:none;
-    padding: 20px 24px;
-    font-family: var(--mono);
-    font-size:14px;
-    line-height:1.6;
-    color: #e2e8f0;
-    background: var(--panel);
-  }
-  .copy-flash{
-    position:fixed;
-    bottom:22px; right:22px;
-    background: var(--accent-strong);
-    color:#fff;
-    padding:10px 18px;
-    border-radius: var(--radius);
-    font-size:13px;
-    opacity:0;
-    transform: translateY(6px);
-    transition: all .18s ease;
-    pointer-events:none;
-    box-shadow: 0 8px 20px rgba(0,0,0,.3);
-  }
-  .copy-flash.show{ opacity:1; transform:translateY(0); }
-
-  .settings-overlay{
-    position:fixed;
-    inset:0;
-    background: rgba(4,9,14,0.72);
-    display:none;
-    align-items:center;
-    justify-content:center;
-    z-index:100;
-  }
-  .settings-overlay.open{ display:flex; }
-  .settings-panel{
-    width: min(720px, 92vw);
-    max-height: 88vh;
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: var(--radius-lg);
-    display:flex;
-    flex-direction:column;
-    overflow:hidden;
-  }
-  .settings-head{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    padding: 16px 20px;
-    border-bottom: 1px solid var(--line);
-    background: var(--panel-alt);
-  }
-  .settings-head h2{
-    margin:0;
-    font-size:14px;
-    text-transform:uppercase;
-    letter-spacing:.05em;
-  }
-  .settings-close{
-    background:none;
-    border:none;
-    color: var(--ink-soft);
-    font-size:20px;
-    cursor:pointer;
-    line-height:1;
-  }
-  .settings-close:hover{ color: var(--ink); }
-  .settings-body{
-    overflow-y:auto;
-    padding: 18px 20px 26px;
-  }
-  .settings-section{
-    border: 1px solid var(--line-soft);
-    border-radius: var(--radius);
-    padding: 16px;
-    margin-bottom: 14px;
-  }
-  .settings-section h3{
-    margin: 0 0 10px;
-    font-size:12px;
-    text-transform:uppercase;
-    letter-spacing:.05em;
-    color: var(--accent);
-  }
-  .field-row{
-    display:flex;
-    gap:10px;
-    margin-bottom:8px;
-    flex-wrap:wrap;
-    align-items:center;
-  }
-  .field-row label{
-    font-size:11.5px;
-    color: var(--ink-soft);
-    display:block;
-    margin-bottom:4px;
-  }
-  .field{
-    flex:1;
-    min-width:160px;
-  }
-  select, input[type=text], input[type=email], input[type=password], input[type=number], textarea{
-    width:100%;
-    font-family: var(--font);
-    font-size:13px;
-    padding: 8px 10px;
-    border: 1px solid var(--line);
-    border-radius: 6px;
-    background: var(--bg);
-    color: var(--ink);
-    transition: border-color .2s;
-  }
-  select:focus, input[type=text]:focus, input[type=email]:focus, input[type=password]:focus, input[type=number]:focus, textarea:focus{ outline:none; border-color: var(--accent); }
-  textarea{ resize: vertical; min-height:46px; }
-  .btn-sm{
-    font-family: var(--font);
-    font-size:12.5px;
-    font-weight:600;
-    padding: 7px 14px;
-    border-radius: 6px;
-    cursor:pointer;
-    border:1px solid var(--accent);
-    background: transparent;
-    color: var(--accent);
-    transition: all .2s ease;
-  }
-  .btn-sm:hover{ background: var(--accent-soft); }
-
-  .mini-toggle{
-    font-family: var(--font);
-    font-size:11px;
-    font-weight:700;
-    padding: 4px 12px;
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    background: var(--bg);
-    color: var(--ink-soft);
-    cursor:pointer;
-    margin-left:8px;
-    transition: all .2s ease;
-  }
-  .mini-toggle:hover{ border-color: var(--accent); }
-  .mini-toggle.active{
-    background: var(--accent-strong);
-    border-color: var(--accent);
-    color:#fff;
-    box-shadow: 0 4px 12px rgba(2,132,199,.35);
-  }
-
-  .login-overlay{
-    position:fixed;
-    inset:0;
-    background: var(--bg);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    z-index:200;
-  }
-  .login-overlay.hidden{ display:none; }
-  .login-card{
-    width: min(380px, 92vw);
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: var(--radius-lg);
-    padding: 32px 28px;
-  }
-  .login-field{
-    margin-bottom:14px;
-  }
-  .login-field label{
-    font-size:11.5px;
-    color: var(--ink-soft);
-    display:block;
-    margin-bottom:4px;
-  }
-  .login-error{
-    font-size:12px;
-    color: var(--danger);
-    margin: 6px 0 4px;
-    min-height:16px;
-  }
-  .login-actions{
-    display:flex;
-    gap:8px;
-    margin-top:16px;
-  }
-  .login-actions .btn{
-    flex:1;
-    text-align:center;
-  }
-  .login-hint{
-    font-size:11.5px;
-    color: var(--ink-soft);
-    margin-top:16px;
-    line-height:1.5;
-  }
-  .app.hidden{ display:none; }
-  .user-badge{
-    font-size:13px;
-    color: var(--ink-soft);
-  }
-  .mic-btn{
-    font-family: var(--font);
-    font-size:15px;
-    padding: 8px 10px;
-    border: none;
-    border-radius: 6px;
-    background: transparent;
-    color: var(--accent);
-    cursor:pointer;
-    line-height:1;
-    transition: background-color .2s, transform .1s;
-  }
-  .mic-btn:hover{ background-color: var(--accent-soft); transform: scale(1.08); }
-  .mic-btn.recording{
-    background: var(--danger);
-    color:#fff;
-    animation: micpulse 1.1s infinite;
-  }
-  @keyframes micpulse{
-    0%{ opacity:1; }
-    50%{ opacity:.55; }
-    100%{ opacity:1; }
-  }
-  [hidden]{ display:none !important; }
-  a.btn, a.btn-settings{ display:inline-flex; align-items:center; gap:6px; text-decoration:none; }
-
-  /* Schede: più referti in parallelo */
-  .workspace-tabs{ display:flex; gap:8px; margin-bottom:16px; flex:none; }
-  .workspace-tab{
-    font-family: var(--font); font-size:13px; font-weight:700; width:30px; height:30px;
-    display:flex; align-items:center; justify-content:center; border:1px solid var(--line);
-    border-radius:8px; background: var(--bg); color: var(--ink-soft); cursor:pointer;
-    transition: all .15s ease; position:relative; flex:none;
-  }
-  .workspace-tab:hover{ border-color: var(--accent); color: var(--ink); }
-  .workspace-tab.active{ background: var(--accent-strong); border-color: var(--accent); color:#fff; box-shadow: 0 4px 12px rgba(2,132,199,.35); }
-  .workspace-tab .dot{
-    position:absolute; top:-3px; right:-3px; width:8px; height:8px; border-radius:50%;
-    background: var(--accent); border:2px solid var(--panel-alt); display:none;
-  }
-  .workspace-tab.has-content .dot{ display:block; }
-
-  /* Accesso, registrazione, recupero password */
-  .login-card h1{ font-size:18px; font-weight:700; margin:18px 0 16px; }
-  .login-error.ok{ color: var(--accent); }
-  .auth-links{ margin-top:14px; font-size:12.5px; color: var(--ink-soft); display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
-  .link-btn{ background:none; border:0; padding:0; color: var(--accent); font: inherit; cursor:pointer; text-decoration:underline; }
-  .btn:disabled, .btn-sm:disabled{ opacity:.6; cursor:progress; }
-
-  /* Avvisi nel builder */
-  .lib-banner{
-    background: var(--amber-soft); border:1px solid var(--amber); color: var(--amber);
-    border-radius: var(--radius); padding:10px 12px; font-size:12.5px; margin-bottom:14px;
-    display:flex; gap:10px; align-items:center; justify-content:space-between;
-  }
-  .lib-banner button{ flex:none; }
-  .sample-note{ font-size:11.5px; color: var(--ink-soft); margin:0 0 12px; }
-
-  /* Anteprima di stampa */
-  .print-preview{ display:flex; flex-direction:column; gap:10px; }
-  .print-preview iframe{ width:100%; height:62vh; border:1px solid var(--line); border-radius:6px; background:#fff; }
-  .print-actions{ display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap; }
-  .settings-section .hint{ font-size:12px; color: var(--ink-soft); margin:6px 0 0; }
-  .field-message{ font-size:12px; min-height:16px; }
-  .field-message.error{ color: var(--danger); }
-  .field-message.ok{ color: var(--accent); }
-  .field-message.warn{ color: var(--amber); }
-  .local-try{ margin-top:18px; padding-top:14px; border-top:1px solid var(--line); display:flex; flex-direction:column; gap:6px; font-size:12px; color: var(--ink-soft); }
-  .mode-badge{ font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color: var(--amber); border:1px solid var(--amber); border-radius:999px; padding:3px 9px; }
-  .consent-row{ display:flex; gap:8px; align-items:flex-start; font-size:12px; color: var(--ink-soft); margin:8px 0; line-height:1.45; cursor:pointer; }
-  .consent-row input{ margin-top:2px; flex:none; }
-  .consent-row a{ color: var(--accent); }
-  .shared-device{ display:flex; gap:8px; align-items:flex-start; font-size:12px; color: var(--ink-soft); margin:4px 0 6px; line-height:1.4; cursor:pointer; }
-  .shared-device input{ margin-top:2px; }
-  .copy-flash.with-action{ pointer-events:auto; }
-  .copy-flash button{ background:none; border:0; color:#fff; font: inherit; font-weight:700; text-decoration:underline; cursor:pointer; padding:0; }
-  .visually-hidden{ position:absolute !important; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
-</style>
 </head>
-<body>
+<body class="page-app">
+<a class="skip-link btn btn--primary" href="#report-text">Vai al referto</a>
 
-<div class="login-overlay" id="login-overlay">
-  <div class="login-card">
-    <div class="brand-login"><span class="mark"></span> ModReport</div>
+<div class="auth" id="login-overlay">
+  <div class="auth__card card">
+    <a class="brand" href="index.html"><img src="assets/logo.svg" alt="" width="26" height="26"> ModReport</a>
 
     <form id="view-login" class="auth-view" novalidate>
       <h1>Accedi</h1>
-      <div class="login-field">
+      <div class="field">
         <label for="login-email">Email</label>
         <input type="email" id="login-email" name="email" autocomplete="username" placeholder="nome@ospedale.it" required>
       </div>
-      <div class="login-field">
+      <div class="field">
         <label for="login-password">Password</label>
         <input type="password" id="login-password" name="password" autocomplete="current-password" required>
       </div>
-      <label class="shared-device">
-        <input type="checkbox" id="login-shared">
-        <span>Postazione condivisa: esci dopo 30 minuti di inattività e alla chiusura del browser</span>
-      </label>
-      <div class="login-error" id="login-error" role="alert"></div>
-      <div class="login-actions">
-        <button type="submit" class="btn primary" id="btn-signin">Accedi</button>
-      </div>
+      <label class="check"><input type="checkbox" id="login-shared"><span>Postazione condivisa: esci dopo 30 minuti di inattività e alla chiusura del browser</span></label>
+      <div class="auth-error" id="login-error" role="alert"></div>
+      <button type="submit" class="btn btn--primary btn--lg btn--block" id="btn-signin">Accedi</button>
       <div class="auth-links">
         <button type="button" class="link-btn" data-auth-view="forgot">Password dimenticata?</button>
         <span aria-hidden="true">·</span>
         <button type="button" class="link-btn" data-auth-view="signup">Crea un account</button>
       </div>
       <div class="local-try">
-        <button type="button" class="btn ghost" id="btn-local-mode">Prova senza account</button>
-        <span>I dati restano solo su questo computer; potrai creare un account in seguito.</span>
+        <button type="button" class="btn" id="btn-local-mode"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#hard-drive"></use></svg>Prova senza account</button>
+        <span class="auth-note">I dati restano solo su questo computer; potrai creare un account in seguito.</span>
       </div>
     </form>
 
     <form id="view-signup" class="auth-view" novalidate hidden>
       <h1>Crea un account</h1>
-      <div class="login-field">
+      <div class="field">
         <label for="signup-email">Email</label>
         <input type="email" id="signup-email" name="email" autocomplete="email" placeholder="nome@ospedale.it" required>
       </div>
-      <div class="login-field">
+      <div class="field">
         <label for="signup-password">Password</label>
         <input type="password" id="signup-password" name="new-password" autocomplete="new-password" minlength="12" required aria-describedby="signup-password-hint">
-        <div class="login-hint" id="signup-password-hint" style="margin-top:4px;">Almeno 12 caratteri.</div>
+        <span class="field__hint" id="signup-password-hint">Almeno 12 caratteri.</span>
       </div>
-      <div class="login-field">
+      <div class="field">
         <label for="signup-password2">Ripeti la password</label>
         <input type="password" id="signup-password2" autocomplete="new-password" required>
       </div>
-      <label class="consent-row">
-        <input type="checkbox" id="signup-terms">
-        <span>Ho letto e accetto i <a href="termini-servizio.html" target="_blank" rel="noopener">Termini di servizio</a> e ho letto l'<a href="informativa-privacy.html" target="_blank" rel="noopener">Informativa sulla privacy</a>.</span>
-      </label>
-      <label class="consent-row">
-        <input type="checkbox" id="signup-clauses">
-        <span>Approvo specificamente, ai sensi degli artt. 1341 e 1342 c.c., gli articoli 9 (sospensione e chiusura), 10 (limitazione di responsabilità), 11 (modifiche) e 12 (foro competente) dei Termini.</span>
-      </label>
-      <div class="login-error" id="signup-error" role="alert"></div>
-      <div class="login-actions">
-        <button type="submit" class="btn primary" id="btn-signup">Registrati</button>
-      </div>
-      <div class="auth-links">
-        <span>Hai già un account?</span>
-        <button type="button" class="link-btn" data-auth-view="login">Accedi</button>
-      </div>
+      <label class="check"><input type="checkbox" id="signup-terms"><span>Ho letto e accetto i <a href="termini-servizio.html" target="_blank" rel="noopener">Termini di servizio</a> e ho letto l'<a href="informativa-privacy.html" target="_blank" rel="noopener">Informativa sulla privacy</a>.</span></label>
+      <label class="check"><input type="checkbox" id="signup-clauses"><span>Approvo specificamente, ai sensi degli artt. 1341 e 1342 c.c., gli articoli 9 (sospensione e chiusura), 10 (limitazione di responsabilità), 11 (modifiche) e 12 (foro competente) dei Termini.</span></label>
+      <div class="auth-error" id="signup-error" role="alert"></div>
+      <button type="submit" class="btn btn--primary btn--lg btn--block" id="btn-signup">Registrati</button>
+      <div class="auth-links"><span>Hai già un account?</span><button type="button" class="link-btn" data-auth-view="login">Accedi</button></div>
     </form>
 
     <form id="view-forgot" class="auth-view" novalidate hidden>
       <h1>Recupera la password</h1>
-      <p class="login-hint">Inserisci l'email del tuo account: ti invieremo un link per impostare una nuova password.</p>
-      <div class="login-field">
+      <p class="auth-note">Inserisci l'email del tuo account: ti invieremo un link per impostare una nuova password.</p>
+      <div class="field">
         <label for="forgot-email">Email</label>
         <input type="email" id="forgot-email" autocomplete="username" required>
       </div>
-      <div class="login-error" id="forgot-error" role="alert"></div>
-      <div class="login-actions">
-        <button type="submit" class="btn primary" id="btn-forgot">Invia il link</button>
-      </div>
-      <div class="auth-links">
-        <button type="button" class="link-btn" data-auth-view="login">Torna all'accesso</button>
-      </div>
+      <div class="auth-error" id="forgot-error" role="alert"></div>
+      <button type="submit" class="btn btn--primary btn--lg btn--block" id="btn-forgot">Invia il link</button>
+      <div class="auth-links"><button type="button" class="link-btn" data-auth-view="login">Torna all'accesso</button></div>
     </form>
 
     <form id="view-recovery" class="auth-view" novalidate hidden>
       <h1>Imposta una nuova password</h1>
-      <div class="login-field">
+      <div class="field">
         <label for="recovery-password">Nuova password</label>
         <input type="password" id="recovery-password" autocomplete="new-password" required>
+        <span class="field__hint">Almeno 12 caratteri.</span>
       </div>
-      <div class="login-field">
+      <div class="field">
         <label for="recovery-password2">Ripeti la nuova password</label>
         <input type="password" id="recovery-password2" autocomplete="new-password" required>
       </div>
-      <div class="login-error" id="recovery-error" role="alert"></div>
-      <div class="login-actions">
-        <button type="submit" class="btn primary" id="btn-recovery">Salva la nuova password</button>
-      </div>
+      <div class="auth-error" id="recovery-error" role="alert"></div>
+      <button type="submit" class="btn btn--primary btn--lg btn--block" id="btn-recovery">Salva la nuova password</button>
     </form>
 
     <form id="view-mfa" class="auth-view" novalidate hidden>
       <h1>Verifica in due passaggi</h1>
-      <p class="login-hint">Inserisci il codice a 6 cifre generato dalla tua app di autenticazione.</p>
-      <div class="login-field">
+      <p class="auth-note">Inserisci il codice a 6 cifre generato dalla tua app di autenticazione.</p>
+      <div class="field">
         <label for="mfa-code">Codice</label>
         <input type="text" id="mfa-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required>
       </div>
-      <div class="login-error" id="mfa-error" role="alert"></div>
-      <div class="login-actions">
-        <button type="submit" class="btn primary" id="btn-mfa">Verifica</button>
-      </div>
-      <div class="auth-links">
-        <button type="button" class="link-btn" id="btn-mfa-cancel">Annulla ed esci</button>
-      </div>
+      <div class="auth-error" id="mfa-error" role="alert"></div>
+      <button type="submit" class="btn btn--primary btn--lg btn--block" id="btn-mfa">Verifica</button>
+      <div class="auth-links"><button type="button" class="link-btn" id="btn-mfa-cancel">Annulla ed esci</button></div>
     </form>
 
     <form id="view-consent" class="auth-view" novalidate hidden>
       <h1>Termini e informativa aggiornati</h1>
-      <p class="login-hint">Per continuare a usare ModReport leggi e accetta la versione aggiornata dei documenti.</p>
-      <label class="consent-row">
-        <input type="checkbox" id="consent-terms">
-        <span>Ho letto e accetto i <a href="termini-servizio.html" target="_blank" rel="noopener">Termini di servizio</a> e ho letto l'<a href="informativa-privacy.html" target="_blank" rel="noopener">Informativa sulla privacy</a>.</span>
-      </label>
-      <label class="consent-row">
-        <input type="checkbox" id="consent-clauses">
-        <span>Approvo specificamente, ai sensi degli artt. 1341 e 1342 c.c., gli articoli 9, 10, 11 e 12 dei Termini.</span>
-      </label>
-      <div class="login-error" id="consent-error" role="alert"></div>
-      <div class="login-actions">
-        <button type="submit" class="btn primary" id="btn-consent">Accetta e continua</button>
-      </div>
-      <div class="auth-links">
-        <button type="button" class="link-btn" id="btn-consent-cancel">Esci</button>
-      </div>
+      <p class="auth-note">Per continuare a usare ModReport leggi e accetta la versione aggiornata dei documenti.</p>
+      <label class="check"><input type="checkbox" id="consent-terms"><span>Ho letto e accetto i <a href="termini-servizio.html" target="_blank" rel="noopener">Termini di servizio</a> e ho letto l'<a href="informativa-privacy.html" target="_blank" rel="noopener">Informativa sulla privacy</a>.</span></label>
+      <label class="check"><input type="checkbox" id="consent-clauses"><span>Approvo specificamente, ai sensi degli artt. 1341 e 1342 c.c., gli articoli 9, 10, 11 e 12 dei Termini.</span></label>
+      <div class="auth-error" id="consent-error" role="alert"></div>
+      <button type="submit" class="btn btn--primary btn--lg btn--block" id="btn-consent">Accetta e continua</button>
+      <div class="auth-links"><button type="button" class="link-btn" id="btn-consent-cancel">Esci</button></div>
     </form>
 
     <div id="view-check-email" class="auth-view" hidden>
       <h1>Controlla la tua email</h1>
-      <p class="login-hint" id="check-email-text">Ti abbiamo inviato un link di conferma: aprilo per attivare l'account (controlla anche lo spam).</p>
-      <div class="login-error" id="check-email-error" role="status"></div>
-      <div class="login-actions">
-        <button type="button" class="btn ghost" id="btn-resend">Reinvia l'email</button>
-      </div>
-      <div class="auth-links">
-        <button type="button" class="link-btn" data-auth-view="login">Torna all'accesso</button>
-      </div>
+      <p class="auth-note" id="check-email-text">Ti abbiamo inviato un link di conferma: aprilo per attivare l'account (controlla anche lo spam).</p>
+      <div class="auth-error" id="check-email-error" role="status"></div>
+      <button type="button" class="btn btn--block" id="btn-resend">Reinvia l'email</button>
+      <div class="auth-links"><button type="button" class="link-btn" data-auth-view="login">Torna all'accesso</button></div>
     </div>
-
-    <div class="login-hint" style="margin-top:16px;">Ogni utente ha il proprio account e la propria libreria, sincronizzata su ogni postazione.</div>
   </div>
 </div>
 
 <div class="app hidden" id="app-root">
-  <div class="topbar">
-    <div class="brand"><span class="mark"></span> <span>ModReport — Bozza di lavoro</span></div>
-    <div class="breadcrumb" id="breadcrumb"></div>
-    <div class="topbar-right">
-      <span class="mode-badge" id="local-badge" hidden title="I dati restano su questo computer">Modalità locale</span>
-      <span class="user-badge" id="user-badge"></span>
-      <button class="btn-settings" id="btn-logout">Esci</button>
-      <a class="btn-settings" href="archivio.html">📁 Archivio</a>
-      <a class="btn-settings" href="team.html" id="link-team">💬 Team</a>
-      <a class="btn-settings" href="tutorial.html">🎬 Tutorial</a>
-      <a class="btn-settings" href="account.html">👤 Il mio account</a>
+  <header class="topbar">
+    <a class="brand" href="index.html"><img src="assets/logo.svg" alt="" width="26" height="26"> ModReport</a>
+    <nav class="topnav" aria-label="Sezioni">
+      <a href="app.html" aria-current="page"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#file-text"></use></svg><span>Referto</span></a>
+      <a href="archivio.html"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#archive"></use></svg><span>Archivio</span></a>
+      <a href="team.html" id="link-team"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#messages-square"></use></svg><span>Team</span></a>
+    </nav>
+    <div class="topbar__end">
+      <span class="badge badge--warn" id="local-badge" hidden title="I dati restano su questo computer">Modalità locale</span>
+      <div class="menu">
+        <button class="btn btn--ghost" id="user-menu-btn" aria-haspopup="menu" aria-expanded="false" aria-controls="user-menu">
+          <span class="avatar" id="user-avatar" aria-hidden="true">?</span><span id="user-badge"></span>
+          <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#chevron-down"></use></svg>
+          <span class="visually-hidden">Menu utente</span>
+        </button>
+        <div class="menu__list" id="user-menu" role="menu" hidden>
+          <a role="menuitem" href="account.html"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#circle-user"></use></svg>Il mio account</a>
+          <a role="menuitem" href="account.html#libreria"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#library-big"></use></svg>Libreria delle frasi</a>
+          <a role="menuitem" href="tutorial.html"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#circle-play"></use></svg>Tutorial</a>
+          <div class="menu__sep" role="separator"></div>
+          <div class="menu__label">Tema</div>
+          <button role="menuitemradio" data-theme-set="dark"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#moon"></use></svg>Scuro</button>
+          <button role="menuitemradio" data-theme-set="light"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#sun"></use></svg>Chiaro</button>
+          <button role="menuitemradio" data-theme-set="auto"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#settings"></use></svg>Come il sistema</button>
+          <div class="menu__sep" role="separator"></div>
+          <button role="menuitem" id="btn-logout"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#log-out"></use></svg><span id="logout-label">Esci</span></button>
+        </div>
+      </div>
     </div>
+  </header>
+
+  <div class="segmented mobile-switch" role="tablist" aria-label="Vista">
+    <button role="tab" aria-selected="true" data-pane="compose">Componi</button>
+    <button role="tab" aria-selected="false" data-pane="report">Referto</button>
   </div>
 
-  <aside class="builder">
-
-    <div class="lib-banner" id="lib-banner" role="alert" hidden>
-      <span>La tua libreria personale non è stata caricata (problema di connessione): stai vedendo le frasi predefinite.</span>
-      <button class="btn-sm" id="btn-lib-retry">Riprova</button>
-    </div>
-
-    <!-- BLOCCO 1: METODICA -->
-    <div class="block">
-      <div class="block-head">
-        <span class="block-num">01</span>
-        <span class="block-title">Metodica</span>
+  <div class="workspace" id="workspace" data-pane="compose">
+    <aside class="builder" aria-label="Composizione del referto">
+      <div class="banner banner--warn" id="lib-banner" role="alert" hidden>
+        <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#triangle-alert"></use></svg>
+        <span class="banner__text">La tua libreria personale non è stata caricata (problema di connessione): stai vedendo le frasi predefinite.</span>
+        <button class="btn btn--sm" id="btn-lib-retry">Riprova</button>
       </div>
-      <div class="block-body">
-        <div class="chip-row" id="metodica-row"></div>
-      </div>
-    </div>
 
-    <!-- BLOCCO 2: ESAME -->
-    <div class="block">
-      <div class="block-head">
-        <span class="block-num">02</span>
-        <span class="block-title">Esame</span>
-        <span class="block-hint">filtrato per metodica</span>
-      </div>
-      <div class="block-body" id="esame-body"></div>
-    </div>
+      <section class="block" aria-labelledby="b1">
+        <div class="block__head"><span class="block__num">01</span><h2 class="block__title" id="b1">Metodica</h2></div>
+        <div class="block__body"><div class="chip-row" id="metodica-row"></div></div>
+      </section>
 
-    <!-- BLOCCO 3: INDICAZIONE -->
-    <div class="block">
-      <div class="block-head">
-        <span class="block-num">03</span>
-        <span class="block-title">Indicazione</span>
-        <span class="block-hint">filtrata per esame</span>
-        <button class="mini-toggle" id="btn-urgenza-toggle" title="Attiva/disattiva intestazione urgenza" aria-pressed="false">Urgenza</button>
-      </div>
-      <div class="block-body" id="indicazione-body"></div>
-    </div>
+      <section class="block" aria-labelledby="b2">
+        <div class="block__head"><span class="block__num">02</span><h2 class="block__title" id="b2">Esame</h2><span class="block__hint">filtrato per metodica</span></div>
+        <div class="block__body" id="esame-body"></div>
+      </section>
 
-    <!-- BLOCCO 4: CONFRONTO CON PRECEDENTI -->
-    <div class="block">
-      <div class="block-head">
-        <span class="block-num">04</span>
-        <span class="block-title">Confronto con precedenti</span>
-      </div>
-      <div class="block-body">
-        <div class="chip-row">
-          <button class="btn-report" id="btn-confronto">Confronto</button>
-          <button class="btn-report" id="btn-presa-visione">Presa visione</button>
-          <button class="btn-report" id="btn-non-precedenti">Non precedenti</button>
+      <section class="block" aria-labelledby="b3">
+        <div class="block__head">
+          <span class="block__num">03</span><h2 class="block__title" id="b3">Indicazione</h2>
+          <span class="block__hint">filtrata per esame</span>
+          <button class="mini-toggle" id="btn-urgenza-toggle" aria-pressed="false"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#siren"></use></svg>Urgenza</button>
         </div>
-      </div>
-    </div>
+        <div class="block__body" id="indicazione-body"></div>
+      </section>
 
-    <!-- BLOCCO 5: REFERTO -->
-    <div class="block">
-      <div class="block-head">
-        <span class="block-num">05</span>
-        <span class="block-title">Referto</span>
-        <span class="block-hint">filtrato per esame</span>
-      </div>
-      <div class="block-body" id="referto-body"></div>
-    </div>
+      <section class="block" aria-labelledby="b4">
+        <div class="block__head"><span class="block__num">04</span><h2 class="block__title" id="b4">Confronto con precedenti</h2></div>
+        <div class="block__body">
+          <div class="chip-row">
+            <button class="chip" id="btn-confronto">Confronto</button>
+            <button class="chip" id="btn-presa-visione">Presa visione</button>
+            <button class="chip" id="btn-non-precedenti">Non precedenti</button>
+          </div>
+        </div>
+      </section>
 
-  </aside>
+      <section class="block" aria-labelledby="b5">
+        <div class="block__head"><span class="block__num">05</span><h2 class="block__title" id="b5">Referto</h2><span class="block__hint">filtrato per esame</span></div>
+        <div class="block__body" id="referto-body"></div>
+      </section>
+    </aside>
 
-  <main class="report-panel">
-    <div class="workspace-tabs" id="workspace-tabs" aria-label="Referti aperti"></div>
-    <div class="report-toolbar">
-      <h2>Anteprima referto</h2>
-      <div class="actions">
-        <button class="btn ghost" id="btn-mic-report" title="Detta nel referto" aria-label="Detta nel referto" aria-pressed="false">🎤</button>
-        <button class="btn ghost" id="btn-reset">Svuota</button>
-        <button class="btn ghost" id="btn-archive">Salva nell'archivio</button>
-        <button class="btn primary" id="btn-copy">Copia negli appunti</button>
+    <main class="report" aria-label="Referto">
+      <div class="report__tabs" id="workspace-tabs" role="tablist" aria-label="Referti aperti"></div>
+      <div class="report__toolbar">
+        <button class="btn" id="btn-mic-report" aria-pressed="false" title="Detta nel referto"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#mic"></use></svg><span>Detta</span></button>
+        <span class="rec-pill" id="rec-pill" hidden>In ascolto</span>
+        <span class="spacer"></span>
+        <button class="btn btn--ghost" id="btn-reset"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#eraser"></use></svg><span>Svuota</span></button>
+        <button class="btn" id="btn-open-print"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#printer"></use></svg><span>Stampa</span></button>
+        <button class="btn" id="btn-archive"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#save"></use></svg><span>Salva</span></button>
+        <button class="btn btn--primary" id="btn-copy" aria-keyshortcuts="Control+Enter"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#copy"></use></svg><span>Copia</span> <kbd>Ctrl ↵</kbd></button>
       </div>
-    </div>
-    <div class="report-doc">
-      <div class="doc-meta">
-        <div class="row"><b>METODICA:</b> <span id="meta-metodica">—</span></div>
-        <div class="row"><b>ESAME:</b> <span id="meta-esame">—</span></div>
+      <div class="report__doc">
+        <div class="report__meta" id="report-context">Nessun esame selezionato</div>
+        <label class="visually-hidden" for="report-text">Testo del referto</label>
+        <textarea class="report__text" id="report-text" autocomplete="off" spellcheck="true" placeholder="Il referto composto apparirà qui. Puoi anche scrivere o correggere liberamente."></textarea>
+        <div class="report__footer subtle"><span id="report-stats">0 righe · 0 caratteri</span><span>Ctrl+Z annulla l'ultimo inserimento</span></div>
       </div>
-      <textarea class="report-text" id="report-text" autocomplete="off" spellcheck="true" placeholder="Il referto composto apparirà qui. Puoi anche scrivere o correggere liberamente."></textarea>
-    </div>
-    <div class="print-row">
-      <button class="btn ghost" id="btn-open-print">🖨 Stampa</button>
-    </div>
-  </main>
+    </main>
+  </div>
 </div>
 
-<div class="copy-flash" id="copy-flash" role="status" aria-live="polite">Copiato negli appunti</div>
-
-<div class="settings-overlay" id="print-overlay" role="dialog" aria-modal="true" aria-labelledby="print-title">
-  <div class="settings-panel" style="width:min(780px, 94vw);">
-    <div class="settings-head">
-      <h2 id="print-title">Stampa referto</h2>
-      <button class="settings-close" id="print-close" aria-label="Chiudi">×</button>
-    </div>
-    <div class="settings-body">
-      <div id="print-setup">
-        <div class="settings-section">
-          <h3>Carta intestata</h3>
-          <div class="field-row">
-            <div class="field">
-              <label for="print-letterhead-select">Seleziona</label>
-              <select id="print-letterhead-select">
-                <option value="">Nessuna (pagina bianca)</option>
-              </select>
-            </div>
-          </div>
-          <p class="hint" id="print-letterhead-hint"></p>
-        </div>
-        <div class="settings-section" id="print-manual-margins">
-          <h3>Posizione del testo</h3>
-          <div class="field-row">
-            <div class="field">
-              <label for="margin-top">Margine superiore (mm)</label>
-              <input type="number" id="margin-top" value="40" min="0" max="200" step="1" inputmode="decimal">
-            </div>
-            <div class="field">
-              <label for="margin-left">Margine sinistro (mm)</label>
-              <input type="number" id="margin-left" value="20" min="0" max="100" step="1" inputmode="decimal">
-            </div>
-            <div class="field">
-              <label for="margin-right">Margine destro (mm)</label>
-              <input type="number" id="margin-right" value="20" min="0" max="100" step="1" inputmode="decimal">
-            </div>
-          </div>
-        </div>
-        <p class="field-message" id="print-signature-info"></p>
-        <div class="field-message" id="print-message" role="status"></div>
-        <div class="field-row" style="justify-content:flex-end;">
-          <button class="btn-sm" id="print-generate-btn">Genera anteprima</button>
-        </div>
+<dialog class="dialog dialog--wide" id="print-overlay" aria-labelledby="print-title">
+  <div class="dialog__head">
+    <h2 id="print-title">Stampa referto</h2>
+    <button class="btn btn--ghost btn--icon" id="print-close" aria-label="Chiudi"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#x"></use></svg></button>
+  </div>
+  <div class="dialog__body">
+    <div id="print-setup" class="stack">
+      <div class="field">
+        <label for="print-letterhead-select">Carta intestata</label>
+        <select id="print-letterhead-select"><option value="">Nessuna (pagina bianca)</option></select>
+        <span class="field__hint" id="print-letterhead-hint"></span>
       </div>
-      <div class="print-preview" id="print-preview" hidden>
-        <iframe id="print-frame" title="Anteprima del PDF"></iframe>
-        <div class="field-message warn" id="print-warning"></div>
-        <div class="print-actions">
-          <button class="btn ghost" id="print-back">← Modifica impostazioni</button>
-          <a class="btn ghost" id="print-open" target="_blank" rel="noopener">Apri in una nuova scheda</a>
-          <a class="btn ghost" id="print-download" download="referto.pdf">Scarica PDF</a>
-          <button class="btn primary" id="print-do">Stampa</button>
-        </div>
+      <fieldset class="form-grid" id="print-manual-margins" style="border:0; padding:0; margin:0;">
+        <legend class="field__label" style="margin-bottom:6px;">Posizione del testo (mm)</legend>
+        <div class="field"><label for="margin-top">Margine superiore</label><input type="number" id="margin-top" value="40" min="0" max="200" step="1" inputmode="decimal"></div>
+        <div class="field"><label for="margin-left">Margine sinistro</label><input type="number" id="margin-left" value="20" min="0" max="100" step="1" inputmode="decimal"></div>
+        <div class="field"><label for="margin-right">Margine destro</label><input type="number" id="margin-right" value="20" min="0" max="100" step="1" inputmode="decimal"></div>
+      </fieldset>
+      <p class="msg" id="print-signature-info"></p>
+      <div class="msg" id="print-message" role="status"></div>
+      <div class="row" style="justify-content:flex-end;"><button class="btn btn--primary" id="print-generate-btn">Genera anteprima</button></div>
+    </div>
+    <div class="stack print-preview" id="print-preview" hidden>
+      <iframe id="print-frame" title="Anteprima del PDF"></iframe>
+      <div class="msg msg--warn" id="print-warning"></div>
+      <div class="row" style="justify-content:flex-end;">
+        <button class="btn btn--ghost" id="print-back"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#arrow-left"></use></svg>Modifica impostazioni</button>
+        <a class="btn" id="print-open" target="_blank" rel="noopener"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#external-link"></use></svg>Apri in una nuova scheda</a>
+        <a class="btn" id="print-download" download="referto.pdf"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#download"></use></svg>Scarica PDF</a>
+        <button class="btn btn--primary" id="print-do"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#printer"></use></svg>Stampa</button>
       </div>
     </div>
   </div>
-</div>
+</dialog>
 
 </body>
 </html>

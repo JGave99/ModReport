@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="ModReport">
+  <defs>
+    <linearGradient id="mr-bar" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7dd3fc"/>
+      <stop offset="1" stop-color="#0284c7"/>
+    </linearGradient>
+  </defs>
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="#0b1120" stroke="#1e293b" stroke-width="2"/>
+  <rect x="14" y="16" width="10" height="33" rx="3.5" fill="url(#mr-bar)"/>
+  <rect x="27" y="28" width="10" height="21" rx="3.5" fill="url(#mr-bar)"/>
+  <rect x="40" y="16" width="10" height="33" rx="3.5" fill="url(#mr-bar)"/>
+</svg>

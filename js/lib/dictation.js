@@ -2,6 +2,7 @@
 // L'audio è elaborato dal servizio vocale del browser (Google, Microsoft o Apple): al primo uso
 // lo si spiega all'utente, che può anche disattivare la dettatura su questo computer.
 import { confirmDialog } from './dialog.js';
+import { toast } from './toast.js';
 import { appendText, insertAtCursor } from './text-insert.js';
 
 const ACK_KEY = 'mr-dictation-ack-v1';
@@ -49,14 +50,16 @@ export function stopAllDictation() {
 
 // getTarget: funzione che restituisce il campo (input/textarea) in cui scrivere.
 // onError: funzione per mostrare un messaggio all'utente (default: alert).
-export function attachDictation(button, getTarget, { onError = (m) => alert(m), lang = 'it-IT' } = {}) {
+export function attachDictation(button, getTarget, { onError = (m) => toast(m, { type: 'error', duration: 8000 }), onStateChange = null, lang = 'it-IT' } = {}) {
   let recognition = null;
   let recording = false;
 
   const setRecording = (on) => {
     recording = on;
     button.classList.toggle('recording', on);
+    button.classList.toggle('is-recording', on);
     button.setAttribute('aria-pressed', on ? 'true' : 'false');
+    if (onStateChange) onStateChange(on);
   };
   const stop = () => { if (recognition) { try { recognition.stop(); } catch { /* già fermo */ } } };
 

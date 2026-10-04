@@ -5,251 +5,263 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://umejthggxihtyqvcszgm.supabase.co wss://umejthggxihtyqvcszgm.supabase.co; frame-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; worker-src 'self' blob:; manifest-src 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ModReport — Refertazione modulare per radiologi</title>
-<link rel="icon" type="image/png" href="modreport_logo_bars_m.png">
+<title>ModReport — Il tuo frasario radiologico, sopra qualunque RIS</title>
+<meta name="description" content="Componi i referti radiologici a blocchi con le tue frasi, dettali e copiali nel RIS o stampali su carta intestata. Nel browser, senza installazioni. Gratuito durante la beta.">
+<link rel="canonical" href="https://jgave99.github.io/ModReport/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="ModReport">
+<meta property="og:locale" content="it_IT">
+<meta property="og:title" content="ModReport — Il tuo frasario radiologico, sopra qualunque RIS">
+<meta property="og:description" content="Componi i referti a blocchi con le tue frasi, dettali, copiali nel RIS o stampali su carta intestata.">
+<meta property="og:url" content="https://jgave99.github.io/ModReport/">
+<meta property="og:image" content="https://jgave99.github.io/ModReport/assets/img/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Logo di ModReport e il claim: il tuo frasario radiologico, sopra qualunque RIS">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#0b0f14">
+<link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+<link rel="icon" href="assets/icons/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
 <script src="js/auth-redirect.js"></script>
-<script src="js/legal-config.js"></script>
-<script src="js/legal-fill.js" defer></script>
+<script src="js/theme.js"></script>
 <link rel="stylesheet" href="css/fonts.css">
-<style>
-  :root{
-    --bg: #0f172a;
-    --panel: #1e293b;
-    --panel-alt: #0b1120;
-    --line: #334155;
-    --ink: #f8fafc;
-    --ink-soft: #94a3b8;
-    --accent: #38bdf8;
-    --accent-soft: rgba(56,189,248,0.08);
-    --accent-strong: #0284c7;
-    --accent-dim: #0369a1;
-    --font: 'Inter', -apple-system, sans-serif;
-    --radius: 10px;
-  }
-  *{box-sizing:border-box;}
-  body{
-    margin:0; font-family: var(--font); background: var(--bg); color: var(--ink);
-    line-height:1.5;
-  }
-  a{ color:inherit; }
-
-  .topbar{
-    position:sticky; top:0; z-index:20;
-    display:flex; align-items:center; justify-content:space-between;
-    padding: 16px 32px; background: rgba(11,17,32,0.85); backdrop-filter: blur(8px);
-    border-bottom: 1px solid var(--line);
-  }
-  .brand{ font-weight:700; font-size:16px; display:flex; align-items:center; gap:10px; }
-  .brand .mark{
-    width:22px; height:22px; border-radius:5px;
-    background: url('modreport_logo_bars_m.png') no-repeat center / cover;
-    display:inline-block; flex:none;
-  }
-
-  .btn{
-    display:inline-flex; align-items:center; gap:8px; font-family: var(--font); font-weight:600;
-    font-size:14px; padding: 11px 22px; border-radius: 8px; cursor:pointer; text-decoration:none;
-    transition: all .2s ease; border: 1px solid transparent;
-  }
-  .btn.primary{ background: var(--accent-strong); color:#fff; }
-  .btn.primary:hover{ background: var(--accent-dim); box-shadow: 0 8px 24px rgba(2,132,199,.35); }
-  .btn.ghost{ border-color: var(--line); color: var(--ink); }
-  .btn.ghost:hover{ border-color: var(--ink-soft); background: var(--panel); }
-
-  section{ padding: 90px 32px; max-width:1180px; margin:0 auto; }
-
-  .hero{ text-align:center; padding-top:110px; padding-bottom:70px; }
-  .hero .kicker{
-    display:inline-block; font-size:12.5px; font-weight:700; text-transform:uppercase;
-    letter-spacing:.08em; color: var(--accent); background: var(--accent-soft);
-    padding: 6px 16px; border-radius:999px; margin-bottom:22px;
-  }
-  .hero h1{ font-size:48px; font-weight:800; line-height:1.15; margin:0 0 20px; letter-spacing:-.01em; }
-  .hero h1 span{ color: var(--accent); }
-  .hero p{ font-size:18px; color: var(--ink-soft); max-width:640px; margin:0 auto 36px; }
-  .hero-ctas{ display:flex; gap:14px; justify-content:center; flex-wrap:wrap; }
-
-  .hero-mock{
-    margin: 60px auto 0; max-width:980px; background: var(--panel); border: 1px solid var(--line);
-    border-radius: 16px; padding: 6px; box-shadow: 0 30px 80px rgba(0,0,0,.45);
-  }
-  .hero-mock-inner{
-    background: var(--panel-alt); border-radius:12px; padding:22px 26px; display:grid;
-    grid-template-columns: 1fr 1.3fr; gap:20px; text-align:left;
-  }
-  .mock-col{ display:flex; flex-direction:column; gap:10px; }
-  .mock-chip-row{ display:flex; flex-wrap:wrap; gap:7px; }
-  .mock-chip{ font-size:11.5px; padding:6px 11px; border-radius:7px; border:1px solid var(--line); color: var(--ink-soft); background: var(--bg); }
-  .mock-chip.active{ background: var(--accent-strong); border-color:var(--accent); color:#fff; font-weight:600; }
-  .mock-label{ font-size:10px; text-transform:uppercase; letter-spacing:.06em; color: var(--ink-soft); font-weight:700; margin-top:6px; }
-  .mock-doc{ background: var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px 18px; font-family: 'SFMono-Regular', Consolas, monospace; font-size:12.5px; color:#e2e8f0; line-height:1.7; }
-
-  h2.section-title{ font-size:32px; font-weight:800; text-align:center; margin:0 0 12px; letter-spacing:-.01em; }
-  p.section-sub{ text-align:center; color: var(--ink-soft); font-size:16px; max-width:600px; margin:0 auto 56px; }
-
-  .feature-grid{ display:grid; grid-template-columns: repeat(3, 1fr); gap:22px; }
-  .feature-card{
-    background: var(--panel); border:1px solid var(--line); border-radius: var(--radius);
-    padding:28px; transition: transform .2s ease, border-color .2s ease;
-  }
-  .feature-card:hover{ transform: translateY(-3px); border-color: var(--accent); }
-  .feature-icon{
-    width:46px; height:46px; border-radius:12px; background: var(--accent-soft);
-    display:flex; align-items:center; justify-content:center; font-size:22px; margin-bottom:16px;
-  }
-  .feature-card h3{ font-size:16.5px; margin:0 0 8px; font-weight:700; }
-  .feature-card p{ font-size:14px; color: var(--ink-soft); margin:0; line-height:1.55; }
-
-  .steps{ display:flex; justify-content:space-between; gap:14px; flex-wrap:wrap; }
-  .step{ flex:1; min-width:150px; text-align:center; }
-  .step-num{
-    width:38px; height:38px; border-radius:50%; border:2px solid var(--accent); color:var(--accent);
-    display:flex; align-items:center; justify-content:center; font-weight:700; margin:0 auto 14px;
-  }
-  .step h4{ font-size:14.5px; margin:0 0 6px; font-weight:700; }
-  .step p{ font-size:12.5px; color: var(--ink-soft); margin:0; }
-
-  .cta-band{
-    background: linear-gradient(135deg, var(--accent-strong), #075985);
-    border-radius: 20px; text-align:center; padding: 64px 40px; margin: 0 32px;
-  }
-  .cta-band h2{ font-size:30px; font-weight:800; margin:0 0 14px; }
-  .cta-band p{ color: rgba(255,255,255,.85); font-size:16px; margin:0 0 30px; }
-  .cta-band .btn.primary{ background:#fff; color: var(--accent-strong); }
-  .cta-band .btn.primary:hover{ background:#e2e8f0; box-shadow:none; }
-
-  footer{
-    border-top: 1px solid var(--line); padding: 36px 32px; text-align:center;
-    color: var(--ink-soft); font-size:12.5px;
-  }
-  footer a{ color: var(--ink-soft); text-decoration:underline; margin: 0 8px; }
-  .legal-todo{ color:#fca5a5; }
-
-  @media (max-width: 860px){
-    .hero h1{ font-size:34px; }
-    .feature-grid{ grid-template-columns: 1fr; }
-    .hero-mock-inner{ grid-template-columns: 1fr; }
-    .steps{ flex-direction:column; }
-  }
-</style>
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/pages/landing.css">
+<script src="js/legal-config.js"></script>
+<script src="js/site-config.js"></script>
+<script src="js/pricing-config.js"></script>
+<script src="js/legal-fill.js" defer></script>
+<script type="module" src="js/pages/landing.js"></script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "ModReport",
+  "url": "https://jgave99.github.io/ModReport/",
+  "image": "https://jgave99.github.io/ModReport/assets/img/og-image.png",
+  "description": "Strumento di scrittura per la refertazione radiologica: frasi personalizzabili a blocchi, dettatura, copia nel RIS e stampa su carta intestata.",
+  "applicationCategory": "BusinessApplication",
+  "operatingSystem": "Web",
+  "inLanguage": "it",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR", "description": "Gratuito durante la beta" }
+}
+</script>
 </head>
-<body>
+<body class="page-landing">
 
-<div class="topbar">
-  <div class="brand"><span class="mark"></span> ModReport</div>
-  <div style="display:flex; gap:10px;">
-    <a class="btn ghost" href="tutorial.html">Tutorial</a>
-    <a class="btn ghost" href="app.html">Accedi</a>
-  </div>
-</div>
+<a class="skip-link" href="#main">Vai al contenuto</a>
 
-<section class="hero">
-  <span class="kicker">Per radiologi, dai radiologi</span>
-  <h1>Referti in <span>metà del tempo</span>,<br>scritti a modo tuo</h1>
-  <p>Componi i tuoi referti a blocchi, con la tua libreria di frasi personalizzate, dettatura vocale, e tutto sincronizzato in cloud su ogni postazione da cui lavori.</p>
-  <div class="hero-ctas">
-    <a class="btn primary" href="app.html?view=signup">Inizia gratis →</a>
-    <a class="btn ghost" href="#funzioni">Scopri le funzioni</a>
-    <a class="btn ghost" href="tutorial.html">▶ Guarda il tutorial</a>
-  </div>
+<header class="l-topbar">
+  <a class="brand" href="index.html"><img src="assets/logo.svg" alt="" width="26" height="26"> ModReport</a>
+  <nav aria-label="Sezioni della pagina">
+    <a class="navlink" href="#funzioni">Funzioni</a>
+    <a class="navlink" href="#sicurezza">Sicurezza</a>
+    <a class="navlink" href="#prezzi">Prezzi</a>
+    <a class="navlink" href="#faq">FAQ</a>
+    <a class="navlink" href="tutorial.html">Tutorial</a>
+    <button class="btn btn--ghost btn--icon" id="theme-toggle" type="button" aria-label="Passa al tema chiaro" title="Tema chiaro / scuro">
+      <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#sun"></use></svg>
+    </button>
+    <a class="btn btn--ghost" href="app.html"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#log-in"></use></svg>Accedi</a>
+    <a class="btn btn--primary hide-xs" href="app.html?view=signup">Crea un account</a>
+  </nav>
+</header>
 
-  <div class="hero-mock">
-    <div class="hero-mock-inner">
-      <div class="mock-col">
-        <div class="mock-label">Metodica</div>
-        <div class="mock-chip-row">
-          <span class="mock-chip">Ecografia</span><span class="mock-chip active">RX</span>
-          <span class="mock-chip">TC</span><span class="mock-chip">RMN</span>
-        </div>
-        <div class="mock-label">Esame</div>
-        <div class="mock-chip-row">
-          <span class="mock-chip active">RX TORACE 2PR</span><span class="mock-chip">RX ADDOME</span>
-        </div>
-        <div class="mock-label">Referto — filtrato per RX TORACE 2PR</div>
-        <div class="mock-chip-row">
-          <span class="mock-chip">Parenchima nella norma</span>
-          <span class="mock-chip">Pleura libera</span>
-          <span class="mock-chip">Cuore nella norma</span>
-        </div>
-      </div>
-      <div class="mock-col">
-        <div class="mock-label">Anteprima referto</div>
-        <div class="mock-doc">Indicazione: tosse persistente
+<main id="main">
 
-RX TORACE 2PR
-Confronto con precedente RX del 12/03/2026
-
-Non addensamenti parenchimali a focolaio.
-Non versamento pleurico bilateralmente.
-Ombra cardiaca di dimensioni nei limiti della norma.</div>
-      </div>
+<section class="section hero">
+  <div>
+    <span class="eyebrow">Strumento di scrittura per radiologi</span>
+    <h1 class="h-display">Il tuo frasario radiologico,<br><span class="accent">sopra qualunque RIS.</span></h1>
+    <p class="lead">Componi il referto a blocchi con le tue frasi, dettalo a voce, poi copialo nel RIS o stampalo su carta intestata. Funziona nel browser, senza installare nulla.</p>
+    <div class="hero__ctas">
+      <a class="btn btn--primary btn--lg" href="app.html?view=signup">Crea un account gratuito</a>
+      <a class="btn btn--lg" href="app.html?local=1"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#hard-drive"></use></svg>Prova senza account</a>
     </div>
+    <p class="hero__note">Gratuito durante la beta · Nessuna carta di credito · <a href="tutorial.html">Guarda come funziona</a></p>
   </div>
+  <figure class="shot">
+    <img class="shot--dark" src="assets/img/editor-dark.png" width="1360" height="820" loading="lazy" decoding="async"
+      alt="L'editor di ModReport: a sinistra metodica, esame, indicazione e frasi del referto; a destra il testo di una RX torace in composizione.">
+    <img class="shot--light" src="assets/img/editor-light.png" width="1360" height="820" loading="lazy" decoding="async"
+      alt="L'editor di ModReport con il tema chiaro.">
+  </figure>
 </section>
 
-<section id="funzioni">
-  <h2 class="section-title">Tutto quello che serve, in un unico posto</h2>
-  <p class="section-sub">Non solo un editor di testo: uno spazio di lavoro pensato per chi referta ogni giorno.</p>
-  <div class="feature-grid">
-    <div class="feature-card">
-      <div class="feature-icon">🧩</div>
+<section class="section" id="funzioni">
+  <div class="section-head">
+    <span class="eyebrow">Funzioni</span>
+    <h2 class="h-section">Meno battitura, più tempo per le immagini</h2>
+    <p class="lead">Uno spazio di lavoro pensato per chi referta ogni giorno, accanto al RIS che usi già.</p>
+  </div>
+  <div class="grid-3">
+    <article class="feature">
+      <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#layers"></use></svg>
       <h3>Referto a blocchi</h3>
-      <p>Metodica, esame, indicazione e referto si filtrano a cascata: vedi solo le opzioni pertinenti a ogni scelta.</p>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">🎙️</div>
+      <p>Metodica, esame, indicazione e frasi si filtrano a cascata. Un clic aggiunge la frase al punto giusto del referto, un altro la toglie.</p>
+    </article>
+    <article class="feature">
+      <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#library-big"></use></svg>
+      <h3>La tua libreria</h3>
+      <p>Frasi normali e patologiche per ogni esame, divise in gruppi. Le modifichi dall'account, importi i tuoi referti tipo e le esporti quando vuoi.</p>
+    </article>
+    <article class="feature">
+      <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#mic"></use></svg>
       <h3>Dettatura vocale</h3>
-      <p>Componi indicazioni e referti parlando, con il riconoscimento vocale del browser: nessun software da installare. L'audio è elaborato dal fornitore del browser, mai da ModReport.</p>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">📚</div>
-      <h3>Libreria personale</h3>
-      <p>Aggiungi, modifica ed elimina le tue frasi standard per ogni esame — la tua libreria, scritta come scrivi tu.</p>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">☁️</div>
-      <h3>Sempre sincronizzato</h3>
-      <p>Un account personale, gli stessi dati da qualunque postazione — ospedale, studio o casa.</p>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">🖨️</div>
-      <h3>Stampa con carta intestata</h3>
-      <p>Carica la tua carta intestata una volta sola: da quel momento la stampa genera il PDF pronto in automatico.</p>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">💬</div>
-      <h3>Comunicazione di team</h3>
-      <p>Canali dedicati per il tuo reparto, con messaggi in tempo reale — come una chat, ma solo per chi lavora con te.</p>
-    </div>
+      <p>Detta indicazioni e referto con il riconoscimento vocale del browser. Ti diciamo chiaramente chi elabora l'audio, e puoi disattivarla.</p>
+    </article>
+    <article class="feature">
+      <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#printer"></use></svg>
+      <h3>Copia o stampa</h3>
+      <p>Copia nel RIS con un clic oppure genera il PDF su carta intestata, anche su più pagine, con anteprima prima di stampare.</p>
+    </article>
+    <article class="feature">
+      <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#monitor-smartphone"></use></svg>
+      <h3>Su ogni postazione</h3>
+      <p>Ospedale, studio o casa: la tua libreria ti segue. Con l'opzione «Postazione condivisa» la sessione si chiude da sola dopo 30 minuti di inattività.</p>
+    </article>
+    <article class="feature">
+      <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#messages-square"></use></svg>
+      <h3>Team di studio o reparto</h3>
+      <p>Canali per il tuo gruppo, inviti con scadenza e ruoli. Più team separati, ciascuno visibile solo ai suoi membri.</p>
+    </article>
   </div>
 </section>
 
-<section>
-  <h2 class="section-title">Come funziona</h2>
-  <p class="section-sub">Dalla scelta della metodica al referto pronto da copiare, in pochi clic.</p>
-  <div class="steps">
-    <div class="step"><div class="step-num">1</div><h4>Metodica</h4><p>RX, TC, RMN o Ecografia</p></div>
-    <div class="step"><div class="step-num">2</div><h4>Esame</h4><p>Filtrato automaticamente</p></div>
-    <div class="step"><div class="step-num">3</div><h4>Indicazione</h4><p>Un clic o dettata a voce</p></div>
-    <div class="step"><div class="step-num">4</div><h4>Confronto</h4><p>Con l'esame precedente</p></div>
-    <div class="step"><div class="step-num">5</div><h4>Referto</h4><p>Pronto da copiare o stampare</p></div>
+<section class="section" id="come-funziona">
+  <div class="section-head">
+    <span class="eyebrow">Come funziona</span>
+    <h2 class="h-section">Dalla metodica al referto in pochi clic</h2>
+  </div>
+  <ol class="steps">
+    <li class="step"><h3>Metodica</h3><p>Ecografia, RX, TC o RMN</p></li>
+    <li class="step"><h3>Esame</h3><p>Filtrato in automatico</p></li>
+    <li class="step"><h3>Indicazione</h3><p>Un clic o dettata a voce</p></li>
+    <li class="step"><h3>Confronto</h3><p>Con l'esame precedente</p></li>
+    <li class="step"><h3>Referto</h3><p>Da copiare o stampare</p></li>
+  </ol>
+</section>
+
+<section class="section" id="sicurezza">
+  <div class="trust">
+    <div>
+      <span class="eyebrow">Sicurezza e privacy</span>
+      <h2 class="h-section">I referti restano sul tuo dispositivo</h2>
+      <p class="lead">Il testo che componi non viene salvato sui nostri server: bozza e archivio vivono nel tuo browser. Nel cloud va solo ciò che serve a ritrovare il tuo ambiente su ogni postazione.</p>
+      <p class="use-statement">ModReport è uno strumento di scrittura e organizzazione di testi per professionisti della radiologia. Consente di comporre testi a partire da frasi personalizzabili, dettarli, copiarli o stamparli. Non elabora immagini né dati clinici per fornire diagnosi, misure, punteggi, classificazioni o raccomandazioni e non sostituisce il giudizio del medico.</p>
+    </div>
+    <ul class="checklist">
+      <li><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#hard-drive"></use></svg><span><strong>Referti solo in locale.</strong> Bozza e archivio restano in questo browser; puoi esportarli o cancellarli quando vuoi.</span></li>
+      <li><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#cloud"></use></svg><span><strong>Nel cloud il minimo.</strong> Libreria di frasi, preferenze, carta intestata e messaggi del team, nei quali non vanno inseriti dati dei pazienti.</span></li>
+      <li><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#lock"></use></svg><span><strong>Accesso protetto.</strong> Password robuste, verifica in due passaggi con app di autenticazione, uscita automatica sulle postazioni condivise.</span></li>
+      <li><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#shield-check"></use></svg><span><strong>Dati separati.</strong> Ogni utente e ogni team vede solo i propri dati, con regole applicate dal database e verificate da test automatici.</span></li>
+      <li><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#eye-off"></use></svg><span><strong>Nessun tracciamento.</strong> Niente cookie di profilazione né analytics di terze parti.</span></li>
+      <li data-legal-if="SUPABASE_REGIONE"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#server"></use></svg><span><strong>Server in <span data-legal="SUPABASE_REGIONE"></span>.</strong> Fornitori con accordo sul trattamento dei dati (art. 28 GDPR).</span></li>
+    </ul>
   </div>
 </section>
 
-<section>
+<section class="section" id="prezzi">
+  <div class="section-head">
+    <span class="eyebrow">Prezzi</span>
+    <h2 class="h-section" id="pricing-title">Gratuito durante la beta</h2>
+    <p class="lead" id="pricing-lead">Tutte le funzioni, senza limiti, finché dura la beta.</p>
+  </div>
+  <div class="plan plan--featured plan--beta" id="beta-plan">
+    <div class="plan__name">Beta</div>
+    <div class="plan__price">0 € <small>finché dura la beta</small></div>
+    <ul class="checklist">
+      <li><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#check"></use></svg><span>Editor, libreria, dettatura, PDF, archivio e team</span></li>
+      <li><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#check"></use></svg><span>Nessuna carta di credito</span></li>
+      <li><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#check"></use></svg><span>Nessun addebito senza la tua accettazione esplicita: eventuali piani a pagamento avranno condizioni separate</span></li>
+      <li><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#check"></use></svg><span>La tua libreria resta esportabile in qualsiasi momento</span></li>
+    </ul>
+    <a class="btn btn--primary btn--lg btn--block" href="app.html?view=signup">Crea un account gratuito</a>
+  </div>
+  <div class="plans" id="plans" hidden></div>
+  <p class="plans-note" id="plans-note" hidden></p>
+</section>
+
+<section class="section" id="testimonianze" hidden>
+  <div class="section-head">
+    <span class="eyebrow">Dicono di noi</span>
+    <h2 class="h-section">Cosa ne pensano i colleghi</h2>
+  </div>
+  <div class="quotes" id="testimonials"></div>
+</section>
+
+<section class="section" id="chi-siamo" hidden>
+  <div class="section-head">
+    <span class="eyebrow">Chi siamo</span>
+    <h2 class="h-section">Fatto da radiologi, per radiologi</h2>
+  </div>
+  <div class="people" id="founders"></div>
+</section>
+
+<section class="section" id="faq">
+  <div class="section-head">
+    <span class="eyebrow">Domande frequenti</span>
+    <h2 class="h-section">FAQ</h2>
+  </div>
+  <div class="faq">
+    <details>
+      <summary>ModReport sostituisce il RIS?</summary>
+      <p>No. Lavora accanto al RIS che usi già: componi il testo in ModReport e lo incolli nel RIS, oppure stampi il PDF sulla tua carta intestata.</p>
+    </details>
+    <details>
+      <summary>I dati dei pazienti passano dai vostri server?</summary>
+      <p>Il testo del referto no: resta nel browser in cui lavori, anche nell'archivio. Sui nostri server vanno libreria, preferenze, carta intestata e messaggi del team; in questi non vanno inseriti dati che identificano i pazienti. Quando importi i tuoi referti tipo, ModReport blocca i testi che sembrano contenere dati identificativi (date, codici fiscali, numeri di accettazione…).</p>
+    </details>
+    <details>
+      <summary>Come funziona la dettatura? Chi ascolta l'audio?</summary>
+      <p>Usa il riconoscimento vocale integrato nel browser. In Chrome ed Edge l'audio è elaborato dai server di Google o Microsoft, in Safari da Apple; ModReport riceve solo il testo trascritto e non registra l'audio. Al primo utilizzo te lo ricordiamo, e puoi disattivare la dettatura dalle preferenze.</p>
+    </details>
+    <details>
+      <summary>Posso usare le mie frasi?</summary>
+      <p>Sì. Parti da una libreria di esempio e la modifichi esame per esame, oppure importi i tuoi referti tipo: ModReport li divide in frasi e ti propone se sono normali o patologiche. Puoi esportare la libreria in un file e reimportarla quando vuoi.</p>
+    </details>
+    <details>
+      <summary>Funziona sui computer dell'ospedale?</summary>
+      <p>Serve solo un browser recente (Chrome, Edge, Firefox o Safari), senza installazioni né permessi di amministratore. La dettatura funziona in Chrome, Edge e Safari. Sulle postazioni condivise attiva "Postazione condivisa" all'accesso: la sessione non resta salvata e si chiude dopo 30 minuti di inattività.</p>
+    </details>
+    <details>
+      <summary>È un dispositivo medico?</summary>
+      <p>No. È uno strumento di scrittura: non analizza immagini, non calcola punteggi o categorie e non suggerisce diagnosi. Il contenuto del referto resta sempre una scelta del medico.</p>
+    </details>
+    <details>
+      <summary>Quanto costa?</summary>
+      <p>Oggi è gratuito. Se in futuro introdurremo piani a pagamento, avranno condizioni di vendita separate che dovrai accettare espressamente prima di qualsiasi addebito.</p>
+    </details>
+    <details>
+      <summary>Posso cancellare il mio account?</summary>
+      <p>Sì, in qualsiasi momento da Account → Profilo: account, libreria, carte intestate e dati del cloud vengono eliminati subito. L'archivio locale lo cancelli dalla pagina Archivio.</p>
+    </details>
+  </div>
+</section>
+
+<section class="section">
   <div class="cta-band">
-    <h2>Pronto a refertare più velocemente?</h2>
-    <p>Gratuito per iniziare. Nessuna carta di credito richiesta.</p>
-    <a class="btn primary" href="app.html?view=signup">Crea il tuo account →</a>
+    <h2 class="h-section">Prova ModReport sul tuo prossimo referto</h2>
+    <p class="lead">Crea l'account in pochi passaggi, oppure provalo subito senza registrarti: in modalità locale tutto resta in questo browser.</p>
+    <div class="hero__ctas">
+      <a class="btn btn--primary btn--lg" href="app.html?view=signup">Crea un account gratuito</a>
+      <a class="btn btn--lg" href="app.html?local=1">Prova senza account</a>
+    </div>
   </div>
 </section>
 
-<footer>
+</main>
+
+<footer class="l-footer">
   <div>ModReport — strumento di scrittura per la refertazione radiologica. Non è un dispositivo medico e non fornisce diagnosi.</div>
-  <div style="margin-top:6px;">© <span data-legal="TITOLARE"></span> · P.IVA <span data-legal="PIVA"></span> · <span data-legal="SEDE"></span> · <a data-legal="EMAIL" href="#"></a></div>
-  <div style="margin-top:10px;">
-    <a href="informativa-privacy.html">Informativa sulla Privacy</a> · <a href="termini-servizio.html">Termini di Servizio</a> · <a href="tutorial.html">Tutorial</a> · <a href="app.html">Accedi</a>
-  </div>
+  <div>© <span id="year"></span> <span data-legal="TITOLARE"></span> · P.IVA <span data-legal="PIVA"></span> · <span data-legal="SEDE"></span> · <a data-legal="EMAIL" href="#"></a></div>
+  <nav aria-label="Link legali">
+    <a href="informativa-privacy.html">Informativa sulla privacy</a> · <a href="termini-servizio.html">Termini di servizio</a> · <a href="tutorial.html">Tutorial</a> · <a href="app.html">Accedi</a>
+  </nav>
 </footer>
 
 </body>

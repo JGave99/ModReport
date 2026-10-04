@@ -22,8 +22,18 @@ test('ogni pagina ha la CSP con l\'host Supabase configurato', () => {
 test('nessuno script inline e nessuna risorsa da CDN o Google Fonts', () => {
   for (const p of pages) {
     const html = readFileSync(new URL(p, root), 'utf8');
-    assert.ok(!/<script(?![^>]*\bsrc=)[^>]*>/i.test(html), p + ': script inline');
+    // Unica eccezione: i dati strutturati JSON-LD, che il browser non esegue.
+    assert.ok(!/<script(?![^>]*\bsrc=)(?![^>]*type="application\/ld\+json")[^>]*>/i.test(html), p + ': script inline');
     assert.ok(!/(cdn\.jsdelivr|cdnjs|unpkg|googleapis|gstatic)/i.test(html), p + ': risorsa esterna');
     assert.ok(!/\son[a-z]+="/i.test(html), p + ': gestore di eventi inline');
+  }
+});
+
+test('i dati strutturati JSON-LD sono JSON valido', () => {
+  for (const p of pages) {
+    const html = readFileSync(new URL(p, root), 'utf8');
+    for (const m of html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)) {
+      assert.doesNotThrow(() => JSON.parse(m[1]), p + ': JSON-LD non valido');
+    }
   }
 });

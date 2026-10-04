@@ -5,723 +5,223 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://umejthggxihtyqvcszgm.supabase.co wss://umejthggxihtyqvcszgm.supabase.co; frame-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; worker-src 'self' blob:; manifest-src 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
 <title>Il mio account — ModReport</title>
-<link rel="icon" type="image/png" href="modreport_logo_bars_m.png">
+<link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+<link rel="icon" href="assets/icons/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<script src="js/theme.js"></script>
+<link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/pages/account.css">
 <script src="assets/vendor/supabase.js"></script>
 <script src="js/config.js"></script>
 <script type="module" src="js/pages/account.js"></script>
-<link rel="stylesheet" href="css/fonts.css">
-<style>
-  :root{
-    --bg: #0f172a;
-    --panel: #1e293b;
-    --panel-alt: #0b1120;
-    --line: #334155;
-    --line-soft: #334155;
-    --ink: #f8fafc;
-    --ink-soft: #94a3b8;
-    --accent: #38bdf8;
-    --accent-soft: rgba(56,189,248,0.08);
-    --accent-strong: #0284c7;
-    --accent-dim: #0369a1;
-    --amber: #f59e0b;
-    --amber-soft: rgba(245,158,11,0.12);
-    --danger: #ef4444;
-    --font: 'Inter', -apple-system, sans-serif;
-    --radius: 8px;
-    --radius-lg: 10px;
-  }
-  *{box-sizing:border-box;}
-  body{
-    margin:0;
-    font-family: var(--font);
-    background: var(--bg);
-    color: var(--ink);
-    min-height:100vh;
-  }
-  .topbar{
-    position:sticky;
-    top:0;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    padding: 12px 24px;
-    background: var(--panel-alt);
-    border-bottom: 1px solid var(--line);
-    font-size:13px;
-    z-index:10;
-  }
-  .brand{
-    font-weight:600;
-    font-size:15px;
-    display:flex;
-    align-items:center;
-    gap:10px;
-  }
-  .brand .mark{
-    width:20px; height:20px; border-radius:5px;
-    background: url('modreport_logo_bars_m.png') no-repeat center / cover;
-    display:inline-block; flex:none;
-  }
-  .topbar-right{ display:flex; align-items:center; gap:10px; }
-  .btn-settings{
-    background: transparent;
-    border: 1px solid var(--line);
-    color: var(--ink);
-    font-family: var(--font);
-    font-size:13px;
-    padding: 7px 14px;
-    border-radius: 6px;
-    cursor:pointer;
-    text-decoration:none;
-    display:inline-flex;
-    align-items:center;
-    gap:6px;
-    transition: all .2s ease;
-  }
-  .btn-settings:hover{ background-color: var(--line); border-color: var(--ink-soft); }
-
-  .page{
-    max-width: 760px;
-    margin: 0 auto;
-    padding: 32px 24px 80px;
-  }
-  .page h1{
-    font-size:19px;
-    font-weight:700;
-    margin: 4px 0 22px;
-  }
-  .page h2{
-    font-size:13px;
-    text-transform:uppercase;
-    letter-spacing:.06em;
-    color: var(--accent);
-    font-weight:700;
-    margin: 32px 0 12px;
-  }
-  .page h2:first-of-type{ margin-top:0; }
-
-  .account-layout{
-    display:flex;
-    align-items:flex-start;
-    min-height: calc(100vh - 53px);
-  }
-  .account-nav{
-    width: 220px;
-    flex:none;
-    padding: 24px 12px;
-    display:flex;
-    flex-direction:column;
-    gap:4px;
-    position:sticky;
-    top:53px;
-    border-right: 1px solid var(--line);
-    min-height: calc(100vh - 53px);
-  }
-  .nav-item{
-    text-align:left;
-    padding: 10px 14px;
-    border-radius: var(--radius);
-    background:transparent;
-    border:none;
-    color: var(--ink-soft);
-    font-family: var(--font);
-    font-size:13.5px;
-    font-weight:500;
-    cursor:pointer;
-    text-decoration:none;
-    display:flex;
-    align-items:center;
-    gap:9px;
-    transition: all .2s ease;
-  }
-  .nav-item:hover{ background: var(--panel); color: var(--ink); }
-  .nav-item.active{
-    background: var(--accent-soft);
-    color: var(--accent);
-    font-weight:600;
-  }
-  .account-content{
-    flex:1;
-    max-width: 720px;
-    padding: 32px 32px 80px;
-  }
-  .tab-panel{ display:none; }
-  .tab-panel.active{ display:block; }
-  .tab-panel h1{
-    font-size:19px;
-    font-weight:700;
-    margin: 4px 0 22px;
-  }
-  .tab-panel h2{
-    font-size:13px;
-    text-transform:uppercase;
-    letter-spacing:.06em;
-    color: var(--accent);
-    font-weight:700;
-    margin: 32px 0 12px;
-  }
-  .tab-panel h2:first-of-type{ margin-top:0; }
-
-  .card{
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: var(--radius-lg);
-    padding: 18px 20px;
-    margin-bottom: 16px;
-  }
-  .muted{ color: var(--ink-soft); font-size:12.5px; line-height:1.6; }
-  .field-message{
-    font-size:12px;
-    min-height:16px;
-    margin-top:4px;
-  }
-  .field-message.ok{ color: var(--accent); }
-  .field-message.error{ color: var(--danger); }
-
-  .settings-section{
-    border: 1px solid var(--line-soft);
-    border-radius: var(--radius);
-    padding: 16px;
-    margin-bottom: 14px;
-  }
-  .settings-section h3{
-    margin: 0 0 10px;
-    font-size:12px;
-    text-transform:uppercase;
-    letter-spacing:.05em;
-    color: var(--accent);
-  }
-  .field-row{
-    display:flex;
-    gap:10px;
-    margin-bottom:8px;
-    flex-wrap:wrap;
-    align-items:center;
-  }
-  .field-row label{
-    font-size:11.5px;
-    color: var(--ink-soft);
-    display:block;
-    margin-bottom:4px;
-  }
-  .field{ flex:1; min-width:160px; }
-  select, input[type=text], input[type=email], input[type=password], textarea{
-    width:100%;
-    font-family: var(--font);
-    font-size:13px;
-    padding: 8px 10px;
-    border: 1px solid var(--line);
-    border-radius: 6px;
-    background: var(--bg);
-    color: var(--ink);
-    transition: border-color .2s;
-  }
-  select:focus, input:focus, textarea:focus{ outline:none; border-color: var(--accent); }
-  input:disabled{ opacity:.6; }
-  textarea{ resize: vertical; min-height:46px; }
-  .checkbox-row{
-    display:flex;
-    align-items:center;
-    gap:7px;
-    font-size:12.5px;
-    color: var(--ink-soft);
-  }
-  .btn-sm{
-    font-family: var(--font);
-    font-size:12.5px;
-    font-weight:600;
-    padding: 7px 14px;
-    border-radius: 6px;
-    cursor:pointer;
-    border:1px solid var(--accent);
-    background: transparent;
-    color: var(--accent);
-    transition: all .2s ease;
-  }
-  .btn-sm:hover{ background: var(--accent-soft); }
-  .btn-sm.recording{ background: var(--danger); color:#fff; border-color: var(--danger); }
-  .btn-sm.danger{ border-color: var(--danger); color: var(--danger); }
-  .btn-sm.danger:hover{ background: rgba(239,68,68,0.1); }
-  .reset-row{ text-align:right; padding-top:4px; }
-
-  .ai-voce-item{
-    border: 1px solid var(--line-soft);
-    border-left: 3px solid var(--accent);
-    border-radius: var(--radius);
-    padding: 10px 12px;
-    margin-bottom: 8px;
-    background: var(--bg);
-  }
-  .ai-voce-item.neg{ border-left-color: var(--amber); }
-  .ai-voce-item.added{ opacity:.45; }
-  .ai-voce-item .voce-row{
-    display:flex;
-    gap:8px;
-    margin-bottom:6px;
-    flex-wrap:wrap;
-  }
-  .ai-voce-item .voce-row input, .ai-voce-item .voce-row textarea{
-    flex:1;
-    min-width:140px;
-  }
-  .ai-voce-actions{
-    display:flex;
-    gap:8px;
-    justify-content:flex-end;
-  }
-  .ai-warning{
-    background: var(--amber-soft);
-    border: 1px solid var(--amber);
-    color: var(--amber);
-    border-radius: var(--radius);
-    padding: 8px 12px;
-    font-size:12.5px;
-    margin-bottom:12px;
-  }
-  .info-banner{
-    background: var(--accent-soft);
-    border: 1px solid var(--accent);
-    color: var(--ink);
-    border-radius: var(--radius);
-    padding: 12px 16px;
-    font-size:13px;
-    line-height:1.5;
-    margin-bottom:16px;
-  }
-
-  .lh-item{
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    padding: 14px 16px;
-    margin-bottom: 10px;
-  }
-  .lh-item-head{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    margin-bottom:6px;
-  }
-  .lh-item-name{
-    font-weight:600;
-    font-size:13.5px;
-    flex:1;
-  }
-  .lh-item-margins{
-    font-size:12px;
-    color: var(--ink-soft);
-    margin-bottom:10px;
-  }
-  .lh-item-actions{
-    display:flex;
-    gap:8px;
-  }
-
-  .gate{
-    position:fixed; inset:0;
-    background: var(--bg);
-    display:flex; align-items:center; justify-content:center;
-    font-size:13px; color: var(--ink-soft);
-  }
-  .hidden{ display:none; }
-  [hidden]{ display:none !important; }
-  .lib-status{ font-size:12px; color: var(--ink-soft); display:inline-flex; gap:8px; align-items:center; }
-  .lib-status.error, .lib-status.conflict{ color: var(--danger); }
-  .lib-status.saved{ color: var(--accent); }
-  .lib-status button{ font-family: var(--font); font-size:12px; padding:3px 8px; border-radius:6px; border:1px solid currentColor; background:transparent; color:inherit; cursor:pointer; }
-  .lib-banner{ background: var(--amber-soft); border:1px solid var(--amber); color: var(--amber); border-radius: var(--radius); padding:10px 12px; font-size:12.5px; margin-bottom:16px; display:flex; gap:10px; align-items:center; justify-content:space-between; }
-  .locked{ opacity:.5; pointer-events:none; }
-  .btn-sm:disabled{ opacity:.6; cursor:progress; }
-  .field-message.warn{ color: var(--amber); }
-</style>
 </head>
 <body>
 
 <div class="gate" id="gate">Verifica accesso in corso…</div>
 
-<div id="page-root" class="hidden">
-  <div class="topbar">
-    <div class="brand"><span class="mark"></span> Il mio account</div>
-    <div class="topbar-right">
+<div id="page-root" hidden>
+  <header class="topbar">
+    <a class="brand" href="index.html"><img src="assets/logo.svg" alt="" width="26" height="26"> ModReport</a>
+    <nav class="topnav" aria-label="Sezioni">
+      <a href="app.html"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#file-text"></use></svg><span>Referto</span></a>
+      <a href="archivio.html"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#archive"></use></svg><span>Archivio</span></a>
+      <a href="team.html"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#messages-square"></use></svg><span>Team</span></a>
+    </nav>
+    <div class="topbar__end">
       <span class="lib-status" id="lib-status" role="status" aria-live="polite" hidden></span>
-      <a class="btn-settings" href="app.html">← Torna al referto</a>
-      <button class="btn-settings" id="btn-logout">Esci</button>
+      <button class="btn btn--ghost" id="btn-logout"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#log-out"></use></svg><span>Esci</span></button>
     </div>
-  </div>
+  </header>
 
-  <div class="account-layout">
-    <aside class="account-nav">
-      <button class="nav-item active" data-tab="tab-account">👤 Gestione account</button>
-      <button class="nav-item" data-tab="tab-import">📥 Importazione referti</button>
-      <button class="nav-item" data-tab="tab-personalizza">⚙ Personalizza referti</button>
-      <button class="nav-item" data-tab="tab-stampa">🖨 Gestione stampa</button>
-      <a class="nav-item" href="archivio.html">📁 Archivio</a>
-      <a class="nav-item" href="tutorial.html">🎬 Tutorial</a>
+  <div class="account">
+    <aside class="account__nav" aria-label="Sezioni dell'account">
+      <nav class="sidenav">
+        <a href="#profilo" data-panel="profilo"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#circle-user"></use></svg>Profilo e sicurezza</a>
+        <a href="#libreria" data-panel="libreria"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#library-big"></use></svg>Libreria delle frasi</a>
+        <a href="#importa" data-panel="importa"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#file-input"></use></svg>Importa referti</a>
+        <a href="#stampa" data-panel="stampa"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#printer"></use></svg>Stampa e firma</a>
+        <a href="#preferenze" data-panel="preferenze"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#settings"></use></svg>Preferenze</a>
+        <a href="tutorial.html"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#circle-play"></use></svg>Tutorial</a>
+      </nav>
     </aside>
 
-    <main class="account-content">
-
-    <div class="tab-panel active" id="tab-account">
-    <h1>Gestione account</h1>
-
-    <h2>Profilo</h2>
-    <div class="card">
-      <div class="field-row">
-        <div class="field">
-          <label>Nome</label>
-          <input type="text" id="profile-nome" placeholder="Nome">
-        </div>
-        <div class="field">
-          <label>Cognome</label>
-          <input type="text" id="profile-cognome" placeholder="Cognome">
-        </div>
-      </div>
-      <p class="muted" style="margin:0 0 10px;">Comparirà nella chat di team e in fondo al referto stampato.</p>
-      <div class="field-row">
-        <button class="btn-sm" id="update-name-btn">Salva nome e cognome</button>
-      </div>
-      <div class="field-message" id="name-message"></div>
-    </div>
-
-    <div class="card" id="credentials-card">
-      <div class="field-row">
-        <div class="field">
-          <label>Email</label>
-          <input type="email" id="profile-email" disabled>
-        </div>
-      </div>
-      <div class="field-row">
-        <div class="field">
-          <label>Nuova password</label>
-          <input type="password" id="new-password" placeholder="Almeno 12 caratteri" autocomplete="new-password">
-        </div>
-        <div class="field">
-          <label>Conferma nuova password</label>
-          <input type="password" id="confirm-password" autocomplete="new-password">
-        </div>
-      </div>
-      <div class="field-row">
-        <button class="btn-sm" id="update-password-btn">Aggiorna password</button>
-      </div>
-      <div class="field-message" id="password-message"></div>
-    </div>
-
-    <h2>Preferenze</h2>
-    <div class="card">
-      <div class="checkbox-row">
-        <input type="checkbox" id="pref-dictation-off">
-        <label for="pref-dictation-off" style="margin:0;">Disattiva la dettatura vocale su questo computer</label>
-      </div>
-      <p class="muted" style="margin:8px 0 0;">La dettatura usa il servizio vocale del browser (Google, Microsoft o Apple), che riceve l'audio. Se in ospedale non è consentito, disattivala qui.</p>
-    </div>
-
-    <h2 data-cloud-only>Verifica in due passaggi</h2>
-    <div class="card" id="mfa-card" data-cloud-only>
-      <p class="muted" style="margin-top:0;" id="mfa-status">Protegge l'account con un codice generato da un'app di autenticazione sul telefono.</p>
-      <div id="mfa-enroll" hidden>
-        <p class="muted">Inquadra il codice QR con un'app di autenticazione (Google Authenticator, Microsoft Authenticator, 1Password…), poi inserisci il codice a 6 cifre che compare.</p>
-        <img id="mfa-qr" alt="Codice QR da inquadrare con l'app di autenticazione" width="180" height="180" style="background:#fff; border-radius:8px; padding:6px;">
-        <p class="muted">Se non puoi inquadrarlo, inserisci a mano la chiave: <code id="mfa-secret"></code></p>
-        <div class="field-row">
-          <div class="field">
-            <label for="mfa-enroll-code">Codice a 6 cifre</label>
-            <input type="text" id="mfa-enroll-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6">
+    <main class="account__main">
+      <!-- PROFILO E SICUREZZA -->
+      <section class="panel" id="panel-profilo" aria-labelledby="t-profilo">
+        <h1 class="page-title" id="t-profilo">Profilo e sicurezza</h1>
+        <div class="stack">
+          <div class="card stack">
+            <h2 class="section-title">Profilo</h2>
+            <div class="form-grid">
+              <div class="field"><label for="profile-nome">Nome</label><input type="text" id="profile-nome" autocomplete="given-name" maxlength="80"></div>
+              <div class="field"><label for="profile-cognome">Cognome</label><input type="text" id="profile-cognome" autocomplete="family-name" maxlength="80"></div>
+            </div>
+            <p class="subtle">Compare nella chat di team e nella firma del referto stampato.</p>
+            <div class="row"><button class="btn btn--primary" id="update-name-btn">Salva nome e cognome</button></div>
+            <div class="msg" id="name-message" role="status"></div>
           </div>
-          <button class="btn-sm" id="mfa-verify-btn" style="align-self:flex-end;">Conferma e attiva</button>
-        </div>
-      </div>
-      <div class="field-row">
-        <button class="btn-sm" id="mfa-enable-btn">Attiva la verifica in due passaggi</button>
-        <button class="btn-sm danger" id="mfa-disable-btn" hidden>Disattiva</button>
-      </div>
-      <div class="field-message" id="mfa-message"></div>
-    </div>
 
-    <div class="card" id="local-card" hidden>
-      <p class="muted" style="margin-top:0;"><strong>Modalità locale:</strong> libreria, carte intestate e archivio restano solo in questo browser. Per usarli su altre postazioni crea un account e importa la libreria.</p>
-      <div class="field-row"><button class="btn-sm danger" id="clear-local-btn">Cancella tutti i dati locali</button></div>
-      <div class="field-message" id="local-message"></div>
-    </div>
-
-    <h2 data-cloud-only>Zona pericolosa</h2>
-    <div class="card" style="border-color:var(--danger);" data-cloud-only>
-      <p class="muted" style="margin-top:0;">
-        Elimina definitivamente il tuo account. Verranno cancellati in modo permanente: la tua libreria personalizzata, i referti archiviati, le carte intestate caricate, la tua appartenenza a eventuali team e i messaggi che hai scritto. L'operazione non è reversibile.
-      </p>
-      <div class="field-row">
-        <button class="btn-sm danger" id="delete-account-btn">Elimina il mio account</button>
-      </div>
-      <div class="field-message" id="delete-account-message"></div>
-    </div>
-    </div>
-
-    <div class="tab-panel" id="tab-import">
-    <h1>Importazione referti</h1>
-    <div class="lib-banner" data-lib-banner role="alert" hidden>
-      <span>La libreria non è stata caricata (problema di connessione): le modifiche sono bloccate per non sovrascrivere i tuoi dati.</span>
-      <button class="btn-sm" data-lib-retry>Riprova</button>
-    </div>
-
-    <h2>Scomponi un referto esistente</h2>
-    <div class="card">
-      <p class="muted" style="margin-top:0;">
-        Incolla qui un referto che hai già scritto (o dettalo). Il sistema proverà a riconoscere l'esame — se è già in libreria — e a scomporre il resto in voci riutilizzabili, una frase per volta, che potrai rivedere prima di aggiungerle alla tua libreria.
-        L'analisi avviene nel browser; solo le voci che scegli di includere vengono salvate nella tua libreria. <strong>Togli sempre i dati del paziente</strong> (nome, date, codice fiscale, numero di accettazione): le voci che li contengono non possono essere incluse.
-      </p>
-      <div class="field-row">
-        <div class="field">
-          <label>Testo del referto</label>
-          <textarea id="ai-report-text" style="min-height:110px;" placeholder="Incolla qui il testo del referto…"></textarea>
-        </div>
-        <button class="btn-sm" id="mic-ai-report-text" title="Detta">🎤</button>
-      </div>
-      <div class="field-row">
-        <button class="btn-sm" id="ai-analyze-btn">Analizza referto</button>
-      </div>
-      <div class="field-message" id="ai-message"></div>
-
-      <div id="ai-results" class="hidden" style="margin-top:16px;">
-        <p class="muted" style="margin:0 0 10px;">Correggi qui metodica ed esame se non sono stati riconosciuti correttamente: senza un esame selezionato non è possibile aggiungere le voci alla libreria.</p>
-        <div class="field-row">
-          <div class="field">
-            <label>Metodica riconosciuta</label>
-            <select id="ai-metodica-riconosciuta"></select>
+          <div class="card stack" id="credentials-card">
+            <h2 class="section-title">Accesso</h2>
+            <div class="field"><label for="profile-email">Email</label><input type="email" id="profile-email" disabled></div>
+            <div class="form-grid">
+              <div class="field"><label for="new-password">Nuova password</label><input type="password" id="new-password" placeholder="Almeno 12 caratteri" autocomplete="new-password"></div>
+              <div class="field"><label for="confirm-password">Ripeti la nuova password</label><input type="password" id="confirm-password" autocomplete="new-password"></div>
+            </div>
+            <div class="row"><button class="btn" id="update-password-btn">Aggiorna password</button></div>
+            <div class="msg" id="password-message" role="status"></div>
           </div>
-          <div class="field">
-            <label>Esame riconosciuto</label>
-            <select id="ai-esame-riconosciuto"></select>
+
+          <div class="card stack" id="mfa-card" data-cloud-only>
+            <h2 class="section-title">Verifica in due passaggi</h2>
+            <p class="muted" id="mfa-status">Protegge l'account con un codice generato da un'app di autenticazione sul telefono.</p>
+            <div class="stack" id="mfa-enroll" hidden>
+              <p class="muted">Inquadra il codice QR con un'app di autenticazione (Google Authenticator, Microsoft Authenticator, 1Password…), poi inserisci il codice a 6 cifre che compare.</p>
+              <img id="mfa-qr" class="mfa-qr" alt="Codice QR da inquadrare con l'app di autenticazione" width="180" height="180">
+              <p class="subtle">Se non puoi inquadrarlo, inserisci a mano la chiave: <code id="mfa-secret"></code></p>
+              <div class="row">
+                <div class="field"><label for="mfa-enroll-code">Codice a 6 cifre</label><input type="text" id="mfa-enroll-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6"></div>
+                <button class="btn btn--primary" id="mfa-verify-btn" style="align-self:flex-end;">Conferma e attiva</button>
+              </div>
+            </div>
+            <div class="row">
+              <button class="btn" id="mfa-enable-btn"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#shield-check"></use></svg>Attiva la verifica in due passaggi</button>
+              <button class="btn btn--danger" id="mfa-disable-btn" hidden>Disattiva</button>
+            </div>
+            <div class="msg" id="mfa-message" role="status"></div>
+          </div>
+
+          <div class="card stack" id="local-card" hidden>
+            <h2 class="section-title">Modalità locale</h2>
+            <p class="muted">Libreria, carte intestate e archivio restano solo in questo browser. Per usarli su altre postazioni crea un account e importa la libreria (Libreria delle frasi → Esporta).</p>
+            <div class="row"><button class="btn btn--danger" id="clear-local-btn">Cancella tutti i dati locali</button></div>
+            <div class="msg" id="local-message"></div>
+          </div>
+
+          <div class="card card--danger stack" data-cloud-only>
+            <h2 class="section-title">Elimina l'account</h2>
+            <p class="muted">Cancella in modo permanente libreria, carte intestate, documenti, messaggi e appartenenza ai team. I team di cui sei proprietario passano a un altro membro. L'operazione non è reversibile.</p>
+            <div class="row"><button class="btn btn--danger" id="delete-account-btn"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#trash-2"></use></svg>Elimina il mio account</button></div>
+            <div class="msg" id="delete-account-message" role="status"></div>
           </div>
         </div>
-        <div id="ai-indicazione-row" class="field-row hidden">
+      </section>
+
+      <!-- LIBRERIA -->
+      <section class="panel" id="panel-libreria" aria-labelledby="t-libreria">
+        <h1 class="page-title" id="t-libreria">Libreria delle frasi</h1>
+        <p class="page-lead">Metodiche, esami, indicazioni e frasi che compaiono nell'editor. Le modifiche si salvano da sole. Non inserire dati dei pazienti.</p>
+        <div class="banner banner--warn" data-lib-banner role="alert" hidden>
+          <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#triangle-alert"></use></svg>
+          <span class="banner__text">La libreria non è stata caricata (problema di connessione): le modifiche sono bloccate per non sovrascrivere i tuoi dati.</span>
+          <button class="btn btn--sm" data-lib-retry>Riprova</button>
+        </div>
+        <div class="lib-toolbar">
+          <button class="btn btn--sm" id="lib-export"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#download"></use></svg>Esporta (file)</button>
+          <label class="btn btn--sm" for="lib-import-file"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#upload"></use></svg>Importa da file</label>
+          <input type="file" id="lib-import-file" accept="application/json,.json" class="visually-hidden">
+          <span class="spacer"></span>
+          <button class="btn btn--sm btn--danger" id="btn-reset-data"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#rotate-ccw"></use></svg>Ripristina i predefiniti</button>
+        </div>
+        <div class="msg" id="lib-tools-message" role="status"></div>
+        <div id="library-editor"></div>
+      </section>
+
+      <!-- IMPORTAZIONE -->
+      <section class="panel" id="panel-importa" aria-labelledby="t-importa">
+        <h1 class="page-title" id="t-importa">Importa referti</h1>
+        <p class="page-lead">Incolla un referto che hai già scritto (o dettalo): ModReport riconosce l'esame e lo divide in frasi che puoi aggiungere alla libreria. L'analisi avviene nel browser; solo le voci che scegli di includere vengono salvate. <strong>Togli sempre i dati del paziente</strong>: le voci che li contengono non possono essere incluse.</p>
+        <div class="banner banner--warn" data-lib-banner role="alert" hidden>
+          <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#triangle-alert"></use></svg>
+          <span class="banner__text">La libreria non è stata caricata: l'importazione è bloccata finché non riprovi.</span>
+          <button class="btn btn--sm" data-lib-retry>Riprova</button>
+        </div>
+        <div class="card stack">
           <div class="field">
-            <label>Indicazione riconosciuta</label>
-            <input type="text" id="ai-indicazione-riconosciuta">
+            <label for="ai-report-text">Testo del referto</label>
+            <textarea id="ai-report-text" rows="6" placeholder="Incolla qui il testo del referto…"></textarea>
           </div>
-          <button class="btn-sm" id="ai-add-indicazione-btn" style="align-self:flex-end;">+ Aggiungi indicazione</button>
-        </div>
-        <div class="field-message warn" id="ai-pii-warning" style="margin-top:12px;"></div>
-        <p class="muted" style="margin:16px 0 6px;">Voci proposte — rivedi ciascuna, scegli se è un reperto normale o patologico e premi "Includi nella libreria":</p>
-        <div id="ai-voci-list"></div>
-        <div class="field-row" id="ai-voci-empty-row" style="display:none;">
-          <p class="muted" style="margin:0;">Nessuna frase riutilizzabile è stata individuata nel testo.</p>
-        </div>
-        <div class="field-message" id="ai-add-message"></div>
-      </div>
-    </div>
-    </div>
+          <div class="row">
+            <button class="btn" id="mic-ai-report-text" aria-pressed="false" title="Detta"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#mic"></use></svg>Detta</button>
+            <button class="btn btn--primary" id="ai-analyze-btn">Analizza referto</button>
+          </div>
+          <div class="msg" id="ai-message" role="status"></div>
 
-    <div class="tab-panel" id="tab-personalizza">
-    <h1>Personalizza referti</h1>
-    <div class="lib-banner" data-lib-banner role="alert" hidden>
-      <span>La libreria non è stata caricata (problema di connessione): le modifiche sono bloccate per non sovrascrivere i tuoi dati.</span>
-      <button class="btn-sm" data-lib-retry>Riprova</button>
-    </div>
+          <div id="ai-results" class="stack" hidden>
+            <p class="subtle">Correggi metodica ed esame se non sono stati riconosciuti: senza un esame non si possono aggiungere voci.</p>
+            <div class="form-grid">
+              <div class="field"><label for="ai-metodica-riconosciuta">Metodica</label><select id="ai-metodica-riconosciuta"></select></div>
+              <div class="field"><label for="ai-esame-riconosciuto">Esame</label><select id="ai-esame-riconosciuto"></select></div>
+            </div>
+            <div id="ai-indicazione-row" class="row" hidden>
+              <div class="field" style="flex:1;"><label for="ai-indicazione-riconosciuta">Indicazione riconosciuta</label><input type="text" id="ai-indicazione-riconosciuta"></div>
+              <button class="btn" id="ai-add-indicazione-btn" style="align-self:flex-end;">+ Aggiungi indicazione</button>
+            </div>
+            <div class="msg msg--warn" id="ai-pii-warning"></div>
+            <p class="subtle">Voci proposte — rivedi ciascuna, scegli se è un reperto normale o patologico e premi "Includi nella libreria":</p>
+            <div id="ai-voci-list" class="stack"></div>
+            <p class="subtle" id="ai-voci-empty-row" hidden>Nessuna frase riutilizzabile individuata nel testo.</p>
+            <div class="msg" id="ai-add-message" role="status"></div>
+          </div>
+        </div>
+      </section>
 
-    <div class="settings-section">
-      <h3>Aggiungi metodica</h3>
-      <div class="field-row">
-        <div class="field">
-          <label>Nome metodica</label>
-          <input type="text" id="new-metodica-name" placeholder="es. Mammografia">
+      <!-- STAMPA -->
+      <section class="panel" id="panel-stampa" aria-labelledby="t-stampa">
+        <h1 class="page-title" id="t-stampa">Stampa e firma</h1>
+        <div class="stack">
+          <div class="card stack">
+            <h2 class="section-title">Aggiungi carta intestata</h2>
+            <p class="muted">Carica un PDF con l'intestazione della struttura e imposta i margini in cui deve cadere il testo. Se il PDF ha due pagine, la seconda viene usata per le pagine successive.</p>
+            <div class="field"><label for="lh-nome">Nome della carta intestata</label><input type="text" id="lh-nome" maxlength="120" placeholder="es. Studio Radiologico Rossi"></div>
+            <div class="field"><label for="lh-file">File PDF (massimo 5 MB)</label><input type="file" id="lh-file" accept="application/pdf"></div>
+            <div class="form-grid">
+              <div class="field"><label for="lh-margin-top">Margine superiore (mm)</label><input type="number" id="lh-margin-top" value="40" min="0" max="200" inputmode="decimal"></div>
+              <div class="field"><label for="lh-margin-left">Margine sinistro (mm)</label><input type="number" id="lh-margin-left" value="20" min="0" max="100" inputmode="decimal"></div>
+              <div class="field"><label for="lh-margin-right">Margine destro (mm)</label><input type="number" id="lh-margin-right" value="20" min="0" max="100" inputmode="decimal"></div>
+            </div>
+            <div class="row"><button class="btn btn--primary" id="lh-save-btn"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#upload"></use></svg>Salva carta intestata</button></div>
+            <div class="msg" id="lh-message" role="status"></div>
+          </div>
+          <div class="card">
+            <h2 class="section-title">Carte intestate salvate</h2>
+            <div id="lh-list"></div>
+            <p class="subtle" id="lh-empty">Nessuna carta intestata salvata.</p>
+          </div>
         </div>
-        <button class="btn-sm" id="add-metodica-btn">+ Aggiungi</button>
-      </div>
-    </div>
+      </section>
 
-    <div class="settings-section">
-      <h3>Aggiungi esame (filtrato per metodica)</h3>
-      <div class="field-row">
-        <div class="field">
-          <label>Metodica</label>
-          <select id="new-esame-metodica"></select>
+      <!-- PREFERENZE -->
+      <section class="panel" id="panel-preferenze" aria-labelledby="t-preferenze">
+        <h1 class="page-title" id="t-preferenze">Preferenze</h1>
+        <div class="card stack">
+          <div class="form-grid">
+            <div class="field">
+              <label for="pref-theme">Tema</label>
+              <select id="pref-theme">
+                <option value="dark">Scuro (consigliato in sala refertazione)</option>
+                <option value="light">Chiaro</option>
+                <option value="auto">Come il sistema</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="pref-scale">Dimensione del testo</label>
+              <select id="pref-scale">
+                <option value="100">Normale</option>
+                <option value="112">Grande</option>
+                <option value="125">Molto grande</option>
+              </select>
+            </div>
+          </div>
+          <label class="check"><input type="checkbox" id="pref-dictation-off"><span>Disattiva la dettatura vocale su questo computer (usa il servizio vocale del browser, che riceve l'audio)</span></label>
         </div>
-        <div class="field">
-          <label>Nome esame</label>
-          <input type="text" id="new-esame-name" placeholder="es. RX RACHIDE CERVICALE">
-        </div>
-      </div>
-      <div class="field-row">
-        <button class="btn-sm" id="add-esame-btn">+ Aggiungi esame</button>
-      </div>
-    </div>
-
-    <div class="settings-section">
-      <h3>Elimina esame</h3>
-      <div class="field-row">
-        <div class="field">
-          <label>Esame da eliminare</label>
-          <select id="delete-esame-select"></select>
-        </div>
-        <button class="btn-sm danger" id="delete-esame-btn">Elimina esame</button>
-      </div>
-    </div>
-
-    <div class="settings-section">
-      <h3>Aggiungi indicazione (filtrata per esame)</h3>
-      <div class="field-row">
-        <div class="field">
-          <label>Esame</label>
-          <select id="new-indicazione-esame"></select>
-        </div>
-      </div>
-      <div class="field-row">
-        <div class="field">
-          <label>Testo indicazione</label>
-          <input type="text" id="new-indicazione-text" placeholder="es. Trauma">
-        </div>
-        <button class="btn-sm" id="mic-new-indicazione-text" title="Detta">🎤</button>
-        <button class="btn-sm" id="add-indicazione-btn">+ Aggiungi</button>
-      </div>
-    </div>
-
-    <div class="settings-section">
-      <h3>Aggiungi pulsante referto</h3>
-      <div class="field-row">
-        <div class="field">
-          <label>Esame</label>
-          <select id="new-referto-esame"></select>
-        </div>
-        <div class="field">
-          <label>Gruppo / distretto</label>
-          <input type="text" id="new-referto-group" placeholder="es. Parenchima">
-        </div>
-      </div>
-      <div class="field-row">
-        <div class="field">
-          <label>Etichetta pulsante</label>
-          <input type="text" id="new-referto-label" placeholder="es. Nella norma">
-        </div>
-      </div>
-      <div class="field-row">
-        <div class="field">
-          <label>Testo inserito nel referto</label>
-          <textarea id="new-referto-text" placeholder="es. Non si evidenziano alterazioni significative."></textarea>
-        </div>
-        <button class="btn-sm" id="mic-new-referto-text" title="Detta">🎤</button>
-      </div>
-      <div class="field-row">
-        <div class="checkbox-row">
-          <input type="checkbox" id="new-referto-neg">
-          <label for="new-referto-neg" style="margin:0;">Segna come reperto da approfondire</label>
-        </div>
-        <button class="btn-sm" id="add-referto-btn">+ Aggiungi pulsante</button>
-      </div>
-    </div>
-
-    <div class="settings-section">
-      <h3>Modifica o elimina un pulsante di referto</h3>
-      <div class="field-row">
-        <div class="field">
-          <label>Esame</label>
-          <select id="edit-referto-esame"></select>
-        </div>
-        <div class="field">
-          <label>Gruppo</label>
-          <select id="edit-referto-group"></select>
-        </div>
-        <div class="field">
-          <label>Pulsante</label>
-          <select id="edit-referto-button"></select>
-        </div>
-      </div>
-      <div class="field-row">
-        <div class="field">
-          <label>Etichetta pulsante</label>
-          <input type="text" id="edit-referto-label">
-        </div>
-      </div>
-      <div class="field-row">
-        <div class="field">
-          <label>Testo inserito nel referto</label>
-          <textarea id="edit-referto-text"></textarea>
-        </div>
-        <button class="btn-sm" id="mic-edit-referto-text" title="Detta">🎤</button>
-      </div>
-      <div class="field-row">
-        <div class="checkbox-row">
-          <input type="checkbox" id="edit-referto-neg">
-          <label for="edit-referto-neg" style="margin:0;">Segna come reperto da approfondire</label>
-        </div>
-        <button class="btn-sm" id="save-referto-btn">Salva modifiche</button>
-        <button class="btn-sm danger" id="delete-referto-btn">Elimina pulsante</button>
-      </div>
-    </div>
-
-    <div class="settings-section">
-      <h3>Modifica o elimina un'indicazione</h3>
-      <div class="field-row">
-        <div class="field">
-          <label>Esame</label>
-          <select id="edit-indicazione-esame"></select>
-        </div>
-        <div class="field">
-          <label>Indicazione</label>
-          <select id="edit-indicazione-item"></select>
-        </div>
-      </div>
-      <div class="field-row">
-        <div class="field">
-          <label>Nuovo testo</label>
-          <input type="text" id="edit-indicazione-text">
-        </div>
-        <button class="btn-sm" id="mic-edit-indicazione-text" title="Detta">🎤</button>
-        <button class="btn-sm" id="save-indicazione-btn">Salva</button>
-        <button class="btn-sm danger" id="delete-indicazione-btn">Elimina</button>
-      </div>
-    </div>
-
-    <div class="reset-row">
-      <button class="btn-sm danger" id="btn-reset-data">Ripristina impostazioni predefinite</button>
-    </div>
-    </div>
-
-    <div class="tab-panel" id="tab-stampa">
-    <h1>Gestione stampa</h1>
-
-    <h2>Aggiungi carta intestata</h2>
-    <div class="card">
-      <p class="muted" style="margin-top:0;">
-        Carica un PDF (anche di una sola pagina) con il logo/intestazione della struttura, dagli un nome e imposta i margini in cui deve cadere il testo del referto. Puoi salvarne più di una — ad esempio una per ogni struttura in cui lavori.
-      </p>
-      <div class="field-row">
-        <div class="field">
-          <label>Nome carta intestata</label>
-          <input type="text" id="lh-nome" placeholder="es. Ospedale San Marco — Radiologia">
-        </div>
-      </div>
-      <div class="field-row">
-        <div class="field">
-          <label>File PDF</label>
-          <input type="file" id="lh-file" accept="application/pdf">
-          <div class="muted" style="margin-top:4px;">PDF fino a 5 MB.</div>
-        </div>
-      </div>
-      <div class="field-row">
-        <div class="field">
-          <label>Margine superiore (mm)</label>
-          <input type="text" id="lh-margin-top" value="40">
-        </div>
-        <div class="field">
-          <label>Margine sinistro (mm)</label>
-          <input type="text" id="lh-margin-left" value="20">
-        </div>
-        <div class="field">
-          <label>Margine destro (mm)</label>
-          <input type="text" id="lh-margin-right" value="20">
-        </div>
-      </div>
-      <div class="field-row">
-        <button class="btn-sm" id="lh-save-btn">+ Salva carta intestata</button>
-      </div>
-      <div class="field-message" id="lh-message"></div>
-    </div>
-
-    <h2>Carte intestate salvate</h2>
-    <div id="lh-list"></div>
-    <div id="lh-empty" class="muted">Nessuna carta intestata salvata per ora.</div>
-    </div>
-
+      </section>
     </main>
   </div>
 </div>

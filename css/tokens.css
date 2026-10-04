@@ -1,0 +1,89 @@
+/* Design system ModReport — token. Tema scuro "sala refertazione" (predefinito) e tema chiaro.
+   Regole: un solo colore d'accento, niente gradienti né ombre colorate, contrasti AA verificati. */
+:root{
+  /* Superfici */
+  --bg: #0b0f14;
+  --surface-1: #121821;
+  --surface-2: #18202b;
+  --surface-3: #212b38;
+  --border: #263241;
+  --border-strong: #64748b;
+  /* Testo */
+  --text: #d9e1ea;
+  --text-muted: #94a3b8;
+  --text-subtle: #7b8a9d;
+  /* Accento */
+  --primary: #4fb3d9;            /* testi e icone */
+  --primary-solid: #0369a1;      /* sfondo dei pulsanti primari: bianco 5,93:1 */
+  --primary-solid-hover: #075985;
+  --on-primary: #ffffff;
+  --primary-soft: rgba(79, 179, 217, 0.12);
+  --focus: #7dd3fc;
+  /* Semantici */
+  --normal: #2dd4bf;             /* reperto normale */
+  --abnormal: #fbbf24;           /* reperto patologico / da approfondire */
+  --danger: #f87171;
+  --danger-solid: #b91c1c;
+  --success: #34d399;
+  --warning-bg: rgba(251, 191, 36, 0.10);
+  --danger-bg: rgba(248, 113, 113, 0.10);
+  --info-bg: rgba(79, 179, 217, 0.10);
+  --overlay: rgba(3, 7, 12, 0.72);
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  /* Carta (anteprima del referto) */
+  --paper: #fbfbf9;
+  --paper-text: #111827;
+
+  /* Tipografia (rem: segue la dimensione del testo scelta dall'utente) */
+  --font: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: ui-monospace, 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  --fs-xs: 0.75rem;   /* 12 */
+  --fs-sm: 0.8125rem; /* 13 */
+  --fs-md: 0.875rem;  /* 14 */
+  --fs-lg: 1rem;      /* 16 */
+  --fs-xl: 1.125rem;  /* 18 */
+  --fs-2xl: 1.375rem; /* 22 */
+  --fs-3xl: 1.75rem;  /* 28 */
+  --fs-4xl: 2.25rem;  /* 36 */
+  --lh: 1.5;
+
+  /* Spaziature (griglia di 4px) */
+  --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 20px; --s-6: 24px; --s-8: 32px; --s-10: 40px; --s-12: 48px; --s-16: 64px;
+  /* Raggi */
+  --r-xs: 4px; --r-sm: 6px; --r-md: 10px; --r-lg: 14px; --r-pill: 999px;
+  /* Altezze dei controlli */
+  --h-sm: 28px; --h-md: 36px; --h-lg: 44px;
+  --text-scale: 1;
+  color-scheme: dark;
+}
+
+:root[data-theme="light"]{
+  --bg: #f6f7f9;
+  --surface-1: #ffffff;
+  --surface-2: #f1f5f9;
+  --surface-3: #e2e8f0;
+  --border: #d5dde6;
+  --border-strong: #64748b;
+  --text: #0f172a;
+  --text-muted: #475569;
+  --text-subtle: #586779;        /* AA anche su --surface-3 */
+  --primary: #0369a1;
+  --primary-solid: #0369a1;
+  --primary-solid-hover: #075985;
+  --primary-soft: rgba(3, 105, 161, 0.08);
+  --focus: #0284c7;
+  --normal: #0f766e;
+  --abnormal: #b45309;
+  --danger: #b91c1c;
+  --danger-solid: #b91c1c;
+  --success: #047857;
+  --warning-bg: #fef3c7;
+  --danger-bg: #fee2e2;
+  --info-bg: #e0f2fe;
+  --overlay: rgba(15, 23, 42, 0.45);
+  --shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
+  color-scheme: light;
+}
+
+:root[data-text-scale="112"]{ --text-scale: 1.125; }
+:root[data-text-scale="125"]{ --text-scale: 1.25; }

@@ -1,7 +1,7 @@
 // Team (team.html): team per organizzazione, canali, chat in tempo reale, inviti e membri.
 // I permessi veri sono sul server (RLS + funzioni): qui si mostrano solo le azioni consentite.
 import { getSupabase, pageUrl } from '../lib/supabase.js';
-import { $ } from '../lib/dom.js';
+import { $, icon } from '../lib/dom.js';
 import { requireSession } from '../lib/session.js';
 import { confirmDialog, promptDialog, alertDialog } from '../lib/dialog.js';
 import { isLocalMode } from '../lib/local-backend.js';
@@ -183,8 +183,8 @@ function renderChannelList() {
     if (isAdmin()) {
       const actions = document.createElement('span');
       actions.className = 'row-actions';
-      const ren = document.createElement('button'); ren.textContent = '✎'; ren.title = 'Rinomina'; ren.setAttribute('aria-label', 'Rinomina il canale ' + ch.nome);
-      const del = document.createElement('button'); del.textContent = '🗑'; del.title = 'Elimina'; del.setAttribute('aria-label', 'Elimina il canale ' + ch.nome);
+      const ren = document.createElement('button'); ren.appendChild(icon('pencil')); ren.title = 'Rinomina'; ren.setAttribute('aria-label', 'Rinomina il canale ' + ch.nome);
+      const del = document.createElement('button'); del.appendChild(icon('trash-2')); del.title = 'Elimina'; del.setAttribute('aria-label', 'Elimina il canale ' + ch.nome);
       ren.onclick = () => renameChannel(ch);
       del.onclick = () => deleteChannel(ch);
       actions.append(ren, del);
@@ -259,7 +259,7 @@ function appendMessage(m, scroll = true) {
   const empty = wrap.querySelector('.empty-chat');
   if (empty) empty.remove();
   const row = document.createElement('div');
-  row.className = 'msg';
+  row.className = 'chat-msg';
   row.dataset.id = m.id;
   const avatar = document.createElement('div');
   avatar.className = 'msg-avatar';
@@ -317,7 +317,7 @@ function startRealtime() {
     })
     .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'messages' }, (payload) => {
       const id = payload.old && payload.old.id;
-      const node = id && document.querySelector('.msg[data-id="' + CSS.escape(id) + '"]');
+      const node = id && document.querySelector('.chat-msg[data-id="' + CSS.escape(id) + '"]');
       if (node) node.remove();
     })
     .subscribe();
@@ -401,7 +401,7 @@ async function renderMembersPanel() {
     const canRemove = m.user_id !== me.id && m.role !== 'owner' && (currentTeam.role === 'owner' || (currentTeam.role === 'admin' && m.role === 'member'));
     if (canRemove) {
       const rm = document.createElement('button');
-      rm.className = 'btn-sm danger';
+      rm.className = 'btn btn--sm btn--danger';
       rm.textContent = 'Rimuovi';
       rm.onclick = async () => {
         if (!await confirmDialog('Rimuovere ' + (m.nome || 'questo membro') + '?', 'Non vedrà più i canali e i messaggi del team.', { okText: 'Rimuovi', danger: true })) return;
@@ -459,7 +459,7 @@ async function renderInvites() {
     grow.className = 'grow';
     grow.textContent = '…' + inv.code.slice(-6) + ' · usato ' + inv.uses + '/' + inv.max_uses + ' · scade il ' + formatTime(inv.expires_at);
     const rv = document.createElement('button');
-    rv.className = 'btn-sm danger';
+    rv.className = 'btn btn--sm btn--danger';
     rv.textContent = 'Revoca';
     rv.onclick = async () => {
       const { error: e2 } = await sb.rpc('revoke_team_invite', { p_code: inv.code });
@@ -506,7 +506,7 @@ document.querySelectorAll('dialog [data-close]').forEach((b) => b.addEventListen
 (async function init() {
   if (!sb) { $('gate').textContent = 'Configurazione cloud mancante.'; return; }
   if (isLocalMode()) {
-    $('gate').innerHTML = '<div class="setup-card"><h2>Team non disponibile</h2><p>In modalità locale i dati restano su questo computer: per lavorare in team serve un account.</p><a class="btn-settings" href="app.html">← Torna al referto</a></div>';
+    $('gate').innerHTML = '<div class="card setup-card"><h2>Team non disponibile</h2><p>In modalità locale i dati restano su questo computer: per lavorare in team serve un account.</p><a class="btn" href="app.html"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#arrow-left"></use></svg>Torna al referto</a></div>';
     return;
   }
   const invite = new URLSearchParams(window.location.search).get('invite');

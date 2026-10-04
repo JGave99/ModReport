@@ -1,0 +1,7 @@
+# Valido quando il sito è servito dalla radice del dominio (es. Cloudflare Pages): su GitHub Pages
+# di progetto i crawler leggono solo il robots.txt del dominio utente. Le pagine dell'app hanno il meta noindex.
+User-agent: *
+Disallow: /tests/
+Disallow: /docs/
+Disallow: /supabase/
+Sitemap: https://jgave99.github.io/ModReport/sitemap.xml

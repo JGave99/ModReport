@@ -12,7 +12,10 @@
     "test:sql": "node --test \"tests/sql/*.test.mjs\"",
     "check:lancio": "node scripts/check-lancio.mjs",
     "test:e2e": "playwright test",
-    "lint": "node scripts/check-syntax.mjs"
+    "lint": "node scripts/check-syntax.mjs",
+    "icons": "node scripts/icons.mjs",
+    "render-icons": "node scripts/render-icons.mjs",
+    "screenshots": "node scripts/screenshots.mjs"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",
@@ -21,6 +24,7 @@
     "@pdf-lib/fontkit": "1.1.1",
     "@playwright/test": "^1.63.0",
     "@supabase/supabase-js": "2.117.2",
+    "lucide-static": "^1.52.0",
     "pdf-lib": "1.17.1"
   },
   "engines": {

@@ -1,0 +1,58 @@
+/* Il mio account (account.html) */
+.account{ display: grid; grid-template-columns: 230px 1fr; min-height: calc(100vh - 52px); }
+.account__nav{ padding: var(--s-5) var(--s-3); border-right: 1px solid var(--border); position: sticky; top: 52px; align-self: start; height: calc(100vh - 52px); }
+.account__main{ padding: var(--s-6) var(--s-8) var(--s-16); min-width: 0; max-width: 1100px; }
+.panel{ display: none; }
+.panel.is-active{ display: block; }
+.panel > .stack{ gap: var(--s-4); }
+.lib-status{ display: inline-flex; align-items: center; gap: 8px; font-size: var(--fs-xs); color: var(--text-muted); }
+.lib-status.saved{ color: var(--success); }
+.lib-status.error, .lib-status.conflict{ color: var(--danger); }
+.lib-status button{ font-size: var(--fs-xs); padding: 2px 8px; border-radius: var(--r-xs); border: 1px solid currentColor; background: transparent; color: inherit; cursor: pointer; }
+.locked{ opacity: .5; pointer-events: none; }
+.mfa-qr{ background: #fff; border-radius: var(--r-md); padding: 8px; width: 180px; height: 180px; }
+
+/* Editor della libreria */
+.lib-toolbar{ display: flex; flex-wrap: wrap; gap: var(--s-2); align-items: center; margin-bottom: var(--s-4); }
+.lib-editor{ display: grid; grid-template-columns: 280px 1fr; gap: var(--s-4); align-items: start; }
+.lib-tree{ position: sticky; top: 64px; display: flex; flex-direction: column; gap: var(--s-2); max-height: calc(100vh - 90px); overflow: auto; padding-right: 4px; }
+.lib-tree__list{ display: flex; flex-direction: column; gap: var(--s-3); }
+.lib-tree__group{ display: flex; flex-direction: column; gap: 2px; }
+.lib-tree__head{ display: flex; align-items: center; gap: 2px; font-size: var(--fs-xs); font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); padding: 4px 2px; }
+.lib-tree__head span{ flex: 1; }
+.lib-tree__item{
+  display: flex; justify-content: space-between; gap: var(--s-2); width: 100%; text-align: left; border: 0; background: none;
+  padding: 7px 10px; border-radius: var(--r-sm); color: var(--text); font-size: var(--fs-sm); cursor: pointer;
+}
+.lib-tree__item:hover{ background: var(--surface-2); }
+.lib-tree__item[aria-current="true"]{ background: var(--primary-soft); font-weight: 600; }
+.lib-detail{ display: flex; flex-direction: column; gap: var(--s-4); min-width: 0; }
+.lib-detail__head{ display: flex; align-items: center; gap: 2px; }
+.lib-detail__head h3{ flex: 1; font-size: var(--fs-xl); }
+.lib-section{ background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--r-md); padding: var(--s-4); display: flex; flex-direction: column; gap: var(--s-2); }
+.lib-section h4{ font-size: var(--fs-sm); font-weight: 700; }
+.lib-section__head{ display: flex; align-items: center; gap: 2px; }
+.lib-section__head h4{ flex: 1; }
+.lib-row{ display: flex; align-items: center; gap: 2px; }
+.lib-row .input{ flex: 1; }
+.lib-phrase{ border: 1px solid var(--border); border-left: 3px solid var(--normal); border-radius: var(--r-sm); padding: var(--s-2); display: flex; flex-direction: column; gap: 6px; background: var(--bg); }
+.lib-phrase--abnormal{ border-left-color: var(--abnormal); }
+.lib-phrase__top{ display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+.lib-phrase__top .input:first-child{ flex: 1; min-width: 160px; }
+.lib-phrase__top select.input{ width: auto; }
+
+/* Importazione e carte intestate */
+.import-voce .msg:empty{ display: none; }
+.import-voce{ border: 1px solid var(--border); border-radius: var(--r-md); padding: var(--s-3); display: flex; flex-direction: column; gap: var(--s-2); }
+.lh-item{ display: flex; flex-direction: column; gap: 6px; }
+.lh-item + .lh-item{ border-top: 1px solid var(--border); padding-top: var(--s-3); margin-top: var(--s-3); }
+
+@media (max-width: 980px){
+  .account{ grid-template-columns: 1fr; }
+  .account__nav{ position: sticky; top: 52px; z-index: 10; height: auto; border-right: 0; border-bottom: 1px solid var(--border); background: var(--surface-1); padding: var(--s-2); overflow-x: auto; }
+  .account__nav .sidenav{ flex-direction: row; }
+  .account__nav .sidenav a{ white-space: nowrap; }
+  .account__main{ padding: var(--s-4) var(--s-4) var(--s-12); }
+  .lib-editor{ grid-template-columns: 1fr; }
+  .lib-tree{ position: static; max-height: 260px; }
+}

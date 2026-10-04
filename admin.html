@@ -6,114 +6,41 @@
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Amministrazione — ModReport</title>
-<link rel="icon" type="image/png" href="modreport_logo_bars_m.png">
+<link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+<link rel="icon" href="assets/icons/favicon-32.png" type="image/png" sizes="32x32">
+<meta name="robots" content="noindex">
 <script src="assets/vendor/supabase.js"></script>
 <script src="js/config.js"></script>
 <script type="module" src="js/pages/admin.js"></script>
+<script src="js/theme.js"></script>
 <link rel="stylesheet" href="css/fonts.css">
-<style>
-  :root{
-    --bg: #0f172a; --panel: #1e293b; --panel-alt: #0b1120; --line: #334155;
-    --ink: #f8fafc; --ink-soft: #94a3b8; --accent: #38bdf8; --accent-soft: rgba(56,189,248,0.08);
-    --accent-strong: #0284c7; --accent-dim: #0369a1; --danger: #ef4444;
-    --font: 'Inter', -apple-system, sans-serif; --radius: 8px; --radius-lg: 10px;
-  }
-  *{box-sizing:border-box;}
-  body{ margin:0; font-family: var(--font); background: var(--bg); color: var(--ink); min-height:100vh; }
-  .topbar{
-    position:sticky; top:0; display:flex; align-items:center; justify-content:space-between;
-    padding: 14px 28px; background: var(--panel-alt); border-bottom: 1px solid var(--line); z-index:10;
-  }
-  .brand{ font-weight:700; font-size:15px; display:flex; align-items:center; gap:10px; }
-  .brand .mark{
-    width:20px; height:20px; border-radius:5px;
-    background: url('modreport_logo_bars_m.png') no-repeat center / cover;
-    display:inline-block; flex:none;
-  }
-  .btn-settings{
-    background: transparent; border: 1px solid var(--line); color: var(--ink); font-family: var(--font);
-    font-size:13px; padding: 7px 14px; border-radius: 6px; cursor:pointer; text-decoration:none;
-  }
-  .btn-settings:hover{ background-color: var(--line); }
-
-  .page{ max-width: 900px; margin:0 auto; padding: 32px 24px 80px; }
-  .page h1{ font-size:20px; font-weight:700; margin:4px 0 6px; }
-  .page .subtitle{ font-size:13px; color: var(--ink-soft); margin:0 0 28px; }
-
-  .tabs{ display:flex; gap:8px; margin-bottom:22px; }
-  .tab-btn{
-    font-family: var(--font); font-size:13px; font-weight:600; padding:8px 16px; border-radius:999px;
-    border:1px solid var(--line); background:transparent; color: var(--ink-soft); cursor:pointer;
-  }
-  .tab-btn.active{ background: var(--accent-strong); border-color: var(--accent); color:#fff; }
-
-  .req-card{
-    background: var(--panel); border:1px solid var(--line); border-radius: var(--radius-lg);
-    padding:18px 20px; margin-bottom:14px;
-  }
-  .req-head{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px; flex-wrap:wrap; gap:6px; }
-  .req-email{ font-weight:600; font-size:14.5px; }
-  .req-date{ font-size:12px; color: var(--ink-soft); }
-  .req-status{
-    display:inline-block; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:700;
-    text-transform:uppercase; letter-spacing:.04em; margin-bottom:12px;
-  }
-  .req-status.in_attesa{ background: rgba(245,158,11,0.12); color:#f59e0b; }
-  .req-status.approvato{ background: rgba(34,197,94,0.12); color:#22c55e; }
-  .req-status.rifiutato{ background: rgba(239,68,68,0.12); color: var(--danger); }
-  .req-actions{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
-  .btn-sm{
-    font-family: var(--font); font-size:12.5px; font-weight:600; padding:7px 14px; border-radius:6px;
-    cursor:pointer; border:1px solid var(--accent); background:transparent; color: var(--accent);
-  }
-  .btn-sm:hover{ background: var(--accent-soft); }
-  .btn-sm.primary{ background: var(--accent-strong); color:#fff; border-color: var(--accent-strong); }
-  .btn-sm.primary:hover{ background: var(--accent-dim); }
-  .btn-sm.danger{ border-color: var(--danger); color: var(--danger); }
-  .btn-sm.danger:hover{ background: rgba(239,68,68,0.1); }
-  .req-note{
-    font-family: var(--font); font-size:13px; padding:7px 10px; border:1px solid var(--line);
-    border-radius:6px; background: var(--bg); color: var(--ink); flex:1; min-width:180px;
-  }
-  .empty-state{ text-align:center; color: var(--ink-soft); font-size:13.5px; padding:50px 20px; border:1px dashed var(--line); border-radius: var(--radius-lg); }
-  .muted{ color: var(--ink-soft); font-size:12.5px; }
-  .toolbar-row{ display:flex; gap:10px; margin-bottom:14px; }
-  .toolbar-row input{
-    font-family: var(--font); font-size:13px; padding:9px 12px; border:1px solid var(--line);
-    border-radius:6px; background: var(--panel); color: var(--ink); flex:1; min-width:200px;
-  }
-  .toolbar-row input:focus{ outline:none; border-color: var(--accent); }
-  .badge-admin{
-    display:inline-block; padding:2px 9px; border-radius:999px; font-size:10.5px; font-weight:700;
-    text-transform:uppercase; letter-spacing:.04em; background: rgba(56,189,248,0.12); color: var(--accent);
-    margin-left:8px; vertical-align:middle;
-  }
-  .gate{ position:fixed; inset:0; background: var(--bg); display:flex; align-items:center; justify-content:center; font-size:13px; color: var(--ink-soft); text-align:center; padding:20px; }
-  .hidden{ display:none; }
-  [hidden]{ display:none !important; }
-</style>
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/pages/archivio.css">
 </head>
 <body>
 
 <div class="gate" id="gate">Verifica accesso in corso…</div>
 
 <div id="page-root" class="hidden">
-  <div class="topbar">
-    <div class="brand"><span class="mark"></span> Amministrazione</div>
-    <a class="btn-settings" href="app.html">← Torna al referto</a>
-  </div>
+  <header class="topbar">
+    <a class="brand" href="index.html"><img src="assets/logo.svg" alt="" width="26" height="26"> ModReport <small>Amministrazione</small></a>
+    <nav class="topnav" aria-label="Sezioni">
+      <a href="app.html"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#file-text"></use></svg><span>Referto</span></a>
+    </nav>
+  </header>
 
-  <div class="page">
-    <h1>Amministrazione</h1>
-    <p class="subtitle">Gestisci le richieste di verifica specializzando e consulta gli utenti registrati.</p>
+  <main class="page">
+    <h1 class="page-title">Amministrazione</h1>
+    <p class="page-lead">Richieste di verifica degli specializzandi e utenti registrati.</p>
 
     <div class="tabs" id="view-tabs">
-      <button class="tab-btn active" data-view="requests">📋 Richieste specializzando</button>
-      <button class="tab-btn" data-view="users">👥 Utenti registrati</button>
+      <button class="tab-btn active" data-view="requests"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#graduation-cap"></use></svg> Richieste specializzando</button>
+      <button class="tab-btn" data-view="users"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#users"></use></svg> Utenti registrati</button>
     </div>
 
     <div id="view-requests">
-      <p class="subtitle" style="margin-top:0;">Rivedi il documento caricato e approva o rifiuta l'accesso al piano da 5€/mese.</p>
       <div class="tabs">
         <button class="tab-btn active" data-filter="in_attesa">In attesa</button>
         <button class="tab-btn" data-filter="approvato">Approvate</button>
@@ -124,13 +51,14 @@
     </div>
 
     <div id="view-users" class="hidden">
-      <div class="toolbar-row">
-        <input type="text" id="user-search" placeholder="Cerca per email…">
+      <div class="toolbar">
+        <label class="visually-hidden" for="user-search">Cerca per email</label>
+        <input type="text" class="input" id="user-search" placeholder="Cerca per email…">
       </div>
       <div id="users-count" class="muted" style="margin-bottom:10px;"></div>
       <div id="users-list"></div>
     </div>
-  </div>
+  </main>
 </div>
 
 </body>

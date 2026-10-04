@@ -14,6 +14,8 @@ for (const [key, label] of [['TITOLARE', 'Titolare / ragione sociale'], ['FORMA'
 }
 check(!/github pages/i.test(L.HOSTING || ''), 'Hosting diverso da GitHub Pages (i termini di GitHub vietano un SaaS commerciale)', 'js/legal-config.js → HOSTING e _headers');
 
+check(!/github\.io/.test(read('index.html') + read('sitemap.xml') + read('robots.txt')), 'Dominio definitivo in canonical, Open Graph, sitemap.xml e robots.txt', 'index.html, sitemap.xml, robots.txt');
+
 const cfg = read('js/config.js');
 check(!/SUPABASE_KEY:\s*'eyJ/.test(cfg), 'Chiave Supabase "publishable" al posto della chiave anon legacy (dismessa a fine 2026)', 'js/config.js');
 check(existsSync(new URL('_headers', root)), 'Header di sicurezza (_headers)');

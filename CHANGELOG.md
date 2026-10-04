@@ -23,3 +23,11 @@
 - Editor: intestazione senza doppioni, Ctrl+Z, inserimento al cursore, "Svuota" annullabile, bozza conservata.
 - Modalità locale ("Prova senza account").
 - Test end-to-end e integrazione continua.
+
+### Step 5 — Grafica e UX
+- Nuovo design system condiviso da tutte le pagine (tema scuro e chiaro, dimensione del testo regolabile) e icone al posto delle emoji.
+- Editor riorganizzato: barra superiore più ordinata, frasi normali e patologiche riconoscibili, frasi inserite evidenziate, stato del microfono visibile.
+- Editor della libreria ad albero con modifica in linea, riordino ed eliminazioni annullabili.
+- Notifiche e finestre di dialogo al posto degli avvisi del browser; accessibilità (etichette, tastiera, contrasti AA).
+- Layout per smartphone e tablet in tutte le pagine.
+- Nuova home page: screenshot reali, sicurezza e privacy, prezzi (beta gratuita), domande frequenti, registrazione diretta, anteprime per i social; tutorial e pagine legali con la nuova grafica.

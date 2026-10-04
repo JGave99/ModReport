@@ -1,6 +1,8 @@
 // Editor dei referti (app.html).
 import { getSupabase, pageUrl } from '../lib/supabase.js';
-import { $ } from '../lib/dom.js';
+import { $, icon } from '../lib/dom.js';
+import { toast } from '../lib/toast.js';
+import { confirmDialog } from '../lib/dialog.js';
 import { authErrorMessage, isExistingUserSignup, readAuthErrorFromHash } from '../lib/auth-messages.js';
 import { LibraryStore, cloneDefaults } from '../lib/library.js';
 import { attachDictation, stopAllDictation } from '../lib/dictation.js';
@@ -17,6 +19,9 @@ const initialSearch = window.location.search;
 const isRecoveryLink = /(^|[#&])type=recovery(&|$)/.test(initialHash);
 const isSignupConfirmation = /(^|[#&])type=signup(&|$)/.test(initialHash);
 const urlAuthError = readAuthErrorFromHash(initialHash) || readAuthErrorFromHash(initialSearch.replace(/^\?/, '#'));
+
+// "Prova senza account" dalla landing (app.html?local=1): va attivata prima di creare il client.
+if (new URLSearchParams(initialSearch).get('local') === '1') setLocalMode(true);
 
 const sb = getSupabase();
 
@@ -45,26 +50,13 @@ const el = {
   indicazioneBody: $('indicazione-body'),
   refertoBody: $('referto-body'),
   reportText: $('report-text'),
-  metaMetodica: $('meta-metodica'),
-  metaEsame: $('meta-esame'),
-  breadcrumb: $('breadcrumb'),
-  copyFlash: $('copy-flash'),
+  context: $('report-context'),
+  stats: $('report-stats'),
   tabs: $('workspace-tabs'),
 };
 
-function flash(text, ms = 1500, action = null) {
-  el.copyFlash.textContent = text;
-  el.copyFlash.classList.toggle('with-action', !!action);
-  if (action) {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.textContent = action.label;
-    b.onclick = () => { el.copyFlash.classList.remove('show'); action.run(); };
-    el.copyFlash.append(' · ', b);
-  }
-  el.copyFlash.classList.add('show');
-  clearTimeout(flash.t);
-  flash.t = setTimeout(() => el.copyFlash.classList.remove('show'), ms);
+function flash(text, ms = 2500, action = null) {
+  toast(text, { duration: ms, action });
 }
 
 // ---- Bozza: le schede sopravvivono a ricaricamenti e cambi di pagina (solo in questa scheda del browser).
@@ -126,16 +118,21 @@ function renderWorkspaceTabs() {
       ? !!(el.reportText.value.trim() || state.metodica || state.esame)
       : !!(w.reportText.trim() || w.metodica || w.esame);
     const b = document.createElement('button');
-    b.className = 'workspace-tab' + (isActive ? ' active' : '') + (hasContent ? ' has-content' : '');
+    b.className = 'wtab' + (hasContent ? ' has-content' : '');
     b.textContent = String(i + 1);
-    const dot = document.createElement('span');
-    dot.className = 'dot';
-    b.appendChild(dot);
-    b.title = 'Referto ' + (i + 1) + (hasContent ? '' : ' (vuoto)');
-    b.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    b.setAttribute('role', 'tab');
+    b.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    b.setAttribute('aria-label', 'Referto ' + (i + 1) + (hasContent ? '' : ' (vuoto)'));
     b.onclick = () => switchWorkspace(i);
     el.tabs.appendChild(b);
   });
+  updateStats();
+}
+
+function updateStats() {
+  const v = el.reportText.value;
+  const lines = v ? v.split('\n').filter((l) => l.trim()).length : 0;
+  el.stats.textContent = lines + (lines === 1 ? ' riga' : ' righe') + ' · ' + v.length + ' caratteri';
 }
 
 // ============================================================
@@ -145,7 +142,8 @@ function renderMetodica() {
   el.metodicaRow.innerHTML = '';
   DATA.metodiche.forEach((m) => {
     const b = document.createElement('button');
-    b.className = 'chip' + (state.metodica === m ? ' active' : '');
+    b.className = 'chip';
+    b.setAttribute('aria-pressed', state.metodica === m ? 'true' : 'false');
     b.textContent = m.toUpperCase();
     b.onclick = () => {
       if (state.metodica === m) return;
@@ -160,14 +158,15 @@ function renderMetodica() {
 function renderEsame() {
   el.esameBody.innerHTML = '';
   if (!state.metodica) {
-    el.esameBody.innerHTML = '<div class="empty-state">Seleziona prima una metodica.</div>';
+    el.esameBody.innerHTML = '<p class="empty-hint">Seleziona prima una metodica.</p>';
     return;
   }
   const row = document.createElement('div');
   row.className = 'chip-row';
   (DATA.esamiByMetodica[state.metodica] || []).forEach((e) => {
     const b = document.createElement('button');
-    b.className = 'chip' + (state.esame === e ? ' active' : '');
+    b.className = 'chip';
+    b.setAttribute('aria-pressed', state.esame === e ? 'true' : 'false');
     b.textContent = e;
     b.onclick = () => {
       if (state.esame === e) return;
@@ -184,7 +183,7 @@ function renderEsame() {
 function renderIndicazione() {
   el.indicazioneBody.innerHTML = '';
   if (!state.esame) {
-    el.indicazioneBody.innerHTML = '<div class="empty-state">Seleziona prima un esame.</div>';
+    el.indicazioneBody.innerHTML = '<p class="empty-hint">Seleziona prima un esame.</p>';
     return;
   }
   const row = document.createElement('div');
@@ -192,20 +191,24 @@ function renderIndicazione() {
   (DATA.indicazioniByEsame[state.esame] || []).forEach((txt) => {
     const b = document.createElement('button');
     b.className = 'chip';
-    b.textContent = txt;
-    b.onclick = () => insertIndicazione(txt);
+    const on = indicazioneLines.includes(txt);
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    if (on) b.appendChild(icon('check'));
+    b.append(txt);
+    b.onclick = () => toggleIndicazione(txt);
     row.appendChild(b);
   });
   el.indicazioneBody.appendChild(row);
 
   const freeWrap = document.createElement('div');
-  freeWrap.style.marginTop = '12px';
+  freeWrap.className = 'stack';
+  freeWrap.style.gap = '8px';
   freeWrap.innerHTML = `
     <label class="visually-hidden" for="indicazione-free">Indicazione libera</label>
-    <textarea class="free-text" id="indicazione-free" placeholder="…oppure scrivi o detta un'indicazione libera"></textarea>
-    <div style="display:flex; gap:8px; margin-top:8px; align-items:center;">
-      <button class="mic-btn" id="mic-indicazione-free" title="Detta" aria-label="Detta un'indicazione libera" aria-pressed="false">🎤</button>
-      <button class="add-free" id="add-indicazione-free">Aggiungi</button>
+    <textarea class="input" id="indicazione-free" rows="2" placeholder="…oppure scrivi o detta un'indicazione libera"></textarea>
+    <div class="row">
+      <button class="btn btn--sm" id="mic-indicazione-free" aria-pressed="false" title="Detta"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#mic"></use></svg><span class="visually-hidden">Detta un'indicazione libera</span></button>
+      <button class="btn btn--sm" id="add-indicazione-free"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#plus"></use></svg>Aggiungi</button>
     </div>`;
   el.indicazioneBody.appendChild(freeWrap);
   const ta = $('indicazione-free');
@@ -215,61 +218,98 @@ function renderIndicazione() {
       ta.value = '';
     }
   };
-  attachDictation($('mic-indicazione-free'), () => ta, { onError: (m) => alert(m) });
+  attachDictation($('mic-indicazione-free'), () => ta, { onError: (m) => toast(m, { type: 'error', duration: 7000 }) });
+}
+
+function toggleIndicazione(txt) {
+  if (indicazioneLines.includes(txt)) {
+    indicazioneLines = indicazioneLines.filter((x) => x !== txt);
+    rebuildHeader();
+  } else {
+    insertIndicazione(txt);
+  }
+  renderIndicazione();
 }
 
 function renderReferto() {
   el.refertoBody.innerHTML = '';
   if (!state.esame) {
-    el.refertoBody.innerHTML = '<div class="empty-state">Seleziona prima un esame.</div>';
+    el.refertoBody.innerHTML = '<p class="empty-hint">Seleziona prima un esame.</p>';
     return;
   }
   const groups = DATA.refertoByEsame[state.esame];
   if (!groups || Object.keys(groups).length === 0) {
-    el.refertoBody.innerHTML = '<div class="empty-state">Nessuna frase ancora definita per questo esame. Puoi aggiungerne da <a href="account.html" style="color:var(--accent);">Il mio account → Personalizza referti</a>.</div>';
+    el.refertoBody.innerHTML = '<p class="empty-hint">Nessuna frase per questo esame. Aggiungine dalla <a href="account.html#libreria">libreria delle frasi</a>.</p>';
     return;
   }
   const note = document.createElement('p');
   note.className = 'sample-note';
-  note.textContent = 'Frasi di esempio: verificale e adattale alla tua pratica prima dell\'uso.';
+  note.textContent = 'Frasi di esempio: verificale e adattale alla tua pratica. Un secondo clic toglie la frase dal referto.';
   el.refertoBody.appendChild(note);
 
   Object.entries(groups).forEach(([groupName, buttons]) => {
     const g = document.createElement('div');
-    g.className = 'subgroup';
     const label = document.createElement('div');
-    label.className = 'subgroup-label';
+    label.className = 'group__label';
     label.textContent = groupName;
     g.appendChild(label);
     const row = document.createElement('div');
     row.className = 'chip-row';
     (buttons || []).forEach((btnData) => {
       const b = document.createElement('button');
-      b.className = 'btn-report' + (btnData.neg ? ' neg' : '');
-      b.textContent = btnData.label;
+      b.className = 'chip phrase' + (btnData.neg ? ' phrase--abnormal' : '');
+      b.dataset.text = btnData.text;
       b.title = btnData.text;
-      b.onclick = () => insertReferto(btnData.text);
+      b.appendChild(icon(btnData.neg ? 'circle-alert' : 'circle-check'));
+      b.append(btnData.label);
+      const kind = document.createElement('span');
+      kind.className = 'visually-hidden';
+      kind.textContent = btnData.neg ? ' (reperto patologico)' : ' (reperto normale)';
+      b.appendChild(kind);
+      b.onclick = () => togglePhrase(btnData.text);
       row.appendChild(b);
     });
     g.appendChild(row);
     el.refertoBody.appendChild(g);
   });
+  refreshPressed();
 }
 
-function renderBreadcrumb() {
-  el.breadcrumb.innerHTML = '';
-  const seg = (text, empty) => {
-    const s = document.createElement('span');
-    s.className = 'seg' + (empty ? ' empty' : '');
-    s.textContent = text;
-    return s;
-  };
-  const sep = document.createElement('span');
-  sep.className = 'sep';
-  sep.textContent = '›';
-  el.breadcrumb.append(seg(state.metodica ? state.metodica.toUpperCase() : 'metodica', !state.metodica), sep, seg(state.esame || 'esame', !state.esame));
-  el.metaMetodica.textContent = state.metodica ? state.metodica.toUpperCase() : '—';
-  el.metaEsame.textContent = state.esame || '—';
+// Frasi già presenti nel testo: evidenziate (aria-pressed) e rimovibili con un secondo clic.
+function refreshPressed() {
+  const text = el.reportText.value;
+  el.refertoBody.querySelectorAll('.phrase').forEach((b) => {
+    b.setAttribute('aria-pressed', text.includes(b.dataset.text) ? 'true' : 'false');
+  });
+}
+
+function togglePhrase(text) {
+  const ta = el.reportText;
+  const idx = ta.value.indexOf(text);
+  if (idx === -1) {
+    insertReferto(text);
+  } else {
+    const end = ta.value[idx + text.length] === '\n' ? idx + text.length + 1 : idx + text.length;
+    replaceRange(ta, idx, end, '');
+    caret = null;
+    renderWorkspaceTabs();
+    saveDraft();
+  }
+  refreshPressed();
+}
+
+function renderContext() {
+  el.context.innerHTML = '';
+  if (!state.metodica) { el.context.textContent = 'Nessun esame selezionato'; return; }
+  const m = document.createElement('strong');
+  m.textContent = state.metodica.toUpperCase();
+  el.context.append(m);
+  if (state.esame) {
+    el.context.append(' › ');
+    const e = document.createElement('strong');
+    e.textContent = state.esame;
+    el.context.append(e);
+  }
 }
 
 function renderAll() {
@@ -277,11 +317,11 @@ function renderAll() {
   renderEsame();
   renderIndicazione();
   renderReferto();
-  renderBreadcrumb();
+  renderContext();
   renderWorkspaceTabs();
 }
 
-el.reportText.addEventListener('input', () => { renderWorkspaceTabs(); saveDraft(); });
+el.reportText.addEventListener('input', () => { renderWorkspaceTabs(); saveDraft(); clearTimeout(refreshPressed.t); refreshPressed.t = setTimeout(refreshPressed, 250); });
 
 // Inserimento alla posizione del cursore: se l'utente ha messo il cursore nel testo (non in fondo),
 // le frasi scelte dai pulsanti entrano lì; altrimenti in coda.
@@ -373,6 +413,7 @@ function insertReferto(txt) {
     pendingEsameOpen = false;
   }
   appendToReport(txt, '\n');
+  refreshPressed();
 }
 
 function setUrgenzaButton() {
@@ -419,20 +460,20 @@ $('btn-copy').onclick = async () => {
 
 $('btn-archive').onclick = async () => {
   const testo = el.reportText.value.trim();
-  if (!testo) { alert('Non c\'è nulla da salvare: il referto è vuoto.'); return; }
-  if (testo.length > 20000) { alert('Il referto è troppo lungo per l\'archivio (massimo 20.000 caratteri).'); return; }
+  if (!testo) { toast('Non c\'è nulla da salvare: il referto è vuoto.'); return; }
+  if (testo.length > 20000) { toast('Il referto è troppo lungo per l\'archivio (massimo 20.000 caratteri).', { type: 'error' }); return; }
   if (isSharedDevice()) {
-    alert('Su una postazione condivisa l\'archivio non è disponibile: copia o stampa il referto.');
+    toast('Su una postazione condivisa l\'archivio non è disponibile: copia o stampa il referto.', { duration: 6000 });
     return;
   }
-  if (!confirm('Salvare il referto nell\'archivio di QUESTO computer?\n\nResta solo in questo browser, non viene inviato al cloud. Togli comunque i dati che identificano il paziente.')) return;
+  if (!await confirmDialog('Salvare nell\'archivio di questo computer?', 'Il referto resta solo in questo browser e non viene inviato al cloud. Togli comunque i dati che identificano il paziente.', { okText: 'Salva' })) return;
   const btn = $('btn-archive');
   btn.disabled = true;
   try {
     await addEntry(currentUser.id, { esame: state.esame || null, testo });
     flash('Salvato nell\'archivio di questo computer', 1800);
   } catch (e) {
-    alert('Errore durante il salvataggio: ' + e.message);
+    toast('Errore durante il salvataggio: ' + e.message, { type: 'error', duration: 7000 });
   }
   btn.disabled = false;
 };
@@ -444,7 +485,10 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-attachDictation($('btn-mic-report'), () => el.reportText, { onError: (m) => alert(m) });
+attachDictation($('btn-mic-report'), () => el.reportText, {
+  onError: (m) => toast(m, { type: 'error', duration: 8000 }),
+  onStateChange: (on) => { $('rec-pill').hidden = !on; },
+});
 
 $('btn-confronto').onclick = () => insertConfronto('Confronto con precedente analogo del ');
 $('btn-presa-visione').onclick = () => insertConfronto('Presa visione di precedente analogo del ');
@@ -469,7 +513,7 @@ const print = {
 };
 
 function setMsg(node, text, kind) {
-  node.className = 'field-message' + (kind ? ' ' + kind : '');
+  node.className = 'msg' + (kind ? ' msg--' + kind : '');
   node.textContent = text || '';
 }
 
@@ -494,9 +538,9 @@ function showPrintSetup() {
 }
 
 function closePrint() {
-  print.overlay.classList.remove('open');
-  showPrintSetup();
+  if (print.overlay.open) print.overlay.close();
 }
+print.overlay.addEventListener('close', showPrintSetup);
 
 function updateMarginsVisibility() {
   print.margins.hidden = !!print.select.value;
@@ -504,7 +548,7 @@ function updateMarginsVisibility() {
 
 $('btn-open-print').onclick = async () => {
   if (!el.reportText.value.trim()) {
-    alert('Il referto è vuoto. Componi o scrivi del testo prima di stampare.');
+    toast('Il referto è vuoto: componi o scrivi del testo prima di stampare.');
     return;
   }
   showPrintSetup();
@@ -531,20 +575,19 @@ $('btn-open-print').onclick = async () => {
   });
   print.hint.textContent = print.letterheads.length
     ? 'Con una carta intestata vengono usati i margini salvati per quella carta.'
-    : 'Nessuna carta intestata salvata: puoi aggiungerne una da "Il mio account → Gestione stampa".';
+    : 'Nessuna carta intestata salvata: puoi aggiungerne una da Account → Stampa e firma.';
   updateMarginsVisibility();
   const sign = doctorSignature();
   setMsg(print.signatureInfo, sign
     ? 'Firma in calce: ' + sign
     : 'Nome e cognome non impostati: la firma non verrà stampata. Puoi aggiungerli in "Il mio account".', sign ? '' : 'warn');
-  print.overlay.classList.add('open');
+  print.overlay.showModal();
 };
 
 print.select.onchange = updateMarginsVisibility;
 $('print-close').onclick = closePrint;
 $('print-back').onclick = showPrintSetup;
 print.overlay.addEventListener('click', (e) => { if (e.target === print.overlay) closePrint(); });
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && print.overlay.classList.contains('open')) closePrint(); });
 
 const readMm = (id, fallback) => {
   const v = parseFloat($(id).value);
@@ -594,6 +637,44 @@ $('print-do').onclick = () => {
     window.open(print.url, '_blank', 'noopener');
   }
 };
+
+// ============================================================
+// MENU UTENTE, TEMA, VISTA SU SCHERMI PICCOLI
+// ============================================================
+const menuBtn = $('user-menu-btn');
+const menu = $('user-menu');
+function setMenu(open) {
+  menu.hidden = !open;
+  menuBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (open) {
+    const theme = window.MR_THEME ? window.MR_THEME.get() : 'dark';
+    menu.querySelectorAll('[data-theme-set]').forEach((b) => b.setAttribute('aria-checked', b.dataset.themeSet === theme ? 'true' : 'false'));
+    const first = menu.querySelector('a, button');
+    if (first) first.focus();
+  }
+}
+menuBtn.onclick = () => setMenu(menu.hidden);
+document.addEventListener('click', (e) => { if (!menu.hidden && !e.target.closest('.menu')) setMenu(false); });
+menu.addEventListener('keydown', (e) => {
+  const items = [...menu.querySelectorAll('a, button')];
+  const i = items.indexOf(document.activeElement);
+  if (e.key === 'Escape') { setMenu(false); menuBtn.focus(); }
+  if (e.key === 'ArrowDown') { e.preventDefault(); items[(i + 1) % items.length].focus(); }
+  if (e.key === 'ArrowUp') { e.preventDefault(); items[(i - 1 + items.length) % items.length].focus(); }
+});
+menu.querySelectorAll('[data-theme-set]').forEach((b) => {
+  b.addEventListener('click', () => {
+    if (window.MR_THEME) window.MR_THEME.set(b.dataset.themeSet);
+    setMenu(false);
+  });
+});
+
+document.querySelectorAll('.mobile-switch [data-pane]').forEach((b) => {
+  b.addEventListener('click', () => {
+    $('workspace').dataset.pane = b.dataset.pane;
+    document.querySelectorAll('.mobile-switch [data-pane]').forEach((x) => x.setAttribute('aria-selected', x === b ? 'true' : 'false'));
+  });
+});
 
 // ============================================================
 // AUTENTICAZIONE
@@ -832,12 +913,14 @@ async function showApp() {
   if (isLocalMode()) {
     $('local-badge').hidden = false;
     $('link-team').hidden = true;
-    $('btn-logout').textContent = 'Esci dalla modalità locale';
+    $('logout-label').textContent = 'Esci dalla modalità locale';
   }
   loginOverlay.classList.add('hidden');
   appRoot.classList.remove('hidden');
   const meta = currentUser.user_metadata || {};
-  $('user-badge').textContent = (meta.nome || meta.cognome) ? [meta.nome, meta.cognome].filter(Boolean).join(' ') : (currentUser.email || '');
+  const displayName = (meta.nome || meta.cognome) ? [meta.nome, meta.cognome].filter(Boolean).join(' ') : (isLocalMode() ? 'Utente locale' : (currentUser.email || ''));
+  $('user-badge').textContent = displayName;
+  $('user-avatar').textContent = displayName.split(/[\s@.]+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('') || '?';
   await loadLibrary();
   const draft = readDraft();
   workspaces = draft ? draft.workspaces : Array.from({ length: WORKSPACE_COUNT }, emptyWorkspace);

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Da aggiornare insieme al dominio definitivo (anche canonical e Open Graph in index.html). -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://jgave99.github.io/ModReport/</loc><lastmod>2026-10-04</lastmod></url>
+  <url><loc>https://jgave99.github.io/ModReport/tutorial.html</loc><lastmod>2026-10-04</lastmod></url>
+  <url><loc>https://jgave99.github.io/ModReport/informativa-privacy.html</loc><lastmod>2026-10-04</lastmod></url>
+  <url><loc>https://jgave99.github.io/ModReport/termini-servizio.html</loc><lastmod>2026-10-04</lastmod></url>
+</urlset>

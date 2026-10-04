@@ -1,6 +1,6 @@
 // Il mio account (account.html): profilo, libreria personale, importazione referti, carte intestate.
 import { getSupabase, pageUrl } from '../lib/supabase.js';
-import { $, escapeHtml, setMessage } from '../lib/dom.js';
+import { $, escapeHtml, setMessage, iconHtml } from '../lib/dom.js';
 import { authErrorMessage } from '../lib/auth-messages.js';
 import { LibraryStore, cloneDefaults } from '../lib/library.js';
 import { DEFAULT_LIBRARY } from '../lib/default-library.js';
@@ -9,6 +9,9 @@ import { passwordProblem } from '../lib/auth-policy.js';
 import { requireSession, needsMfa } from '../lib/session.js';
 import { detectPII, splitIntoSentences, classifyFinding } from '../lib/import-analysis.js';
 import { alertDialog, confirmDialog, promptDialog } from '../lib/dialog.js';
+import { toast } from '../lib/toast.js';
+import { createLibraryEditor } from '../lib/library-editor.js';
+import { migrateLibrary } from '../lib/library.js';
 import { isLocalMode, setLocalMode, clearLocalData } from '../lib/local-backend.js';
 
 const LETTERHEAD_MAX_BYTES = 5 * 1024 * 1024;
@@ -71,7 +74,7 @@ document.addEventListener('click', async (e) => {
   e.preventDefault();
   await store.flush();
   if (store.hasUnsavedChanges()) {
-    if (!confirm('Alcune modifiche alla libreria non sono state salvate. Uscire comunque?')) return;
+    if (!await confirmDialog('Modifiche non salvate', 'Alcune modifiche alla libreria non sono state salvate. Uscire comunque?', { okText: 'Esci comunque', danger: true })) return;
   }
   window.location.href = a.href;
 });
@@ -79,13 +82,9 @@ document.addEventListener('click', async (e) => {
 // Con la libreria non caricata, blocca tutte le modifiche (altrimenti si sovrascriverebbero i dati veri).
 function setLibraryLocked(locked) {
   document.querySelectorAll('[data-lib-banner]').forEach((b) => { b.hidden = !locked; });
-  ['tab-personalizza', 'tab-import'].forEach((id) => {
-    const panel = $(id);
-    panel.querySelectorAll('input, textarea, select, button').forEach((c) => {
-      if (c.closest('[data-lib-banner]')) return;
-      c.disabled = locked;
-    });
-  });
+  $('library-editor').classList.toggle('locked', locked);
+  $('library-editor').inert = locked; // blocca anche la tastiera, non solo il mouse
+  ['lib-export', 'lib-import-file', 'btn-reset-data', 'ai-analyze-btn', 'ai-add-indicazione-btn'].forEach((id) => { $(id).disabled = locked; });
 }
 
 async function loadLibrary() {
@@ -106,7 +105,7 @@ document.querySelectorAll('[data-lib-retry]').forEach((b) => {
   b.addEventListener('click', async () => {
     b.disabled = true;
     await loadLibrary();
-    refreshAllSettingsSelects();
+    refreshLibraryViews();
     b.disabled = false;
   });
 });
@@ -141,180 +140,48 @@ function fillSelect(selectEl, items, placeholder) {
   if (previous !== '' && items.some((i) => String(i.value) === previous)) selectEl.value = previous;
 }
 
-function refreshAllSettingsSelects() {
-  fillSelect($('new-esame-metodica'), DATA.metodiche.map((m) => ({ value: m, label: m.toUpperCase() })));
-  const esamiOptions = allEsami().map(({ esame, metodica }) => ({ value: esame, label: metodica.toUpperCase() + ' — ' + esame }));
-  const none = esamiOptions.length ? null : 'Nessun esame disponibile';
-  ['new-indicazione-esame', 'new-referto-esame', 'edit-referto-esame', 'edit-indicazione-esame', 'delete-esame-select']
-    .forEach((id) => fillSelect($(id), esamiOptions, none));
-  refreshEditRefertoGroups();
-  refreshEditIndicazioneItems();
+// ---- Editor della libreria e strumenti (esporta, importa, ripristina) ----
+let editor = null;
+
+function refreshLibraryViews() {
+  if (editor) editor.render();
   refreshAiSelects();
 }
 
-function refreshEditRefertoGroups() {
-  const esame = $('edit-referto-esame').value;
-  const groups = DATA.refertoByEsame[esame] ? Object.keys(DATA.refertoByEsame[esame]) : [];
-  fillSelect($('edit-referto-group'), groups.map((g) => ({ value: g, label: g })), groups.length ? null : 'Nessun gruppo');
-  refreshEditRefertoButtons();
-}
-
-function refreshEditRefertoButtons() {
-  const esame = $('edit-referto-esame').value;
-  const group = $('edit-referto-group').value;
-  const buttons = (DATA.refertoByEsame[esame] && DATA.refertoByEsame[esame][group]) || [];
-  fillSelect($('edit-referto-button'), buttons.map((b, i) => ({ value: String(i), label: b.label })), buttons.length ? null : 'Nessun pulsante');
-  loadEditRefertoFields();
-}
-
-function loadEditRefertoFields() {
-  const esame = $('edit-referto-esame').value;
-  const group = $('edit-referto-group').value;
-  const idx = $('edit-referto-button').value;
-  const btn = (DATA.refertoByEsame[esame] && DATA.refertoByEsame[esame][group] && DATA.refertoByEsame[esame][group][idx]) || null;
-  $('edit-referto-label').value = btn ? btn.label : '';
-  $('edit-referto-text').value = btn ? btn.text : '';
-  $('edit-referto-neg').checked = btn ? !!btn.neg : false;
-}
-
-function refreshEditIndicazioneItems() {
-  const esame = $('edit-indicazione-esame').value;
-  const list = DATA.indicazioniByEsame[esame] || [];
-  fillSelect($('edit-indicazione-item'), list.map((t, i) => ({ value: String(i), label: t })), list.length ? null : 'Nessuna indicazione');
-  loadEditIndicazioneField();
-}
-
-function loadEditIndicazioneField() {
-  const esame = $('edit-indicazione-esame').value;
-  const idx = $('edit-indicazione-item').value;
-  const list = DATA.indicazioniByEsame[esame] || [];
-  $('edit-indicazione-text').value = (idx !== '' && list[idx] !== undefined) ? list[idx] : '';
-}
-
-$('add-metodica-btn').onclick = () => {
-  const input = $('new-metodica-name');
-  const name = input.value.trim();
-  if (!name) return;
-  if (!DATA.metodiche.includes(name)) {
-    DATA.metodiche.push(name);
-    DATA.esamiByMetodica[name] = DATA.esamiByMetodica[name] || [];
-  }
-  input.value = '';
-  persist();
-  refreshAllSettingsSelects();
+$('lib-export').onclick = () => {
+  const blob = new Blob([JSON.stringify({ app: 'ModReport', kind: 'libreria', exportedAt: new Date().toISOString(), data: DATA }, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'modreport-libreria-' + new Date().toISOString().slice(0, 10) + '.json';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  setMessage($('lib-tools-message'), 'Libreria esportata. Puoi reimportarla qui o su un altro account.', 'ok');
 };
 
-$('add-esame-btn').onclick = () => {
-  const metodica = $('new-esame-metodica').value;
-  const input = $('new-esame-name');
-  const name = input.value.trim();
-  if (!metodica || !name) return;
-  DATA.esamiByMetodica[metodica] = DATA.esamiByMetodica[metodica] || [];
-  if (!DATA.esamiByMetodica[metodica].includes(name)) DATA.esamiByMetodica[metodica].push(name);
-  input.value = '';
+$('lib-import-file').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file || !libraryReady) return;
+  let parsed;
+  try { parsed = JSON.parse(await file.text()); } catch { parsed = null; }
+  const data = parsed && parsed.kind === 'libreria' && parsed.data;
+  if (!data || !Array.isArray(data.metodiche)) { setMessage($('lib-tools-message'), 'Il file non è una libreria ModReport valida.', 'error'); return; }
+  if (!await confirmDialog('Sostituire la libreria?', 'La libreria attuale verrà sostituita da quella del file (' + data.metodiche.length + ' metodiche). Se ti serve, esportala prima.', { okText: 'Sostituisci' })) return;
+  DATA = migrateLibrary(data).data;
   persist();
-  refreshAllSettingsSelects();
-};
+  refreshLibraryViews();
+  setMessage($('lib-tools-message'), 'Libreria importata.', 'ok');
+});
 
-$('delete-esame-btn').onclick = () => {
-  const esame = $('delete-esame-select').value;
-  if (!esame) return;
-  if (!confirm('Eliminare l\'esame "' + esame + '"? Verranno eliminate anche tutte le indicazioni e i pulsanti di referto associati a questo esame.')) return;
-  DATA.metodiche.forEach((m) => {
-    if (DATA.esamiByMetodica[m]) DATA.esamiByMetodica[m] = DATA.esamiByMetodica[m].filter((e) => e !== esame);
-  });
-  delete DATA.indicazioniByEsame[esame];
-  delete DATA.refertoByEsame[esame];
-  persist();
-  refreshAllSettingsSelects();
-};
-
-$('add-indicazione-btn').onclick = () => {
-  const esame = $('new-indicazione-esame').value;
-  const input = $('new-indicazione-text');
-  const text = input.value.trim();
-  if (!esame || !text) return;
-  DATA.indicazioniByEsame[esame] = DATA.indicazioniByEsame[esame] || [];
-  DATA.indicazioniByEsame[esame].push(text);
-  input.value = '';
-  persist();
-  refreshAllSettingsSelects();
-};
-
-$('add-referto-btn').onclick = () => {
-  const esame = $('new-referto-esame').value;
-  const group = $('new-referto-group').value.trim();
-  const label = $('new-referto-label').value.trim();
-  const text = $('new-referto-text').value.trim();
-  const neg = $('new-referto-neg').checked;
-  if (!esame || !group || !label || !text) return;
-  DATA.refertoByEsame[esame] = DATA.refertoByEsame[esame] || {};
-  DATA.refertoByEsame[esame][group] = DATA.refertoByEsame[esame][group] || [];
-  DATA.refertoByEsame[esame][group].push({ label, text, neg });
-  $('new-referto-group').value = '';
-  $('new-referto-label').value = '';
-  $('new-referto-text').value = '';
-  $('new-referto-neg').checked = false;
-  persist();
-  refreshAllSettingsSelects();
-};
-
-$('edit-referto-esame').addEventListener('change', refreshEditRefertoGroups);
-$('edit-referto-group').addEventListener('change', refreshEditRefertoButtons);
-$('edit-referto-button').addEventListener('change', loadEditRefertoFields);
-
-$('save-referto-btn').onclick = () => {
-  const esame = $('edit-referto-esame').value;
-  const group = $('edit-referto-group').value;
-  const idx = $('edit-referto-button').value;
-  if (!esame || !group || idx === '') return;
-  const btn = DATA.refertoByEsame[esame] && DATA.refertoByEsame[esame][group] && DATA.refertoByEsame[esame][group][idx];
-  if (!btn) return;
-  btn.label = $('edit-referto-label').value.trim() || btn.label;
-  btn.text = $('edit-referto-text').value.trim() || btn.text;
-  btn.neg = $('edit-referto-neg').checked;
-  persist();
-  refreshEditRefertoButtons();
-};
-
-$('delete-referto-btn').onclick = () => {
-  const esame = $('edit-referto-esame').value;
-  const group = $('edit-referto-group').value;
-  const idx = $('edit-referto-button').value;
-  if (!esame || !group || idx === '') return;
-  DATA.refertoByEsame[esame][group].splice(Number(idx), 1);
-  if (DATA.refertoByEsame[esame][group].length === 0) delete DATA.refertoByEsame[esame][group];
-  persist();
-  refreshEditRefertoGroups();
-};
-
-$('edit-indicazione-esame').addEventListener('change', refreshEditIndicazioneItems);
-$('edit-indicazione-item').addEventListener('change', loadEditIndicazioneField);
-
-$('save-indicazione-btn').onclick = () => {
-  const esame = $('edit-indicazione-esame').value;
-  const idx = $('edit-indicazione-item').value;
-  const newText = $('edit-indicazione-text').value.trim();
-  if (!esame || idx === '' || !newText) return;
-  DATA.indicazioniByEsame[esame][Number(idx)] = newText;
-  persist();
-  refreshEditIndicazioneItems();
-};
-
-$('delete-indicazione-btn').onclick = () => {
-  const esame = $('edit-indicazione-esame').value;
-  const idx = $('edit-indicazione-item').value;
-  if (!esame || idx === '') return;
-  DATA.indicazioniByEsame[esame].splice(Number(idx), 1);
-  persist();
-  refreshEditIndicazioneItems();
-};
-
-$('btn-reset-data').onclick = () => {
-  if (!confirm('Ripristinare tutti i dati ai valori predefiniti? Le personalizzazioni aggiunte andranno perse.')) return;
+$('btn-reset-data').onclick = async () => {
+  if (!await confirmDialog('Ripristinare la libreria predefinita?', 'Le personalizzazioni andranno perse. Prima viene scaricata automaticamente una copia della libreria attuale.', { okText: 'Ripristina', danger: true })) return;
+  $('lib-export').click();
   DATA = JSON.parse(JSON.stringify(DEFAULT_LIBRARY));
   persist();
-  refreshAllSettingsSelects();
+  refreshLibraryViews();
 };
 
 // ============================================================
@@ -417,42 +284,38 @@ function renderAiVoci() {
   const list = $('ai-voci-list');
   const emptyRow = $('ai-voci-empty-row');
   list.innerHTML = '';
-  if (!aiProposedVoci.length) { emptyRow.style.display = ''; return; }
-  emptyRow.style.display = 'none';
+  if (!aiProposedVoci.length) { emptyRow.hidden = false; return; }
+  emptyRow.hidden = true;
   aiProposedVoci.forEach((voce, idx) => {
     const card = document.createElement('div');
-    card.className = 'settings-section';
+    card.className = 'import-voce';
     card.innerHTML = `
-      <div class="field-row">
+      <div class="form-grid">
         <div class="field">
           <label for="ai-voce-${idx}-group">Gruppo / distretto</label>
           <input type="text" id="ai-voce-${idx}-group" value="${escapeHtml(voce.group)}" placeholder="es. Parenchima">
         </div>
         <div class="field">
-          <label for="ai-voce-${idx}-label">Etichetta pulsante</label>
+          <label for="ai-voce-${idx}-label">Etichetta del pulsante</label>
           <input type="text" id="ai-voce-${idx}-label" value="${escapeHtml(voce.label)}">
         </div>
       </div>
-      <div class="field-row">
-        <div class="field">
-          <label for="ai-voce-${idx}-text">Testo inserito nel referto</label>
-          <textarea id="ai-voce-${idx}-text">${escapeHtml(voce.text)}</textarea>
-        </div>
+      <div class="field">
+        <label for="ai-voce-${idx}-text">Testo inserito nel referto</label>
+        <textarea id="ai-voce-${idx}-text">${escapeHtml(voce.text)}</textarea>
       </div>
-      <div class="field-row">
-        <div class="field">
-          <label for="ai-voce-${idx}-class">Tipo di reperto</label>
-          <select id="ai-voce-${idx}-class">
-            <option value="">— scegli —</option>
-            <option value="normale">Normale</option>
-            <option value="patologico">Patologico / da approfondire</option>
-          </select>
-        </div>
+      <div class="field">
+        <label for="ai-voce-${idx}-class">Tipo di reperto</label>
+        <select id="ai-voce-${idx}-class">
+          <option value="">— scegli —</option>
+          <option value="normale">Normale</option>
+          <option value="patologico">Patologico / da approfondire</option>
+        </select>
+        <span class="field__hint" id="ai-voce-${idx}-hint"></span>
       </div>
-      <div class="muted" id="ai-voce-${idx}-hint"></div>
-      <div class="field-message error" id="ai-voce-${idx}-pii"></div>
-      <div class="field-row">
-        <button class="btn-sm" id="ai-voce-${idx}-add-btn">+ Includi nella libreria</button>
+      <div class="msg msg--error" id="ai-voce-${idx}-pii" role="alert"></div>
+      <div class="row">
+        <button class="btn btn--sm" id="ai-voce-${idx}-add-btn">${iconHtml('plus')}Includi nella libreria</button>
       </div>`;
     list.appendChild(card);
     const q = (suffix) => card.querySelector('#ai-voce-' + idx + '-' + suffix);
@@ -489,7 +352,7 @@ function addSingleVoceToLibrary(voce) {
   DATA.refertoByEsame[esame][group] = DATA.refertoByEsame[esame][group] || [];
   DATA.refertoByEsame[esame][group].push({ label, text, neg: voce.cls === 'patologico' });
   persist();
-  refreshAllSettingsSelects();
+  refreshLibraryViews();
   aiProposedVoci = aiProposedVoci.filter((v) => v !== voce);
   renderAiVoci();
   setMessage(msg, 'Voce "' + label + '" aggiunta alla libreria per l\'esame "' + esame + '".', 'ok');
@@ -526,9 +389,9 @@ $('ai-analyze-btn').onclick = () => {
   }
   const indRow = $('ai-indicazione-row');
   $('ai-indicazione-riconosciuta').value = indicazioneText || '';
-  indRow.classList.toggle('hidden', !indicazioneText);
+  indRow.hidden = !indicazioneText;
   renderAiVoci();
-  $('ai-results').classList.remove('hidden');
+  $('ai-results').hidden = false;
   setMessage($('ai-add-message'), '');
   if (!esameMatch) setMessage(msg, 'Esame non riconosciuto automaticamente: selezionalo qui sotto per poter aggiungere le voci alla libreria.', 'error');
   else if (!sentences.length) setMessage(msg, 'Metodica ed esame riconosciuti, ma non è stata trovata nessuna frase da proporre come voce.', 'ok');
@@ -547,7 +410,7 @@ $('ai-add-indicazione-btn').onclick = () => {
   if (!DATA.indicazioniByEsame[esame].includes(text)) {
     DATA.indicazioniByEsame[esame].push(text);
     persist();
-    refreshAllSettingsSelects();
+    refreshLibraryViews();
     setMessage(msg, 'Indicazione aggiunta alla libreria per l\'esame "' + esame + '".', 'ok');
   } else {
     setMessage(msg, 'Questa indicazione è già presente in libreria per questo esame.');
@@ -560,14 +423,7 @@ $('pref-dictation-off').addEventListener('change', (e) => {
   window.location.reload();
 });
 
-const dictationOpts = { onError: (m) => alert(m) };
-[
-  ['mic-ai-report-text', 'ai-report-text'],
-  ['mic-new-indicazione-text', 'new-indicazione-text'],
-  ['mic-new-referto-text', 'new-referto-text'],
-  ['mic-edit-referto-text', 'edit-referto-text'],
-  ['mic-edit-indicazione-text', 'edit-indicazione-text'],
-].forEach(([btn, target]) => attachDictation($(btn), () => $(target), dictationOpts));
+attachDictation($('mic-ai-report-text'), () => $('ai-report-text'), { onError: (m) => toast(m, { type: 'error', duration: 8000 }) });
 
 // ============================================================
 // CARTE INTESTATE
@@ -592,34 +448,33 @@ function renderLetterheads() {
   const list = $('lh-list');
   const empty = $('lh-empty');
   list.innerHTML = '';
-  empty.classList.toggle('hidden', letterheads.length > 0);
+  empty.hidden = letterheads.length > 0;
   letterheads.forEach((lh) => {
     const item = document.createElement('div');
     item.className = 'lh-item';
     item.innerHTML = `
-      <div class="lh-item-head"><span class="lh-item-name">${escapeHtml(lh.nome)}</span></div>
-      <div class="lh-item-margins">Margini — superiore: ${escapeHtml(lh.margine_top)}mm · sinistro: ${escapeHtml(lh.margine_left)}mm · destro: ${escapeHtml(lh.margine_right)}mm</div>
-      <div class="lh-item-actions">
-        <button class="btn-sm" data-action="modifica">Modifica margini</button>
-        <button class="btn-sm danger" data-action="elimina">Elimina</button>
+      <strong>${escapeHtml(lh.nome)}</strong>
+      <span class="subtle">Margini — superiore: ${escapeHtml(lh.margine_top)} mm · sinistro: ${escapeHtml(lh.margine_left)} mm · destro: ${escapeHtml(lh.margine_right)} mm</span>
+      <div class="row">
+        <button class="btn btn--sm" data-action="modifica"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#pencil"></use></svg>Modifica margini</button>
+        <button class="btn btn--sm btn--danger" data-action="elimina"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#trash-2"></use></svg>Elimina</button>
       </div>`;
     item.querySelector('[data-action="elimina"]').onclick = async () => {
-      if (!confirm('Eliminare la carta intestata "' + lh.nome + '"?')) return;
+      if (!await confirmDialog('Eliminare la carta intestata "' + lh.nome + '"?', 'Il file verrà cancellato.', { okText: 'Elimina', danger: true })) return;
       await sb.storage.from('letterheads').remove([lh.storage_path]);
       const { error } = await sb.from('letterheads').delete().eq('id', lh.id);
       if (error) setMessage($('lh-message'), 'Errore durante l\'eliminazione: ' + error.message, 'error');
       loadLetterheads();
     };
     item.querySelector('[data-action="modifica"]').onclick = async () => {
-      const ask = (label, current) => {
-        const v = prompt(label, current);
-        if (v === null) return null;
-        const n = parseFloat(String(v).replace(',', '.'));
-        return Number.isFinite(n) && n >= 0 ? n : Number(current);
+      const validMm = (v) => { const n = parseFloat(String(v).replace(',', '.')); return Number.isFinite(n) && n >= 0 && n <= 200 ? null : 'Inserisci un numero di millimetri tra 0 e 200.'; };
+      const ask = async (label, current) => {
+        const v = await promptDialog('Margini di "' + lh.nome + '"', { label, value: String(current), inputmode: 'decimal', validate: validMm, okText: 'Avanti' });
+        return v === null ? null : parseFloat(String(v).replace(',', '.'));
       };
-      const top = ask('Margine superiore (mm):', lh.margine_top); if (top === null) return;
-      const left = ask('Margine sinistro (mm):', lh.margine_left); if (left === null) return;
-      const right = ask('Margine destro (mm):', lh.margine_right); if (right === null) return;
+      const top = await ask('Margine superiore (mm)', lh.margine_top); if (top === null) return;
+      const left = await ask('Margine sinistro (mm)', lh.margine_left); if (left === null) return;
+      const right = await ask('Margine destro (mm)', lh.margine_right); if (right === null) return;
       const { error } = await sb.from('letterheads').update({ margine_top: top, margine_left: left, margine_right: right }).eq('id', lh.id);
       if (error) setMessage($('lh-message'), 'Errore nel salvataggio dei margini: ' + error.message, 'error');
       loadLetterheads();
@@ -842,14 +697,25 @@ $('btn-logout').onclick = async () => {
   window.location.replace(pageUrl('app.html'));
 };
 
-document.querySelectorAll('.nav-item[data-tab]').forEach((btn) => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.nav-item[data-tab]').forEach((b) => b.classList.remove('active'));
-    btn.classList.add('active');
-    document.querySelectorAll('.tab-panel').forEach((p) => p.classList.remove('active'));
-    $(btn.dataset.tab).classList.add('active');
+// ---- Pannelli con indirizzo (#profilo, #libreria, …) ----
+const PANELS = ['profilo', 'libreria', 'importa', 'stampa', 'preferenze'];
+function showPanel() {
+  const name = PANELS.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'profilo';
+  PANELS.forEach((p) => $('panel-' + p).classList.toggle('is-active', p === name));
+  document.querySelectorAll('.sidenav [data-panel]').forEach((a) => {
+    if (a.dataset.panel === name) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
   });
-});
+}
+window.addEventListener('hashchange', showPanel);
+showPanel();
+
+// ---- Preferenze: tema e dimensione del testo ----
+if (window.MR_THEME) {
+  $('pref-theme').value = window.MR_THEME.get();
+  $('pref-scale').value = window.MR_THEME.getScale();
+  $('pref-theme').onchange = (e) => window.MR_THEME.set(e.target.value);
+  $('pref-scale').onchange = (e) => window.MR_THEME.setScale(e.target.value);
+}
 
 (async function init() {
   if (!sb) {
@@ -862,7 +728,8 @@ document.querySelectorAll('.nav-item[data-tab]').forEach((btn) => {
   $('profile-nome').value = (currentUser.user_metadata && currentUser.user_metadata.nome) || '';
   $('profile-cognome').value = (currentUser.user_metadata && currentUser.user_metadata.cognome) || '';
   await loadLibrary();
-  refreshAllSettingsSelects();
+  editor = createLibraryEditor($('library-editor'), { getData: () => DATA, onChange: persist });
+  refreshLibraryViews();
   await loadLetterheads();
   if (isLocalMode()) {
     document.querySelectorAll('[data-cloud-only]').forEach((n) => { n.hidden = true; });
@@ -871,6 +738,6 @@ document.querySelectorAll('.nav-item[data-tab]').forEach((btn) => {
   } else {
     await refreshMfa();
   }
-  $('gate').classList.add('hidden');
-  $('page-root').classList.remove('hidden');
+  $('gate').hidden = true;
+  $('page-root').hidden = false;
 })();

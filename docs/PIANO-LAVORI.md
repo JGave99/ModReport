@@ -48,17 +48,18 @@ Origine: audit del 03-04/10/2026. Legenda: `[x]` fatto · `[ ]` da fare · 👤 
 - 👤 [ ] Proteggere `main` (solo PR) e creare un progetto Supabase di staging
 
 ## Step 5 — Grafica e UX
-- [ ] Design system unico in CSS condiviso (`css/`: token, componenti) e icone SVG al posto delle emoji
-- [ ] Bug visivi: anteprima della landing senza a capo, campi login bianchi
-- [ ] Layout responsive (editor, team, account)
-- [ ] Editor: topbar riordinata, stato del microfono, normale/patologico con icona, frasi inserite evidenziate
-- [ ] Editor della libreria ad albero con modifica in linea e riordino
-- [ ] Toast e finestre di dialogo al posto di alert/confirm/prompt
-- [ ] Accessibilità (form, label, tastiera, Esc, focus, contrasti AA)
-- [ ] Tema chiaro opzionale e dimensione del testo
-- [ ] Logo SVG, favicon, manifest
-- [ ] Landing: claim, prezzi, FAQ, sicurezza, chi siamo, footer, SEO/Open Graph, registrazione diretta
-- 👤 [ ] Foto, nomi e ruoli dei fondatori; testimonianze
+- [x] Design system unico in CSS condiviso (`css/`: token, componenti) e icone SVG al posto delle emoji
+- [x] Bug visivi: anteprima della landing senza a capo, campi login bianchi
+- [x] Layout responsive (editor, team, account)
+- [x] Editor: topbar riordinata, stato del microfono, normale/patologico con icona, frasi inserite evidenziate
+- [x] Editor della libreria ad albero con modifica in linea e riordino
+- [x] Toast e finestre di dialogo al posto di alert/confirm/prompt
+- [x] Accessibilità (form, label, tastiera, Esc, focus, contrasti AA)
+- [x] Tema chiaro opzionale e dimensione del testo
+- [x] Logo SVG, favicon, manifest
+- [x] Landing: claim, prezzi, FAQ, sicurezza, chi siamo, footer, SEO/Open Graph, registrazione diretta
+- 👤 [ ] Foto, nomi e ruoli dei fondatori; testimonianze (in `js/site-config.js`; le sezioni compaiono da sole)
+- 👤 [ ] Dominio definitivo in canonical/Open Graph di `index.html`, `sitemap.xml` e `robots.txt` (lo segnala `npm run check:lancio`)
 
 ## Step 6 — Funzionalità
 - [ ] Libreria con ID stabili: base versionata + modifiche utente
