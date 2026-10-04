@@ -5,8 +5,8 @@ import { authErrorMessage, isExistingUserSignup, readAuthErrorFromHash } from '.
 import { LibraryStore, cloneDefaults } from '../lib/library.js';
 import { attachDictation, stopAllDictation } from '../lib/dictation.js';
 import { buildReportPdf } from '../lib/pdf.js';
-
-const MIN_PASSWORD_LENGTH = 6;
+import { passwordProblem } from '../lib/auth-policy.js';
+import { isSharedDevice, setSharedDevice, needsMfa, startIdleLogout } from '../lib/session.js';
 
 // Il fragment dell'URL va letto prima che supabase-js lo consumi.
 const initialHash = window.location.hash;
@@ -334,6 +334,7 @@ $('btn-copy').onclick = async () => {
 $('btn-archive').onclick = async () => {
   const testo = el.reportText.value.trim();
   if (!testo) { alert('Non c\'è nulla da salvare: il referto è vuoto.'); return; }
+  if (testo.length > 20000) { alert('Il referto è troppo lungo per l\'archivio (massimo 20.000 caratteri).'); return; }
   if (!confirm('Salvare questo referto nell\'archivio? Assicurati che sia privo di dati identificativi del paziente.')) return;
   if (!sb || !currentUser) { alert('Devi essere connesso per salvare nell\'archivio.'); return; }
   const btn = $('btn-archive');
@@ -511,8 +512,8 @@ $('print-do').onclick = () => {
 // ============================================================
 const loginOverlay = $('login-overlay');
 const appRoot = $('app-root');
-const AUTH_VIEWS = ['login', 'signup', 'forgot', 'recovery', 'check-email'];
-const ERROR_BOX = { login: 'login-error', signup: 'signup-error', forgot: 'forgot-error', recovery: 'recovery-error', 'check-email': 'check-email-error' };
+const AUTH_VIEWS = ['login', 'signup', 'forgot', 'recovery', 'mfa', 'check-email'];
+const ERROR_BOX = { login: 'login-error', signup: 'signup-error', forgot: 'forgot-error', recovery: 'recovery-error', mfa: 'mfa-error', 'check-email': 'check-email-error' };
 
 function authMessage(view, text, ok) {
   const box = $(ERROR_BOX[view]);
@@ -558,6 +559,8 @@ $('view-login').addEventListener('submit', (e) => {
     const email = $('login-email').value.trim();
     const password = $('login-password').value;
     if (!email || !password) { authMessage('login', 'Inserisci email e password.'); return; }
+    // La scelta va fatta prima dell'accesso: decide dove viene salvata la sessione.
+    setSharedDevice($('login-shared').checked);
     const { data, error } = await sb.auth.signInWithPassword({ email, password });
     if (error) {
       if (error.code === 'email_not_confirmed') {
@@ -569,9 +572,39 @@ $('view-login').addEventListener('submit', (e) => {
       return;
     }
     currentUser = data.user;
+    await afterSignIn();
+  });
+});
+
+// Dopo l'accesso: se l'utente ha la verifica in due passaggi, chiede il codice.
+async function afterSignIn() {
+  if (await needsMfa(sb)) {
+    showAuthView('mfa');
+    return;
+  }
+  await showApp();
+}
+
+$('view-mfa').addEventListener('submit', (e) => {
+  e.preventDefault();
+  withBusy($('btn-mfa'), async () => {
+    const code = $('mfa-code').value.replace(/\s+/g, '');
+    if (!/^\d{6}$/.test(code)) { authMessage('mfa', 'Il codice è composto da 6 cifre.'); return; }
+    const { data: factors, error: listError } = await sb.auth.mfa.listFactors();
+    const factor = factors && factors.totp && factors.totp.find((f) => f.status === 'verified');
+    if (listError || !factor) { authMessage('mfa', authErrorMessage(listError || { message: 'factor' })); return; }
+    const { error } = await sb.auth.mfa.challengeAndVerify({ factorId: factor.id, code });
+    if (error) { authMessage('mfa', authErrorMessage(error)); $('mfa-code').select(); return; }
+    const { data: { session } } = await sb.auth.getSession();
+    currentUser = session.user;
     await showApp();
   });
 });
+
+$('btn-mfa-cancel').onclick = async () => {
+  try { await sb.auth.signOut({ scope: 'local' }); } catch (e) { /* si esce comunque */ }
+  window.location.replace(pageUrl('app.html'));
+};
 
 $('view-signup').addEventListener('submit', (e) => {
   e.preventDefault();
@@ -581,7 +614,8 @@ $('view-signup').addEventListener('submit', (e) => {
     const password = $('signup-password').value;
     const password2 = $('signup-password2').value;
     if (!email) { authMessage('signup', 'Inserisci la tua email.'); return; }
-    if (password.length < MIN_PASSWORD_LENGTH) { authMessage('signup', 'La password deve avere almeno ' + MIN_PASSWORD_LENGTH + ' caratteri.'); return; }
+    const problem = passwordProblem(password, email);
+    if (problem) { authMessage('signup', problem); return; }
     if (password !== password2) { authMessage('signup', 'Le due password non coincidono.'); return; }
     const { data, error } = await sb.auth.signUp({ email, password, options: { emailRedirectTo: pageUrl('app.html') } });
     if (error) { authMessage('signup', authErrorMessage(error)); return; }
@@ -613,14 +647,15 @@ $('view-recovery').addEventListener('submit', (e) => {
   withBusy($('btn-recovery'), async () => {
     const p1 = $('recovery-password').value;
     const p2 = $('recovery-password2').value;
-    if (p1.length < MIN_PASSWORD_LENGTH) { authMessage('recovery', 'La password deve avere almeno ' + MIN_PASSWORD_LENGTH + ' caratteri.'); return; }
+    const problem = passwordProblem(p1);
+    if (problem) { authMessage('recovery', problem); return; }
     if (p1 !== p2) { authMessage('recovery', 'Le due password non coincidono.'); return; }
     const { data, error } = await sb.auth.updateUser({ password: p1 });
     if (error) { authMessage('recovery', authErrorMessage(error)); return; }
     recoveryMode = false;
     cleanUrl();
     currentUser = data.user;
-    await showApp();
+    await afterSignIn();
     flash('Password aggiornata', 2500);
   });
 });
@@ -655,6 +690,14 @@ $('btn-lib-retry').onclick = () => withBusy($('btn-lib-retry'), async () => {
 });
 
 async function showApp() {
+  // Invito a un team ricevuto prima di accedere: si riprende da dove si era rimasti.
+  let pendingInvite = null;
+  try { pendingInvite = sessionStorage.getItem('mr-pending-invite'); sessionStorage.removeItem('mr-pending-invite'); } catch (e) { /* ignora */ }
+  if (pendingInvite) {
+    window.location.replace(pageUrl('team.html?invite=' + encodeURIComponent(pendingInvite)));
+    return;
+  }
+  startIdleLogout(sb, { beforeLogout: stopAllDictation });
   loginOverlay.classList.add('hidden');
   appRoot.classList.remove('hidden');
   const meta = currentUser.user_metadata || {};
@@ -701,9 +744,12 @@ $('btn-logout').onclick = async () => {
   }
   if (session && session.user) {
     currentUser = session.user;
-    await showApp();
+    await afterSignIn();
     if (isSignupConfirmation) flash('Email confermata: benvenuto in ModReport!', 3000);
+  } else if (new URLSearchParams(initialSearch).get('timeout') === '1') {
+    showLogin('Sei uscito automaticamente dopo un periodo di inattività sulla postazione condivisa.');
   } else {
     showLogin();
   }
+  $('login-shared').checked = isSharedDevice();
 })();

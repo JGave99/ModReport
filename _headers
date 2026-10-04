@@ -1,0 +1,16 @@
+# Header HTTP di sicurezza (Cloudflare Pages e Netlify leggono questo file; GitHub Pages lo ignora).
+# La CSP è la stessa dei meta tag nelle pagine, più frame-ancestors che solo l'header può imporre.
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://umejthggxihtyqvcszgm.supabase.co wss://umejthggxihtyqvcszgm.supabase.co; frame-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; worker-src 'self' blob:; manifest-src 'self'; frame-ancestors 'none'
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: microphone=(self), camera=(), geolocation=(), payment=(), usb=()
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  Cross-Origin-Opener-Policy: same-origin
+
+/tests/*
+  X-Robots-Tag: noindex
+
+/assets/*
+  Cache-Control: public, max-age=86400

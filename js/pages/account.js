@@ -5,8 +5,12 @@ import { authErrorMessage } from '../lib/auth-messages.js';
 import { LibraryStore, cloneDefaults } from '../lib/library.js';
 import { DEFAULT_LIBRARY } from '../lib/default-library.js';
 import { attachDictation, stopAllDictation } from '../lib/dictation.js';
+import { passwordProblem } from '../lib/auth-policy.js';
+import { requireSession, needsMfa } from '../lib/session.js';
+import { detectPII, splitIntoSentences, classifyFinding } from '../lib/import-analysis.js';
+import { alertDialog, confirmDialog, promptDialog } from '../lib/dialog.js';
 
-const MIN_PASSWORD_LENGTH = 6;
+const LETTERHEAD_MAX_BYTES = 5 * 1024 * 1024;
 const sb = getSupabase();
 
 let DATA = cloneDefaults();
@@ -372,20 +376,7 @@ function stripKnownLines(text, esameMatch, indicazioneText) {
     if (skipPatterns.some((re) => re.test(line))) return false;
     const lineNorm = normalizeForMatch(line);
     return !(lineNorm === esameNorm || lineNorm === metodicaNorm || lineNorm === indNorm);
-  }).join(' ');
-}
-
-function splitIntoSentences(text) {
-  const joined = text.replace(/\s+/g, ' ').trim();
-  if (!joined) return [];
-  const rough = joined.split(/(?<=[.!?])\s+(?=[A-ZÀÈÉÌÍÒÓÙÚ0-9«"])/);
-  const seen = new Set();
-  const out = [];
-  rough.map((s) => s.trim()).filter((s) => s.length >= 4).forEach((s) => {
-    const key = s.toLowerCase();
-    if (!seen.has(key)) { seen.add(key); out.push(s); }
-  });
-  return out;
+  }).join('\n');
 }
 
 function guessGroup(sentence, esame) {
@@ -402,13 +393,6 @@ function guessGroup(sentence, esame) {
   return '';
 }
 
-function guessNeg(sentence) {
-  const s = sentence.trim().toLowerCase();
-  if (/^non\s/.test(s)) return false;
-  if (/nei limiti della norma|nella norma|regolare|indenne|libera|libere/.test(s)) return false;
-  return true;
-}
-
 function guessLabel(sentence) {
   const clean = sentence.replace(/[.]+$/, '').trim();
   const words = clean.split(/\s+/);
@@ -417,6 +401,16 @@ function guessLabel(sentence) {
 }
 
 let aiProposedVoci = [];
+
+const CLASS_HINT = {
+  normale: 'Proposta automatica: reperto normale — verifica.',
+  patologico: 'Proposta automatica: reperto patologico — verifica.',
+  incerto: 'Classificazione incerta: scegli tu se è un reperto normale o patologico.',
+};
+
+function piiOf(voce) {
+  return detectPII([voce.group, voce.label, voce.text].join(' \n '));
+}
 
 function renderAiVoci() {
   const list = $('ai-voci-list');
@@ -445,20 +439,37 @@ function renderAiVoci() {
         </div>
       </div>
       <div class="field-row">
-        <div class="checkbox-row">
-          <input type="checkbox" id="ai-voce-${idx}-neg" ${voce.neg ? 'checked' : ''}>
-          <label for="ai-voce-${idx}-neg" style="margin:0;">Segna come reperto da approfondire</label>
+        <div class="field">
+          <label for="ai-voce-${idx}-class">Tipo di reperto</label>
+          <select id="ai-voce-${idx}-class">
+            <option value="">— scegli —</option>
+            <option value="normale">Normale</option>
+            <option value="patologico">Patologico / da approfondire</option>
+          </select>
         </div>
       </div>
+      <div class="muted" id="ai-voce-${idx}-hint"></div>
+      <div class="field-message error" id="ai-voce-${idx}-pii"></div>
       <div class="field-row">
         <button class="btn-sm" id="ai-voce-${idx}-add-btn">+ Includi nella libreria</button>
       </div>`;
     list.appendChild(card);
-    card.querySelector('#ai-voce-' + idx + '-group').addEventListener('input', (e) => { voce.group = e.target.value; });
-    card.querySelector('#ai-voce-' + idx + '-label').addEventListener('input', (e) => { voce.label = e.target.value; });
-    card.querySelector('#ai-voce-' + idx + '-text').addEventListener('input', (e) => { voce.text = e.target.value; });
-    card.querySelector('#ai-voce-' + idx + '-neg').addEventListener('change', (e) => { voce.neg = e.target.checked; });
-    card.querySelector('#ai-voce-' + idx + '-add-btn').addEventListener('click', () => addSingleVoceToLibrary(voce));
+    const q = (suffix) => card.querySelector('#ai-voce-' + idx + '-' + suffix);
+    q('class').value = voce.cls;
+    q('hint').textContent = CLASS_HINT[voce.suggestion] || '';
+    const refresh = () => {
+      const pii = piiOf(voce);
+      q('pii').textContent = pii.length
+        ? 'Contiene possibili dati del paziente (' + pii.map((p) => p.label).join(', ') + '): toglili prima di includere la voce.'
+        : '';
+      q('add-btn').disabled = !libraryReady || pii.length > 0 || !voce.cls;
+    };
+    q('group').addEventListener('input', (e) => { voce.group = e.target.value; refresh(); });
+    q('label').addEventListener('input', (e) => { voce.label = e.target.value; refresh(); });
+    q('text').addEventListener('input', (e) => { voce.text = e.target.value; refresh(); });
+    q('class').addEventListener('change', (e) => { voce.cls = e.target.value; refresh(); });
+    q('add-btn').addEventListener('click', () => addSingleVoceToLibrary(voce));
+    refresh();
   });
 }
 
@@ -471,9 +482,11 @@ function addSingleVoceToLibrary(voce) {
   const label = voce.label.trim();
   const text = voce.text.trim();
   if (!group || !label || !text) { setMessage(msg, 'Compila gruppo, etichetta e testo prima di includere questa voce.', 'error'); return; }
+  if (piiOf(voce).length) { setMessage(msg, 'La voce contiene possibili dati del paziente: toglili prima di includerla.', 'error'); return; }
+  if (!voce.cls) { setMessage(msg, 'Scegli se la voce è un reperto normale o patologico.', 'error'); return; }
   DATA.refertoByEsame[esame] = DATA.refertoByEsame[esame] || {};
   DATA.refertoByEsame[esame][group] = DATA.refertoByEsame[esame][group] || [];
-  DATA.refertoByEsame[esame][group].push({ label, text, neg: !!voce.neg });
+  DATA.refertoByEsame[esame][group].push({ label, text, neg: voce.cls === 'patologico' });
   persist();
   refreshAllSettingsSelects();
   aiProposedVoci = aiProposedVoci.filter((v) => v !== voce);
@@ -490,12 +503,20 @@ $('ai-analyze-btn').onclick = () => {
   const esameMatch = findEsameInText(rawText);
   const indicazioneText = findIndicazioneInText(rawText, esameMatch ? esameMatch.esame : null);
   const sentences = splitIntoSentences(stripKnownLines(rawText, esameMatch, indicazioneText));
-  aiProposedVoci = sentences.map((s) => ({
-    group: guessGroup(s, esameMatch ? esameMatch.esame : null),
-    label: guessLabel(s),
-    text: s,
-    neg: guessNeg(s),
-  }));
+  aiProposedVoci = sentences.map((s) => {
+    const suggestion = classifyFinding(s);
+    return {
+      group: guessGroup(s, esameMatch ? esameMatch.esame : null),
+      label: guessLabel(s),
+      text: s,
+      suggestion,
+      cls: suggestion === 'incerto' ? '' : suggestion,
+    };
+  });
+  const pii = detectPII(rawText);
+  setMessage($('ai-pii-warning'), pii.length
+    ? 'Il testo incollato contiene possibili dati identificativi del paziente (' + pii.map((p) => p.label).join(', ') + '). Le voci che li contengono non possono essere incluse finché non li togli.'
+    : '', 'warn');
   refreshAiSelects();
   if (esameMatch) {
     $('ai-metodica-riconosciuta').value = esameMatch.metodica;
@@ -520,6 +541,7 @@ $('ai-add-indicazione-btn').onclick = () => {
   if (!libraryReady) { setMessage(msg, 'Libreria non caricata: riprova prima di aggiungere voci.', 'error'); return; }
   if (!esame) { setMessage(msg, 'Seleziona prima un esame.', 'error'); return; }
   if (!text) return;
+  if (detectPII(text).length) { setMessage(msg, 'L\'indicazione contiene possibili dati del paziente: toglili prima di aggiungerla.', 'error'); return; }
   DATA.indicazioniByEsame[esame] = DATA.indicazioniByEsame[esame] || [];
   if (!DATA.indicazioniByEsame[esame].includes(text)) {
     DATA.indicazioniByEsame[esame].push(text);
@@ -609,6 +631,10 @@ $('lh-save-btn').onclick = async () => {
   const nome = $('lh-nome').value.trim();
   const file = $('lh-file').files[0];
   if (!nome || !file) { setMessage(msg, 'Inserisci un nome e scegli un file PDF.', 'error'); return; }
+  if (nome.length > 120) { setMessage(msg, 'Il nome può avere al massimo 120 caratteri.', 'error'); return; }
+  if (file.size > LETTERHEAD_MAX_BYTES) { setMessage(msg, 'Il PDF supera 5 MB: riducilo (es. "Riduci dimensione file") e riprova.', 'error'); return; }
+  const head = new Uint8Array(await file.slice(0, 5).arrayBuffer());
+  if (String.fromCharCode(...head) !== '%PDF-') { setMessage(msg, 'Il file scelto non è un PDF valido.', 'error'); return; }
   const btn = $('lh-save-btn');
   btn.disabled = true;
   setMessage(msg, 'Caricamento in corso…');
@@ -646,9 +672,11 @@ $('update-name-btn').onclick = async () => {
   btn.disabled = true;
   setMessage(msg, 'Salvataggio in corso…');
   try {
+    if (nome.length > 80 || cognome.length > 80) throw new Error('Nome e cognome possono avere al massimo 80 caratteri.');
     const { error: authError } = await sb.auth.updateUser({ data: { nome, cognome } });
     if (authError) throw authError;
     currentUser.user_metadata = Object.assign({}, currentUser.user_metadata, { nome, cognome });
+    await sb.from('profiles').upsert({ id: currentUser.id, nome, cognome });
     const { error: rpcError } = await sb.rpc('update_my_display_name', { new_nome: nome + ' ' + cognome });
     if (rpcError) setMessage(msg, 'Nome salvato, ma non aggiornato nella chat di team (' + rpcError.message + ').', 'warn');
     else setMessage(msg, 'Nome e cognome salvati.', 'ok');
@@ -658,12 +686,36 @@ $('update-name-btn').onclick = async () => {
   btn.disabled = false;
 };
 
+// Per le azioni sensibili chiede di nuovo la password (e il codice, se c'è la verifica in due passaggi).
+async function confirmIdentity(reason) {
+  const pwd = await promptDialog('Conferma la tua identità', {
+    message: reason, label: 'Password attuale', type: 'password', autocomplete: 'current-password', okText: 'Conferma',
+  });
+  if (pwd === null) return false;
+  const { error } = await sb.auth.signInWithPassword({ email: currentUser.email, password: pwd });
+  if (error) { await alertDialog('Password non corretta', authErrorMessage(error)); return false; }
+  if (await needsMfa(sb)) {
+    const code = await promptDialog('Verifica in due passaggi', {
+      label: 'Codice a 6 cifre dell\'app', inputmode: 'numeric', autocomplete: 'one-time-code',
+      validate: (v) => (/^\d{6}$/.test(v.trim()) ? null : 'Inserisci le 6 cifre del codice.'),
+    });
+    if (code === null) return false;
+    const { data: factors } = await sb.auth.mfa.listFactors();
+    const factor = factors && factors.totp.find((f) => f.status === 'verified');
+    const { error: mfaError } = await sb.auth.mfa.challengeAndVerify({ factorId: factor && factor.id, code: code.trim() });
+    if (mfaError) { await alertDialog('Codice non valido', authErrorMessage(mfaError)); return false; }
+  }
+  return true;
+}
+
 $('update-password-btn').onclick = async () => {
   const pw1 = $('new-password').value;
   const pw2 = $('confirm-password').value;
   const msg = $('password-message');
-  if (pw1.length < MIN_PASSWORD_LENGTH) { setMessage(msg, 'La password deve avere almeno ' + MIN_PASSWORD_LENGTH + ' caratteri.', 'error'); return; }
+  const problem = passwordProblem(pw1, currentUser.email);
+  if (problem) { setMessage(msg, problem, 'error'); return; }
   if (pw1 !== pw2) { setMessage(msg, 'Le due password non coincidono.', 'error'); return; }
+  if (!await confirmIdentity('Per cambiare la password inserisci quella attuale.')) return;
   const { error } = await sb.auth.updateUser({ password: pw1 });
   if (error) { setMessage(msg, authErrorMessage(error), 'error'); return; }
   setMessage(msg, 'Password aggiornata correttamente.', 'ok');
@@ -671,20 +723,95 @@ $('update-password-btn').onclick = async () => {
   $('confirm-password').value = '';
 };
 
+// ============================================================
+// VERIFICA IN DUE PASSAGGI (TOTP)
+// ============================================================
+let enrollingFactorId = null;
+
+async function refreshMfa() {
+  const { data, error } = await sb.auth.mfa.listFactors();
+  const msg = $('mfa-message');
+  if (error) { setMessage(msg, authErrorMessage(error), 'error'); return; }
+  // Elimina iscrizioni lasciate a metà.
+  for (const f of (data.all || []).filter((x) => x.status !== 'verified' && x.id !== enrollingFactorId)) {
+    await sb.auth.mfa.unenroll({ factorId: f.id });
+  }
+  const active = (data.totp || []).find((f) => f.status === 'verified');
+  $('mfa-status').textContent = active
+    ? 'Attiva: a ogni accesso ti chiederemo anche il codice dell\'app di autenticazione.'
+    : 'Protegge l\'account con un codice generato da un\'app di autenticazione sul telefono.';
+  $('mfa-enable-btn').hidden = !!active;
+  $('mfa-disable-btn').hidden = !active;
+  $('mfa-disable-btn').dataset.factorId = active ? active.id : '';
+}
+
+$('mfa-enable-btn').onclick = async () => {
+  const msg = $('mfa-message');
+  const { data, error } = await sb.auth.mfa.enroll({ factorType: 'totp', friendlyName: 'ModReport ' + new Date().toISOString().slice(0, 10) });
+  if (error) { setMessage(msg, authErrorMessage(error), 'error'); return; }
+  enrollingFactorId = data.id;
+  $('mfa-qr').src = data.totp.qr_code;
+  $('mfa-secret').textContent = data.totp.secret;
+  $('mfa-enroll').hidden = false;
+  $('mfa-enable-btn').hidden = true;
+  $('mfa-enroll-code').focus();
+  setMessage(msg, '');
+};
+
+$('mfa-verify-btn').onclick = async () => {
+  const msg = $('mfa-message');
+  const code = $('mfa-enroll-code').value.replace(/\s+/g, '');
+  if (!/^\d{6}$/.test(code)) { setMessage(msg, 'Inserisci le 6 cifre del codice.', 'error'); return; }
+  const { error } = await sb.auth.mfa.challengeAndVerify({ factorId: enrollingFactorId, code });
+  if (error) { setMessage(msg, authErrorMessage(error), 'error'); return; }
+  enrollingFactorId = null;
+  $('mfa-enroll').hidden = true;
+  $('mfa-enroll-code').value = '';
+  setMessage(msg, 'Verifica in due passaggi attivata.', 'ok');
+  refreshMfa();
+};
+
+$('mfa-disable-btn').onclick = async () => {
+  if (!await confirmIdentity('Per disattivare la verifica in due passaggi conferma la tua identità.')) return;
+  const { error } = await sb.auth.mfa.unenroll({ factorId: $('mfa-disable-btn').dataset.factorId });
+  if (error) { setMessage($('mfa-message'), authErrorMessage(error), 'error'); return; }
+  setMessage($('mfa-message'), 'Verifica in due passaggi disattivata.', 'ok');
+  refreshMfa();
+};
+
+// ============================================================
+// ELIMINAZIONE DELL'ACCOUNT
+// ============================================================
+async function removeAllMyFiles() {
+  for (const bucket of ['letterheads', 'verifiche']) {
+    for (;;) {
+      const { data, error } = await sb.storage.from(bucket).list(currentUser.id, { limit: 100 });
+      if (error) throw new Error('impossibile leggere i file (' + error.message + ')');
+      if (!data || !data.length) break;
+      const { error: rmError } = await sb.storage.from(bucket).remove(data.map((f) => currentUser.id + '/' + f.name));
+      if (rmError) throw new Error('impossibile eliminare i file (' + rmError.message + ')');
+      if (data.length < 100) break;
+    }
+  }
+}
+
 $('delete-account-btn').onclick = async () => {
   const msg = $('delete-account-message');
-  if (!confirm('Vuoi eliminare definitivamente il tuo account?\n\nVerranno cancellati in modo permanente e irreversibile tutti i tuoi dati.')) return;
-  if (prompt('Per confermare, scrivi ELIMINA (in maiuscolo) qui sotto:') !== 'ELIMINA') {
-    setMessage(msg, 'Eliminazione annullata.', 'error');
-    return;
-  }
+  const ok = await confirmDialog('Eliminare l\'account?',
+    'Verranno cancellati in modo permanente: la libreria, l\'archivio, le carte intestate, i documenti caricati, i messaggi e l\'appartenenza ai team (i team di cui sei proprietario passano a un altro membro). L\'operazione non è reversibile.',
+    { okText: 'Continua', danger: true });
+  if (!ok) return;
+  const typed = await promptDialog('Conferma definitiva', { label: 'Scrivi ELIMINA in maiuscolo', okText: 'Elimina l\'account' });
+  if (typed !== 'ELIMINA') { setMessage(msg, 'Eliminazione annullata.', 'error'); return; }
+  if (!await confirmIdentity('Per eliminare l\'account inserisci la password.')) return;
   const btn = $('delete-account-btn');
   btn.disabled = true;
   setMessage(msg, 'Eliminazione in corso…');
   try {
-    if (letterheads.length) await sb.storage.from('letterheads').remove(letterheads.map((lh) => lh.storage_path));
+    await removeAllMyFiles();
     const { error } = await sb.rpc('delete_my_account');
     if (error) throw error;
+    stopAllDictation();
     await sb.auth.signOut({ scope: 'local' });
     window.location.replace(pageUrl('index.html'));
   } catch (e) {
@@ -714,21 +841,15 @@ document.querySelectorAll('.nav-item[data-tab]').forEach((btn) => {
     $('gate').textContent = 'Configurazione cloud mancante.';
     return;
   }
-  const { data: { session } } = await sb.auth.getSession();
-  if (!session || !session.user) {
-    window.location.replace(pageUrl('app.html'));
-    return;
-  }
-  currentUser = session.user;
-  sb.auth.onAuthStateChange((event) => {
-    if (event === 'SIGNED_OUT') setTimeout(() => window.location.replace(pageUrl('app.html')), 0);
-  });
+  currentUser = await requireSession(sb);
+  if (!currentUser) return;
   $('profile-email').value = currentUser.email || '';
   $('profile-nome').value = (currentUser.user_metadata && currentUser.user_metadata.nome) || '';
   $('profile-cognome').value = (currentUser.user_metadata && currentUser.user_metadata.cognome) || '';
   await loadLibrary();
   refreshAllSettingsSelects();
   await loadLetterheads();
+  await refreshMfa();
   $('gate').classList.add('hidden');
   $('page-root').classList.remove('hidden');
 })();

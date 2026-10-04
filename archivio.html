@@ -2,13 +2,15 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://umejthggxihtyqvcszgm.supabase.co wss://umejthggxihtyqvcszgm.supabase.co; frame-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; worker-src 'self' blob:; manifest-src 'self'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Archivio — ModReport</title>
 <link rel="icon" type="image/png" href="modreport_logo_bars_m.png">
 <script src="assets/vendor/supabase.js"></script>
 <script src="js/config.js"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script type="module" src="js/pages/archivio.js"></script>
+<link rel="stylesheet" href="css/fonts.css">
 <style>
   :root{
     --bg: #0f172a;
@@ -206,6 +208,7 @@
     font-size:13px; color: var(--ink-soft);
   }
   .hidden{ display:none; }
+  [hidden]{ display:none !important; }
 
   .copy-flash{
     position:fixed;
@@ -254,142 +257,5 @@
 
 <div class="copy-flash" id="copy-flash">Copiato negli appunti</div>
 
-<script>
-const supabaseClient = (window.supabase && window.MR_CONFIG)
-  ? window.supabase.createClient(window.MR_CONFIG.SUPABASE_URL, window.MR_CONFIG.SUPABASE_KEY)
-  : null;
-
-let currentUser = null;
-let allEntries = [];
-
-function escapeHtml(s){
-  return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
-function formatDate(iso){
-  const d = new Date(iso);
-  return d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' }) +
-    ' ' + d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
-}
-
-async function loadEntries(){
-  const { data, error } = await supabaseClient
-    .from('report_archive')
-    .select('id, esame, testo, created_at')
-    .eq('user_id', currentUser.id)
-    .order('created_at', { ascending: false });
-  if (error){
-    document.getElementById('archive-list').innerHTML = '<div class="empty-state">Errore nel caricamento dell\'archivio: ' + escapeHtml(error.message) + '</div>';
-    return;
-  }
-  allEntries = data || [];
-  populateEsameFilter();
-  renderList();
-}
-
-function populateEsameFilter(){
-  const select = document.getElementById('filter-esame');
-  const current = select.value;
-  const esami = Array.from(new Set(allEntries.map(e => e.esame).filter(Boolean))).sort();
-  select.innerHTML = '<option value="">Tutti gli esami</option>' +
-    esami.map(e => '<option value="' + escapeHtml(e) + '">' + escapeHtml(e) + '</option>').join('');
-  select.value = current;
-}
-
-function renderList(){
-  const search = document.getElementById('search-input').value.trim().toLowerCase();
-  const esameFilter = document.getElementById('filter-esame').value;
-
-  const filtered = allEntries.filter(entry => {
-    if (esameFilter && entry.esame !== esameFilter) return false;
-    if (search){
-      const haystack = ((entry.esame || '') + ' ' + entry.testo).toLowerCase();
-      if (!haystack.includes(search)) return false;
-    }
-    return true;
-  });
-
-  const list = document.getElementById('archive-list');
-  const empty = document.getElementById('empty-state');
-  list.innerHTML = '';
-
-  if (!filtered.length){
-    empty.classList.remove('hidden');
-    empty.textContent = allEntries.length
-      ? 'Nessun referto corrisponde alla ricerca.'
-      : 'Nessun referto archiviato per ora. Da "Anteprima referto", una volta composto, usa "Salva nell\'archivio" per iniziare a costruire il tuo archivio.';
-    return;
-  }
-  empty.classList.add('hidden');
-
-  filtered.forEach(entry => {
-    const item = document.createElement('div');
-    item.className = 'archive-item';
-    item.innerHTML = `
-      <div class="archive-head">
-        <span class="chevron">▶</span>
-        <span class="esame-name ${entry.esame ? '' : 'empty'}">${entry.esame ? escapeHtml(entry.esame) : 'Esame non specificato'}</span>
-        <span class="date">${formatDate(entry.created_at)}</span>
-      </div>
-      <div class="archive-body">
-        <pre class="archive-text">${escapeHtml(entry.testo)}</pre>
-        <div class="archive-actions">
-          <button class="btn-sm danger" data-action="elimina">Elimina</button>
-          <button class="btn-sm" data-action="copia">Copia negli appunti</button>
-        </div>
-      </div>
-    `;
-    item.querySelector('.archive-head').onclick = () => item.classList.toggle('open');
-    item.querySelector('[data-action="copia"]').onclick = async (e) => {
-      e.stopPropagation();
-      try{
-        await navigator.clipboard.writeText(entry.testo);
-      }catch(err){
-        const ta = document.createElement('textarea');
-        ta.value = entry.testo;
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand('copy');
-        document.body.removeChild(ta);
-      }
-      const flash = document.getElementById('copy-flash');
-      flash.classList.add('show');
-      setTimeout(() => flash.classList.remove('show'), 1400);
-    };
-    item.querySelector('[data-action="elimina"]').onclick = async (e) => {
-      e.stopPropagation();
-      if (!confirm('Eliminare definitivamente questo referto dall\'archivio?')) return;
-      const { error } = await supabaseClient.from('report_archive').delete().eq('id', entry.id);
-      if (error){
-        alert('Errore durante l\'eliminazione: ' + error.message);
-        return;
-      }
-      allEntries = allEntries.filter(x => x.id !== entry.id);
-      populateEsameFilter();
-      renderList();
-    };
-    list.appendChild(item);
-  });
-}
-
-document.getElementById('search-input').addEventListener('input', renderList);
-document.getElementById('filter-esame').addEventListener('change', renderList);
-
-(async function init(){
-  if (!supabaseClient){
-    document.getElementById('gate').textContent = 'Configurazione cloud mancante.';
-    return;
-  }
-  const { data: { session } } = await supabaseClient.auth.getSession();
-  if (!session || !session.user){
-    window.location.href = 'app.html';
-    return;
-  }
-  currentUser = session.user;
-  await loadEntries();
-  document.getElementById('gate').classList.add('hidden');
-  document.getElementById('page-root').classList.remove('hidden');
-})();
-</script>
 </body>
 </html>

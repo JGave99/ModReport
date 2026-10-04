@@ -2,193 +2,166 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://umejthggxihtyqvcszgm.supabase.co wss://umejthggxihtyqvcszgm.supabase.co; frame-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; worker-src 'self' blob:; manifest-src 'self'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Team — ModReport</title>
 <link rel="icon" type="image/png" href="modreport_logo_bars_m.png">
 <script src="assets/vendor/supabase.js"></script>
 <script src="js/config.js"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script type="module" src="js/pages/team.js"></script>
+<link rel="stylesheet" href="css/fonts.css">
 <style>
   :root{
-    --bg: #0f172a;
-    --panel: #1e293b;
-    --panel-alt: #0b1120;
-    --line: #334155;
-    --line-soft: #334155;
-    --ink: #f8fafc;
-    --ink-soft: #94a3b8;
-    --accent: #38bdf8;
-    --accent-soft: rgba(56,189,248,0.08);
-    --accent-strong: #0284c7;
-    --accent-dim: #0369a1;
-    --danger: #ef4444;
-    --font: 'Inter', -apple-system, sans-serif;
-    --radius: 8px;
-    --radius-lg: 10px;
+    --bg: #0f172a; --panel: #1e293b; --panel-alt: #0b1120; --line: #334155; --ink: #f8fafc; --ink-soft: #94a3b8;
+    --accent: #38bdf8; --accent-soft: rgba(56,189,248,0.08); --accent-strong: #0284c7; --accent-dim: #0369a1;
+    --danger: #ef4444; --font: 'Inter', -apple-system, sans-serif; --radius: 8px; --radius-lg: 10px;
   }
   *{box-sizing:border-box;}
-  body{
-    margin:0;
-    font-family: var(--font);
-    background: var(--bg);
-    color: var(--ink);
-    height:100vh;
-    overflow:hidden;
-  }
+  [hidden]{ display:none !important; }
+  body{ margin:0; font-family: var(--font); background: var(--bg); color: var(--ink); height:100vh; overflow:hidden; }
+  .visually-hidden{ position:absolute !important; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
   .topbar{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    padding: 12px 24px;
-    background: var(--panel-alt);
-    border-bottom: 1px solid var(--line);
-    font-size:13px;
+    display:flex; align-items:center; justify-content:space-between; gap:12px; padding: 12px 24px;
+    background: var(--panel-alt); border-bottom: 1px solid var(--line); font-size:13px;
   }
   .brand{ font-weight:600; font-size:15px; display:flex; align-items:center; gap:10px; }
-  .brand .mark{
-    width:20px; height:20px; border-radius:5px;
-    background: url('modreport_logo_bars_m.png') no-repeat center / cover;
-    display:inline-block; flex:none;
-  }
-  .topbar-right{ display:flex; align-items:center; gap:10px; }
+  .brand .mark{ width:20px; height:20px; border-radius:5px; background: url('modreport_logo_bars_m.png') no-repeat center / cover; display:inline-block; flex:none; }
+  .topbar-right{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:flex-end; }
   .btn-settings{
-    background: transparent; border: 1px solid var(--line); color: var(--ink);
-    font-family: var(--font); font-size:13px; padding: 7px 14px; border-radius: 6px;
-    cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:6px;
-    transition: all .2s ease;
+    background: transparent; border: 1px solid var(--line); color: var(--ink); font-family: var(--font); font-size:13px;
+    padding: 7px 14px; border-radius: 6px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:6px;
   }
   .btn-settings:hover{ background-color: var(--line); }
+  select.team-select{
+    font-family: var(--font); font-size:13px; padding:7px 10px; border-radius:6px; border:1px solid var(--line);
+    background: var(--bg); color: var(--ink); max-width: 260px;
+  }
 
   .app{ display:flex; height:calc(100vh - 53px); }
-
-  .sidebar{
-    width: 260px; flex:none; background: var(--panel-alt);
-    border-right: 1px solid var(--line); display:flex; flex-direction:column;
-    padding: 18px 12px;
-  }
+  .sidebar{ width: 260px; flex:none; background: var(--panel-alt); border-right: 1px solid var(--line); display:flex; flex-direction:column; padding: 18px 12px; }
   .sidebar-title{
     font-size:11px; text-transform:uppercase; letter-spacing:.06em; color: var(--ink-soft);
     padding: 6px 10px; margin-top:10px; display:flex; justify-content:space-between; align-items:center;
   }
-  .sidebar-title .add-btn{
-    cursor:pointer; color: var(--accent); font-weight:700; font-size:15px; line-height:1;
-  }
+  .icon-btn{ background:none; border:0; color: var(--accent); font: inherit; font-size:16px; font-weight:700; cursor:pointer; padding:2px 6px; border-radius:4px; }
+  .icon-btn:hover{ background: var(--accent-soft); }
   .channel-item{
-    display:flex; align-items:center; gap:8px; padding: 8px 10px; border-radius: 6px;
-    cursor:pointer; color: var(--ink-soft); font-size:13.5px; font-weight:500;
-    transition: all .15s ease; position:relative;
+    display:flex; align-items:center; gap:8px; flex:1; min-width:0; padding: 8px 10px; border-radius: 6px; border:0; background:transparent;
+    cursor:pointer; color: var(--ink-soft); font-family: var(--font); font-size:13.5px; font-weight:500; text-align:left;
   }
   .channel-item:hover{ background: var(--panel); color: var(--ink); }
-  .channel-item.active{ background: var(--accent-soft); color: var(--accent); font-weight:600; }
-  .channel-item .hash{ opacity:.6; }
+  .channel-item[aria-current="true"]{ background: var(--accent-soft); color: var(--accent); font-weight:600; }
   .channel-item .chname{ flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .channel-admin-actions{ display:none; align-items:center; gap:4px; margin-left:auto; }
-  .channel-item:hover .channel-admin-actions{ display:flex; }
-  .channel-item:hover .unread-dot{ display:none; }
-  .channel-admin-actions span{
-    font-size:12px; opacity:.65; padding:2px 3px; border-radius:4px;
-  }
-  .channel-admin-actions span:hover{ opacity:1; background: rgba(255,255,255,0.08); }
-  .unread-dot{
-    width:8px; height:8px; border-radius:50%; background: var(--accent);
-    margin-left:auto; flex:none;
-  }
-  .members-mini{ margin-top:auto; padding: 10px; font-size:11.5px; color: var(--ink-soft); }
+  .unread-dot{ width:8px; height:8px; border-radius:50%; background: var(--accent); flex:none; }
+  .channel-row{ display:flex; align-items:center; gap:2px; }
+  .row-actions{ display:flex; gap:2px; }
+  .row-actions button{ background:none; border:0; color: var(--ink-soft); cursor:pointer; font-size:12px; padding:3px 5px; border-radius:4px; }
+  .row-actions button:hover{ color: var(--ink); background: rgba(255,255,255,0.08); }
+  .sidebar-footer{ margin-top:auto; padding: 10px; font-size:11.5px; color: var(--ink-soft); }
 
   .chat-area{ flex:1; display:flex; flex-direction:column; min-width:0; }
-  .chat-head{
-    padding: 14px 22px; border-bottom: 1px solid var(--line); font-weight:600; font-size:15px;
-    display:flex; align-items:center; gap:8px;
-  }
+  .chat-head{ padding: 14px 22px; border-bottom: 1px solid var(--line); font-weight:600; font-size:15px; display:flex; align-items:center; gap:8px; }
   .chat-head .hash{ color: var(--ink-soft); font-weight:400; }
-
   .messages-wrap{ flex:1; overflow-y:auto; padding: 20px 24px; display:flex; flex-direction:column; gap:14px; }
-  .messages-wrap::-webkit-scrollbar{ width:6px; }
-  .messages-wrap::-webkit-scrollbar-thumb{ background: var(--line); border-radius:4px; }
-
   .msg{ display:flex; gap:12px; max-width:720px; }
-  .msg-avatar{
-    width:34px; height:34px; border-radius:50%; background: var(--accent-strong);
-    color:#fff; display:flex; align-items:center; justify-content:center;
-    font-weight:700; font-size:13px; flex:none;
-  }
-  .msg-body{ flex:1; }
+  .msg-avatar{ width:34px; height:34px; border-radius:50%; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; flex:none; }
+  .msg-body{ flex:1; min-width:0; }
   .msg-head{ display:flex; align-items:baseline; gap:8px; margin-bottom:2px; }
   .msg-name{ font-weight:600; font-size:13.5px; color: var(--ink); }
   .msg-time{ font-size:11px; color: var(--ink-soft); }
-  .msg-text{ font-size:14px; color: var(--ink); line-height:1.5; white-space:pre-wrap; }
-
+  .msg-text{ font-size:14px; color: var(--ink); line-height:1.5; white-space:pre-wrap; overflow-wrap:anywhere; }
+  .msg-delete{ margin-left:auto; background:none; border:0; color: var(--ink-soft); cursor:pointer; font-size:11.5px; }
+  .msg-delete:hover{ color: var(--danger); }
   .empty-chat{ margin:auto; text-align:center; color: var(--ink-soft); font-size:13.5px; }
-
-  .composer{
-    padding: 14px 22px 20px; border-top: 1px solid var(--line); display:flex; gap:10px;
-  }
+  .privacy-note{ font-size:11.5px; color: #f59e0b; padding: 0 22px 6px; }
+  .composer{ padding: 14px 22px 20px; border-top: 1px solid var(--line); display:flex; gap:10px; }
   .composer textarea{
-    flex:1; resize:none; min-height:44px; max-height:120px;
-    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
-    color: var(--ink); font-family: var(--font); font-size:14px; padding:10px 14px;
+    flex:1; resize:none; min-height:44px; max-height:140px; background: var(--panel); border: 1px solid var(--line);
+    border-radius: var(--radius); color: var(--ink); font-family: var(--font); font-size:14px; padding:10px 14px;
   }
   .composer textarea:focus{ outline:none; border-color: var(--accent); }
-  .composer button{
-    background: var(--accent-strong); color:#fff; border:none; border-radius: var(--radius);
-    padding: 0 20px; font-family: var(--font); font-weight:600; font-size:13.5px; cursor:pointer;
-    transition: background-color .2s;
-  }
-  .composer button:hover{ background: var(--accent-dim); }
+  .composer button{ background: var(--accent-dim); color:#fff; border:none; border-radius: var(--radius); padding: 0 20px; font-family: var(--font); font-weight:600; font-size:13.5px; cursor:pointer; }
+  .composer button:disabled{ opacity:.6; cursor:progress; }
+  .send-error{ color: var(--danger); font-size:12px; padding: 0 22px 10px; }
 
-  .gate{
-    position:fixed; inset:0; background: var(--bg); display:flex; align-items:center;
-    justify-content:center; font-size:13px; color: var(--ink-soft); flex-direction:column; gap:16px;
-  }
-  .hidden{ display:none; }
-
-  .overlay{
-    position:fixed; inset:0; background: rgba(4,9,14,0.72); display:none;
-    align-items:center; justify-content:center; z-index:100;
-  }
-  .overlay.open{ display:flex; }
-  .overlay-panel{
-    width:min(440px, 92vw); background: var(--panel); border: 1px solid var(--line);
-    border-radius: var(--radius-lg); padding: 22px 24px;
-  }
-  .overlay-panel h2{ margin:0 0 16px; font-size:16px; }
-  .overlay-panel label{ font-size:11.5px; color: var(--ink-soft); display:block; margin-bottom:5px; }
-  .overlay-panel input[type=text]{
-    width:100%; font-family: var(--font); font-size:13.5px; padding: 9px 11px;
-    border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink);
-    margin-bottom:14px;
-  }
-  .overlay-panel input:focus{ outline:none; border-color: var(--accent); }
-  .overlay-actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:6px; }
+  .gate{ position:fixed; inset:0; background: var(--bg); display:flex; align-items:center; justify-content:center; font-size:13px; color: var(--ink-soft); flex-direction:column; gap:16px; padding:20px; }
+  .setup-card{ background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 28px; max-width:460px; width:100%; }
+  .setup-card h2{ margin:0 0 6px; font-size:18px; color: var(--ink); }
+  .setup-card p{ color: var(--ink-soft); font-size:13.5px; line-height:1.6; margin:0 0 14px; }
+  .setup-card label{ font-size:12px; color: var(--ink-soft); display:block; margin-bottom:5px; }
+  .setup-card input{ width:100%; font-family: var(--font); font-size:14px; padding:9px 11px; border:1px solid var(--line); border-radius:6px; background: var(--bg); color: var(--ink); }
+  .setup-card .row{ display:flex; gap:8px; margin-top:8px; }
+  .setup-card .row input{ flex:1; }
+  .setup-card hr{ border:0; border-top:1px solid var(--line); margin:20px 0; }
   .btn-sm{
-    font-family: var(--font); font-size:12.5px; font-weight:600; padding: 8px 16px;
-    border-radius: 6px; cursor:pointer; border:1px solid var(--accent); background: transparent;
-    color: var(--accent); transition: all .2s ease;
+    font-family: var(--font); font-size:12.5px; font-weight:600; padding: 8px 16px; border-radius: 6px; cursor:pointer;
+    border:1px solid var(--accent); background: transparent; color: var(--accent);
   }
   .btn-sm:hover{ background: var(--accent-soft); }
-  .btn-sm.primary{ background: var(--accent-strong); color:#fff; border-color: var(--accent-strong); }
-  .btn-sm.primary:hover{ background: var(--accent-dim); }
-  .invite-link-box{
-    background: var(--bg); border: 1px solid var(--line); border-radius:6px;
-    padding: 10px 12px; font-size:12.5px; color: var(--ink); word-break:break-all; margin-bottom:12px;
-  }
-  .setup-card{
-    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-lg);
-    padding: 32px; max-width:420px; text-align:center;
-  }
+  .btn-sm.primary{ background: var(--accent-dim); color:#fff; border-color: var(--accent-dim); }
+  .btn-sm.danger{ border-color: var(--danger); color: var(--danger); }
+  .btn-sm:disabled{ opacity:.6; cursor:progress; }
+  .form-msg{ font-size:12.5px; min-height:16px; margin-top:8px; color: var(--danger); }
+  .form-msg.ok{ color: var(--accent); }
+
+  dialog.panel{ border:1px solid var(--line); border-radius:12px; padding:0; width:min(560px, 94vw); background: var(--panel); color: var(--ink); font-family: var(--font); }
+  dialog.panel::backdrop{ background: rgba(4,9,14,.72); }
+  .panel-head{ display:flex; justify-content:space-between; align-items:center; padding:16px 20px; border-bottom:1px solid var(--line); }
+  .panel-head h2{ margin:0; font-size:15px; }
+  .panel-body{ padding:16px 20px 22px; display:flex; flex-direction:column; gap:12px; font-size:13px; max-height:70vh; overflow:auto; }
+  .panel-body .muted{ color: var(--ink-soft); font-size:12.5px; margin:0; }
+  .panel-body select{ font-family: var(--font); font-size:13px; padding:7px 9px; border-radius:6px; border:1px solid var(--line); background: var(--bg); color: var(--ink); }
+  .list-item{ display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  .list-item:last-child{ border-bottom:0; }
+  .list-item .grow{ flex:1; min-width:0; }
+  .badge{ display:inline-block; padding:2px 8px; border-radius:999px; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; background: var(--accent-soft); color: var(--accent); }
+  .invite-link{ background: var(--bg); border: 1px solid var(--line); border-radius:6px; padding: 10px 12px; font-size:12.5px; word-break:break-all; }
+  .close-x{ background:none; border:0; color: var(--ink-soft); font-size:20px; cursor:pointer; }
 </style>
 </head>
 <body>
 
 <div class="gate" id="gate">Verifica accesso in corso…</div>
 
-<div id="page-root" class="hidden">
+<div class="gate" id="setup-gate" hidden>
+  <div class="setup-card">
+    <h2 id="setup-title">Team</h2>
+    <p id="setup-text">Non fai ancora parte di nessun team. Creane uno per il tuo studio o reparto, oppure entra con un codice di invito.</p>
+    <form id="join-form">
+      <label for="join-code-input">Codice di invito</label>
+      <div class="row">
+        <input type="text" id="join-code-input" autocomplete="off" placeholder="Incolla qui il codice">
+        <button class="btn-sm primary" id="btn-join-code" type="submit">Entra</button>
+      </div>
+      <div class="form-msg" id="join-msg" role="alert"></div>
+    </form>
+    <hr>
+    <form id="create-form">
+      <label for="create-team-name">Oppure crea un nuovo team</label>
+      <div class="row">
+        <input type="text" id="create-team-name" maxlength="80" placeholder="es. Radiologia — Ospedale San Marco">
+        <button class="btn-sm" id="btn-create-team" type="submit">Crea</button>
+      </div>
+      <div class="form-msg" id="create-msg" role="alert"></div>
+    </form>
+    <hr>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <a class="btn-settings" href="app.html">← Torna al referto</a>
+      <button class="btn-settings" id="btn-setup-back" type="button" hidden>← Torna ai miei team</button>
+    </div>
+  </div>
+</div>
+
+<div id="page-root" hidden>
   <div class="topbar">
     <div class="brand"><span class="mark"></span> Team</div>
     <div class="topbar-right">
+      <select class="team-select" id="team-select" aria-label="Team attivo"></select>
+      <button class="btn-settings" id="btn-members">Membri</button>
+      <button class="btn-settings" id="btn-invite" hidden>+ Invita</button>
+      <button class="btn-settings" id="btn-other-team">Altro team</button>
       <a class="btn-settings" href="app.html">← Torna al referto</a>
-      <button class="btn-settings hidden" id="btn-invite">+ Invita</button>
     </div>
   </div>
 
@@ -196,446 +169,59 @@
     <aside class="sidebar">
       <div class="sidebar-title">
         <span>Canali</span>
-        <span class="add-btn" id="btn-new-channel" title="Nuovo canale">+</span>
+        <button class="icon-btn" id="btn-new-channel" title="Nuovo canale" aria-label="Nuovo canale">+</button>
       </div>
-      <div id="channel-list"></div>
-      <div class="members-mini" id="members-mini"></div>
+      <nav id="channel-list" aria-label="Canali"></nav>
+      <div class="sidebar-footer" id="members-mini"></div>
     </aside>
 
     <main class="chat-area">
       <div class="chat-head" id="chat-head"><span class="empty-chat">Seleziona un canale</span></div>
-      <div class="messages-wrap" id="messages-wrap">
+      <div class="messages-wrap" id="messages-wrap" aria-live="polite">
         <div class="empty-chat">Nessun canale selezionato.</div>
       </div>
-      <div class="composer hidden" id="composer">
-        <textarea id="msg-input" placeholder="Scrivi un messaggio…" rows="1"></textarea>
-        <button id="btn-send">Invia</button>
-      </div>
+      <div class="privacy-note">Non scrivere dati che identificano i pazienti (nomi, date di nascita, codici, numeri di accettazione).</div>
+      <div class="send-error" id="send-error" role="alert" hidden></div>
+      <form class="composer" id="composer" hidden>
+        <label class="visually-hidden" for="msg-input">Messaggio</label>
+        <textarea id="msg-input" placeholder="Scrivi un messaggio…" rows="1" maxlength="4000"></textarea>
+        <button id="btn-send" type="submit">Invia</button>
+      </form>
     </main>
   </div>
 </div>
 
-<div class="gate hidden" id="setup-gate">
-  <div class="setup-card">
-    <h2 style="margin-top:0;">Configura il team</h2>
-    <p style="color:var(--ink-soft); font-size:13.5px; line-height:1.6;">
-      Non esiste ancora nessun team su questo sito. Diventa il primo amministratore per crearlo: potrai poi invitare i colleghi con un link.
-    </p>
-    <button class="btn-sm primary" id="btn-become-admin" style="margin-top:10px;">Crea il team e diventa amministratore</button>
+<dialog class="panel" id="members-panel" aria-labelledby="members-title">
+  <div class="panel-head"><h2 id="members-title">Membri del team</h2><button class="close-x" data-close aria-label="Chiudi">×</button></div>
+  <div class="panel-body">
+    <div id="members-list"></div>
+    <div class="form-msg" id="members-msg" role="alert"></div>
+    <div><button class="btn-sm danger" id="btn-leave-team">Esci dal team</button></div>
   </div>
-</div>
+</dialog>
 
-<div class="gate hidden" id="join-gate">
-  <div class="setup-card">
-    <h2 style="margin-top:0;">Entra nel team</h2>
-    <p style="color:var(--ink-soft); font-size:13.5px; line-height:1.6;" id="join-hint">
-      Non fai ancora parte del team. Chiedi un link di invito a un amministratore.
-    </p>
-    <div id="join-with-code" class="hidden">
-      <label style="text-align:left;">Codice di invito</label>
-      <input type="text" id="join-code-input" placeholder="Incolla qui il codice">
-      <button class="btn-sm primary" id="btn-join-code" style="margin-top:10px;">Entra nel team</button>
+<dialog class="panel" id="invite-panel" aria-labelledby="invite-title">
+  <div class="panel-head"><h2 id="invite-title">Invita colleghi</h2><button class="close-x" data-close aria-label="Chiudi">×</button></div>
+  <div class="panel-body">
+    <p class="muted">Genera un link e invialo tu stesso (email, chat…). Chi lo apre e ha un account entra nel team come membro.</p>
+    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+      <label>Valido per
+        <select id="invite-days"><option value="1">1 giorno</option><option value="7" selected>7 giorni</option><option value="30">30 giorni</option></select>
+      </label>
+      <label>Utilizzi
+        <select id="invite-uses"><option value="1">1 persona</option><option value="5">5 persone</option><option value="10" selected>10 persone</option><option value="50">50 persone</option></select>
+      </label>
+      <button class="btn-sm primary" id="invite-generate">Genera link</button>
     </div>
+    <div id="invite-result" hidden>
+      <div class="invite-link" id="invite-link"></div>
+      <div style="display:flex; justify-content:flex-end; margin-top:8px;"><button class="btn-sm" id="invite-copy">Copia link</button></div>
+    </div>
+    <div class="form-msg" id="invite-msg" role="alert"></div>
+    <h3 style="font-size:12px; text-transform:uppercase; letter-spacing:.05em; color: var(--ink-soft); margin:8px 0 0;">Inviti attivi</h3>
+    <div id="invite-list"></div>
   </div>
-</div>
+</dialog>
 
-<div class="overlay" id="channel-overlay">
-  <div class="overlay-panel">
-    <h2>Nuovo canale</h2>
-    <label>Nome canale</label>
-    <input type="text" id="new-channel-name" placeholder="es. casi-complessi">
-    <div class="overlay-actions">
-      <button class="btn-sm" id="channel-cancel">Annulla</button>
-      <button class="btn-sm primary" id="channel-create">Crea canale</button>
-    </div>
-  </div>
-</div>
-
-<div class="overlay" id="invite-overlay">
-  <div class="overlay-panel">
-    <h2>Invita un collega</h2>
-    <p style="font-size:12.5px; color:var(--ink-soft); margin-top:-8px;">Genera un link, invialo tu stesso (email, chat, ecc.) — chi lo apre e ha un account potrà unirsi al team.</p>
-    <div id="invite-link-area"></div>
-    <div class="overlay-actions">
-      <button class="btn-sm" id="invite-close">Chiudi</button>
-      <button class="btn-sm primary" id="invite-generate">Genera nuovo link</button>
-    </div>
-  </div>
-</div>
-
-<script>
-const supabaseClient = (window.supabase && window.MR_CONFIG)
-  ? window.supabase.createClient(window.MR_CONFIG.SUPABASE_URL, window.MR_CONFIG.SUPABASE_KEY)
-  : null;
-
-let currentUser = null;
-let myMembership = null;
-let channels = [];
-let currentChannelId = null;
-let messagesSub = null;
-let lastReadMap = {};
-let lastMessageMap = {};
-
-function escapeHtml(s){
-  return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-function initials(name){
-  return (name || '?').trim().split(/\s+/).slice(0,2).map(w => w[0].toUpperCase()).join('');
-}
-function formatTime(iso){
-  const d = new Date(iso);
-  return d.toLocaleDateString('it-IT', { day:'2-digit', month:'2-digit' }) + ' ' +
-         d.toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit' });
-}
-
-(async function init(){
-  if (!supabaseClient){
-    document.getElementById('gate').textContent = 'Configurazione cloud mancante.';
-    return;
-  }
-  const { data: { session } } = await supabaseClient.auth.getSession();
-  if (!session || !session.user){
-    window.location.href = 'app.html';
-    return;
-  }
-  currentUser = session.user;
-
-  const { count, error: countErr } = await supabaseClient
-    .from('team_members')
-    .select('user_id', { count: 'exact', head: true });
-
-  if (countErr){
-    document.getElementById('gate').textContent = 'Errore di connessione: ' + countErr.message;
-    return;
-  }
-
-  if (!count || count === 0){
-    document.getElementById('gate').classList.add('hidden');
-    document.getElementById('setup-gate').classList.remove('hidden');
-    return;
-  }
-
-  const { data: myRow, error: myErr } = await supabaseClient
-    .from('team_members')
-    .select('user_id, nome, role')
-    .eq('user_id', currentUser.id)
-    .maybeSingle();
-
-  if (myErr){
-    document.getElementById('gate').textContent = 'Errore di connessione: ' + myErr.message;
-    return;
-  }
-
-  if (!myRow){
-    document.getElementById('gate').classList.add('hidden');
-    document.getElementById('join-gate').classList.remove('hidden');
-    document.getElementById('join-with-code').classList.remove('hidden');
-
-    const params = new URLSearchParams(window.location.search);
-    const inviteFromUrl = params.get('invite');
-    if (inviteFromUrl){
-      document.getElementById('join-code-input').value = inviteFromUrl;
-    }
-    return;
-  }
-
-  myMembership = myRow;
-  await showApp();
-})();
-
-function nomeVisualizzato(){
-  const meta = currentUser.user_metadata;
-  if (meta && meta.nome && meta.cognome) return meta.nome + ' ' + meta.cognome;
-  return (currentUser.email || 'Utente').split('@')[0];
-}
-
-document.getElementById('btn-become-admin').onclick = async () => {
-  const nome = nomeVisualizzato();
-  const { error } = await supabaseClient.from('team_members').insert({
-    user_id: currentUser.id, nome: nome, role: 'admin'
-  });
-  if (error){
-    alert('Errore: ' + error.message);
-    return;
-  }
-  myMembership = { user_id: currentUser.id, nome, role: 'admin' };
-  document.getElementById('setup-gate').classList.add('hidden');
-  await showApp();
-};
-
-document.getElementById('btn-join-code').onclick = async () => {
-  const code = document.getElementById('join-code-input').value.trim();
-  if (!code) return;
-  const nome = nomeVisualizzato();
-  const { data, error } = await supabaseClient.rpc('join_team_with_code', {
-    invite_code: code, member_name: nome
-  });
-  if (error){
-    document.getElementById('join-hint').textContent = 'Errore: ' + error.message;
-    return;
-  }
-  if (data === 'invalid'){
-    document.getElementById('join-hint').textContent = 'Codice non valido. Controlla di averlo copiato per intero.';
-    return;
-  }
-  myMembership = { user_id: currentUser.id, nome, role: 'member' };
-  document.getElementById('join-gate').classList.add('hidden');
-  await showApp();
-};
-
-async function showApp(){
-  document.getElementById('gate').classList.add('hidden');
-  document.getElementById('page-root').classList.remove('hidden');
-  if (myMembership.role === 'admin'){
-    document.getElementById('btn-invite').classList.remove('hidden');
-  }
-  await loadChannelReads();
-  await loadChannels();
-  await loadMembersMini();
-}
-
-async function loadChannelReads(){
-  const { data } = await supabaseClient
-    .from('channel_reads')
-    .select('channel_id, last_read_at')
-    .eq('user_id', currentUser.id);
-  lastReadMap = {};
-  (data || []).forEach(r => { lastReadMap[r.channel_id] = r.last_read_at; });
-}
-
-async function loadChannels(){
-  const { data, error } = await supabaseClient
-    .from('channels')
-    .select('id, nome, created_at')
-    .order('created_at', { ascending: true });
-  if (error){
-    document.getElementById('channel-list').innerHTML = '<div style="padding:8px; font-size:12px; color:var(--ink-soft);">Errore nel caricamento canali.</div>';
-    return;
-  }
-  channels = data || [];
-
-  for (const ch of channels){
-    const { data: lastMsg } = await supabaseClient
-      .from('messages')
-      .select('created_at')
-      .eq('channel_id', ch.id)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    lastMessageMap[ch.id] = lastMsg ? lastMsg.created_at : null;
-  }
-
-  renderChannelList();
-
-  if (!currentChannelId && channels.length){
-    selectChannel(channels[0].id);
-  } else if (!channels.length){
-    document.getElementById('messages-wrap').innerHTML = '<div class="empty-chat">Nessun canale ancora. Creane uno con il "+" qui accanto.</div>';
-    document.getElementById('chat-head').innerHTML = '<span class="empty-chat">Nessun canale</span>';
-  }
-}
-
-function hasUnread(ch){
-  const last = lastMessageMap[ch.id];
-  if (!last) return false;
-  const read = lastReadMap[ch.id];
-  if (!read) return true;
-  return new Date(last) > new Date(read);
-}
-
-function renderChannelList(){
-  const list = document.getElementById('channel-list');
-  list.innerHTML = '';
-  const isAdmin = myMembership && myMembership.role === 'admin';
-  channels.forEach(ch => {
-    const item = document.createElement('div');
-    item.className = 'channel-item' + (ch.id === currentChannelId ? ' active' : '');
-    item.innerHTML = `<span class="hash">#</span><span class="chname">${escapeHtml(ch.nome)}</span>` +
-      (hasUnread(ch) ? '<span class="unread-dot"></span>' : '') +
-      (isAdmin ? `<span class="channel-admin-actions">
-          <span data-action="rename" title="Rinomina">✎</span>
-          <span data-action="delete" title="Elimina">🗑</span>
-        </span>` : '');
-    item.onclick = () => selectChannel(ch.id);
-    if (isAdmin){
-      item.querySelector('[data-action="rename"]').onclick = (e) => { e.stopPropagation(); renameChannel(ch); };
-      item.querySelector('[data-action="delete"]').onclick = (e) => { e.stopPropagation(); deleteChannel(ch); };
-    }
-    list.appendChild(item);
-  });
-}
-
-async function renameChannel(ch){
-  const nuovoNome = prompt('Nuovo nome per il canale:', ch.nome);
-  if (nuovoNome === null) return;
-  const pulito = nuovoNome.trim().toLowerCase().replace(/\s+/g, '-');
-  if (!pulito || pulito === ch.nome) return;
-  const { error } = await supabaseClient.from('channels').update({ nome: pulito }).eq('id', ch.id);
-  if (error){
-    alert('Errore: ' + error.message);
-    return;
-  }
-  await loadChannels();
-}
-
-async function deleteChannel(ch){
-  if (!confirm('Eliminare il canale "#' + ch.nome + '"? Verranno eliminati anche tutti i suoi messaggi, in modo permanente.')) return;
-  const { error } = await supabaseClient.from('channels').delete().eq('id', ch.id);
-  if (error){
-    alert('Errore: ' + error.message);
-    return;
-  }
-  if (ch.id === currentChannelId){
-    currentChannelId = null;
-    if (messagesSub){ supabaseClient.removeChannel(messagesSub); messagesSub = null; }
-  }
-  await loadChannels();
-}
-
-async function loadMembersMini(){
-  const { data } = await supabaseClient.from('team_members').select('nome').order('joined_at', { ascending: true });
-  const names = (data || []).map(m => m.nome);
-  document.getElementById('members-mini').textContent = names.length
-    ? names.length + ' membri: ' + names.slice(0,6).join(', ') + (names.length > 6 ? '…' : '')
-    : '';
-}
-
-async function selectChannel(channelId){
-  currentChannelId = channelId;
-  renderChannelList();
-  const ch = channels.find(c => c.id === channelId);
-  document.getElementById('chat-head').innerHTML = '<span class="hash">#</span> ' + escapeHtml(ch ? ch.nome : '');
-  document.getElementById('composer').classList.remove('hidden');
-
-  await loadMessages(channelId);
-  await markChannelRead(channelId);
-
-  if (messagesSub){ supabaseClient.removeChannel(messagesSub); }
-  messagesSub = supabaseClient
-    .channel('messages-channel-' + channelId)
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: 'channel_id=eq.' + channelId },
-      (payload) => {
-        appendMessage(payload.new);
-        if (channelId === currentChannelId){
-          markChannelRead(channelId);
-        }
-      })
-    .subscribe();
-}
-
-async function loadMessages(channelId){
-  const wrap = document.getElementById('messages-wrap');
-  wrap.innerHTML = '<div class="empty-chat">Caricamento…</div>';
-  const { data, error } = await supabaseClient
-    .from('messages')
-    .select('id, user_id, nome_mittente, testo, created_at')
-    .eq('channel_id', channelId)
-    .order('created_at', { ascending: true })
-    .limit(200);
-  if (error){
-    wrap.innerHTML = '<div class="empty-chat">Errore nel caricamento messaggi.</div>';
-    return;
-  }
-  wrap.innerHTML = '';
-  if (!data || !data.length){
-    wrap.innerHTML = '<div class="empty-chat">Nessun messaggio in questo canale. Scrivi il primo!</div>';
-    return;
-  }
-  data.forEach(m => appendMessage(m, false));
-  wrap.scrollTop = wrap.scrollHeight;
-}
-
-function appendMessage(m, scroll){
-  const wrap = document.getElementById('messages-wrap');
-  if (wrap.querySelector('.empty-chat')) wrap.innerHTML = '';
-  const el = document.createElement('div');
-  el.className = 'msg';
-  el.innerHTML = `
-    <div class="msg-avatar">${escapeHtml(initials(m.nome_mittente))}</div>
-    <div class="msg-body">
-      <div class="msg-head">
-        <span class="msg-name">${escapeHtml(m.nome_mittente)}</span>
-        <span class="msg-time">${formatTime(m.created_at)}</span>
-      </div>
-      <div class="msg-text">${escapeHtml(m.testo)}</div>
-    </div>
-  `;
-  wrap.appendChild(el);
-  if (scroll !== false){
-    wrap.scrollTop = wrap.scrollHeight;
-  }
-}
-
-async function markChannelRead(channelId){
-  lastReadMap[channelId] = new Date().toISOString();
-  await supabaseClient.from('channel_reads').upsert({
-    user_id: currentUser.id, channel_id: channelId, last_read_at: lastReadMap[channelId]
-  });
-  renderChannelList();
-}
-
-document.getElementById('btn-send').onclick = sendMessage;
-document.getElementById('msg-input').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && !e.shiftKey){
-    e.preventDefault();
-    sendMessage();
-  }
-});
-
-async function sendMessage(){
-  const input = document.getElementById('msg-input');
-  const testo = input.value.trim();
-  if (!testo || !currentChannelId) return;
-  input.value = '';
-  const { error } = await supabaseClient.from('messages').insert({
-    channel_id: currentChannelId,
-    user_id: currentUser.id,
-    nome_mittente: myMembership.nome,
-    testo: testo
-  });
-  if (error){
-    alert('Errore nell\'invio: ' + error.message);
-  }
-}
-
-document.getElementById('btn-new-channel').onclick = () => {
-  document.getElementById('new-channel-name').value = '';
-  document.getElementById('channel-overlay').classList.add('open');
-};
-document.getElementById('channel-cancel').onclick = () => {
-  document.getElementById('channel-overlay').classList.remove('open');
-};
-document.getElementById('channel-create').onclick = async () => {
-  const nome = document.getElementById('new-channel-name').value.trim().toLowerCase().replace(/\s+/g, '-');
-  if (!nome) return;
-  const { error } = await supabaseClient.from('channels').insert({ nome, created_by: currentUser.id });
-  if (error){
-    alert('Errore: ' + error.message);
-    return;
-  }
-  document.getElementById('channel-overlay').classList.remove('open');
-  await loadChannels();
-};
-
-document.getElementById('btn-invite').onclick = () => {
-  document.getElementById('invite-link-area').innerHTML = '<p style="font-size:12.5px; color:var(--ink-soft);">Genera un link per invitare un collega.</p>';
-  document.getElementById('invite-overlay').classList.add('open');
-};
-document.getElementById('invite-close').onclick = () => {
-  document.getElementById('invite-overlay').classList.remove('open');
-};
-document.getElementById('invite-generate').onclick = async () => {
-  const code = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random()).replace(/-/g, '').slice(0, 16);
-  const { error } = await supabaseClient.from('team_invites').insert({ code, created_by: currentUser.id });
-  if (error){
-    document.getElementById('invite-link-area').innerHTML = '<p style="color:var(--danger); font-size:12.5px;">Errore: ' + escapeHtml(error.message) + '</p>';
-    return;
-  }
-  const link = window.location.origin + window.location.pathname + '?invite=' + code;
-  document.getElementById('invite-link-area').innerHTML =
-    '<div class="invite-link-box">' + escapeHtml(link) + '</div>' +
-    '<p style="font-size:11.5px; color:var(--ink-soft);">Copia questo link e invialo tu stesso al collega.</p>';
-};
-</script>
 </body>
 </html>

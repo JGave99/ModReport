@@ -18,6 +18,10 @@ const BY_CODE = {
   user_not_found: 'Account non trovato.',
   session_not_found: 'Sessione scaduta: accedi di nuovo.',
   reauthentication_needed: 'Per motivi di sicurezza accedi di nuovo e ripeti l\'operazione.',
+  mfa_verification_failed: 'Codice non valido o scaduto: inserisci il codice attuale dell\'app di autenticazione.',
+  mfa_challenge_expired: 'Il codice è scaduto: inseriscine uno nuovo.',
+  mfa_factor_not_found: 'Verifica in due passaggi non configurata correttamente: contatta l\'assistenza.',
+  insufficient_aal: 'Serve la verifica in due passaggi per questa operazione.',
 };
 
 const BY_TEXT = [
@@ -27,6 +31,7 @@ const BY_TEXT = [
   [/password should be at least|weak password/i, BY_CODE.weak_password],
   [/rate limit|too many/i, BY_CODE.over_request_rate_limit],
   [/not authorized/i, BY_CODE.email_address_not_authorized],
+  [/invalid totp|totp code/i, BY_CODE.mfa_verification_failed],
   [/expired|invalid.*link/i, BY_CODE.otp_expired],
   [/failed to fetch|network|load failed/i, 'Connessione non disponibile. Controlla la rete e riprova.'],
 ];

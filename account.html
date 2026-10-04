@@ -2,14 +2,15 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://umejthggxihtyqvcszgm.supabase.co wss://umejthggxihtyqvcszgm.supabase.co; frame-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; worker-src 'self' blob:; manifest-src 'self'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Il mio account — ModReport</title>
 <link rel="icon" type="image/png" href="modreport_logo_bars_m.png">
 <script src="assets/vendor/supabase.js"></script>
 <script src="js/config.js"></script>
 <script type="module" src="js/pages/account.js"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/fonts.css">
 <style>
   :root{
     --bg: #0f172a;
@@ -393,17 +394,39 @@
       <div class="field-row">
         <div class="field">
           <label>Nuova password</label>
-          <input type="password" id="new-password" placeholder="Almeno 6 caratteri">
+          <input type="password" id="new-password" placeholder="Almeno 12 caratteri" autocomplete="new-password">
         </div>
         <div class="field">
           <label>Conferma nuova password</label>
-          <input type="password" id="confirm-password">
+          <input type="password" id="confirm-password" autocomplete="new-password">
         </div>
       </div>
       <div class="field-row">
         <button class="btn-sm" id="update-password-btn">Aggiorna password</button>
       </div>
       <div class="field-message" id="password-message"></div>
+    </div>
+
+    <h2>Verifica in due passaggi</h2>
+    <div class="card" id="mfa-card">
+      <p class="muted" style="margin-top:0;" id="mfa-status">Protegge l'account con un codice generato da un'app di autenticazione sul telefono.</p>
+      <div id="mfa-enroll" hidden>
+        <p class="muted">Inquadra il codice QR con un'app di autenticazione (Google Authenticator, Microsoft Authenticator, 1Password…), poi inserisci il codice a 6 cifre che compare.</p>
+        <img id="mfa-qr" alt="Codice QR da inquadrare con l'app di autenticazione" width="180" height="180" style="background:#fff; border-radius:8px; padding:6px;">
+        <p class="muted">Se non puoi inquadrarlo, inserisci a mano la chiave: <code id="mfa-secret"></code></p>
+        <div class="field-row">
+          <div class="field">
+            <label for="mfa-enroll-code">Codice a 6 cifre</label>
+            <input type="text" id="mfa-enroll-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6">
+          </div>
+          <button class="btn-sm" id="mfa-verify-btn" style="align-self:flex-end;">Conferma e attiva</button>
+        </div>
+      </div>
+      <div class="field-row">
+        <button class="btn-sm" id="mfa-enable-btn">Attiva la verifica in due passaggi</button>
+        <button class="btn-sm danger" id="mfa-disable-btn" hidden>Disattiva</button>
+      </div>
+      <div class="field-message" id="mfa-message"></div>
     </div>
 
     <h2>Zona pericolosa</h2>
@@ -428,7 +451,8 @@
     <h2>Scomponi un referto esistente</h2>
     <div class="card">
       <p class="muted" style="margin-top:0;">
-        Incolla qui un referto che hai già scritto (o dettalo). Il sistema proverà a riconoscere l'esame — se è già in libreria — e a scomporre il resto in voci riutilizzabili, una frase per volta, che potrai rivedere prima di aggiungerle alla tua libreria. Tutto avviene qui nel browser: il testo non viene inviato a nessun servizio esterno.
+        Incolla qui un referto che hai già scritto (o dettalo). Il sistema proverà a riconoscere l'esame — se è già in libreria — e a scomporre il resto in voci riutilizzabili, una frase per volta, che potrai rivedere prima di aggiungerle alla tua libreria.
+        L'analisi avviene nel browser; solo le voci che scegli di includere vengono salvate nella tua libreria. <strong>Togli sempre i dati del paziente</strong> (nome, date, codice fiscale, numero di accettazione): le voci che li contengono non possono essere incluse.
       </p>
       <div class="field-row">
         <div class="field">
@@ -461,7 +485,8 @@
           </div>
           <button class="btn-sm" id="ai-add-indicazione-btn" style="align-self:flex-end;">+ Aggiungi indicazione</button>
         </div>
-        <p class="muted" style="margin:16px 0 6px;">Voci proposte — rivedi e correggi ciascuna, poi premi "Includi nella libreria" per aggiungerla singolarmente:</p>
+        <div class="field-message warn" id="ai-pii-warning" style="margin-top:12px;"></div>
+        <p class="muted" style="margin:16px 0 6px;">Voci proposte — rivedi ciascuna, scegli se è un reperto normale o patologico e premi "Includi nella libreria":</p>
         <div id="ai-voci-list"></div>
         <div class="field-row" id="ai-voci-empty-row" style="display:none;">
           <p class="muted" style="margin:0;">Nessuna frase riutilizzabile è stata individuata nel testo.</p>
@@ -654,6 +679,7 @@
         <div class="field">
           <label>File PDF</label>
           <input type="file" id="lh-file" accept="application/pdf">
+          <div class="muted" style="margin-top:4px;">PDF fino a 5 MB.</div>
         </div>
       </div>
       <div class="field-row">

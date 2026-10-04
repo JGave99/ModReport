@@ -16,16 +16,16 @@ Origine: audit del 03-04/10/2026. Legenda: `[x]` fatto · `[ ]` da fare · 👤 
 - 👤 [ ] Supabase: creare la chiave publishable e inserirla in `js/config.js` entro fine 2026
 
 ## Step 2 — Sicurezza
-- [ ] Schema, policy RLS/storage e RPC versionati in `supabase/migrations`, con test automatici
-- [ ] Team per organizzazione (fine del team unico); ruoli e inviti gestiti dal server (scadenza, limite usi, revoca); rimozione membri
-- [ ] Nome del mittente in chat impostato dal server
-- [ ] XSS: escape completo, status admin, breadcrumb, margini
-- [ ] Librerie e font in locale (niente CDN), CSP, header di sicurezza
-- [ ] Auth: password ≥ 12 caratteri, MFA (TOTP), modalità "PC condiviso" con uscita per inattività, conferma password per azioni sensibili
-- [ ] Eliminazione account completa (file, dati, team)
-- [ ] Importazione: filtro dati identificativi, classificazione normale/patologico corretta
-- [ ] Limiti di dimensione (upload, testi) lato client e server
-- 👤 [ ] Applicare le migrazioni (dopo backup e confronto con `supabase db pull`); attivare MFA e regole password nella dashboard
+- [x] Schema, policy RLS/storage e RPC versionati in `supabase/migrations`, con test automatici
+- [x] Team per organizzazione (fine del team unico); ruoli e inviti gestiti dal server (scadenza, limite usi, revoca); rimozione membri
+- [x] Nome del mittente in chat impostato dal server
+- [x] XSS: escape completo, status admin, breadcrumb, margini
+- [x] Librerie e font in locale (niente CDN), CSP, header di sicurezza
+- [x] Auth: password ≥ 12 caratteri, MFA (TOTP), modalità "PC condiviso" con uscita per inattività, conferma password per azioni sensibili
+- [x] Eliminazione account completa (file, dati, team)
+- [x] Importazione: filtro dati identificativi, classificazione normale/patologico corretta
+- [x] Limiti di dimensione (upload, testi) lato client e server
+- 👤 [ ] Applicare le migrazioni (dopo backup e confronto con `supabase db pull`); attivare MFA e regole password nella dashboard (vedi `supabase/README.md`)
 
 ## Step 3 — Privacy e legale
 - [ ] Archivio referti solo locale (nel browser) + spostamento dell'archivio cloud esistente
@@ -41,7 +41,7 @@ Origine: audit del 03-04/10/2026. Legenda: `[x]` fatto · `[ ]` da fare · 👤 
 ## Step 4 — Bug e architettura
 - [ ] Codice in moduli condivisi (`js/`, `css/`), niente duplicazioni
 - [ ] Livello dati con modalità cloud e modalità locale/demo
-- [ ] Chat: ultimi messaggi, niente N+1, cambio canale senza race, messaggio non perso se l'invio fallisce
+- [x] Chat: ultimi messaggi, niente N+1, cambio canale senza race, messaggio non perso se l'invio fallisce
 - [ ] Editor: intestazione senza duplicati, bozza salvata, Svuota annullabile, Ctrl+Z, inserimento al cursore, Copia su referto vuoto
 - [ ] Test automatici (unit + e2e) e CI su GitHub Actions
 - [ ] README, CONTRIBUTING (branch + PR), CHANGELOG

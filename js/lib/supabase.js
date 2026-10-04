@@ -1,4 +1,6 @@
 // Client Supabase condiviso. Richiede assets/vendor/supabase.js e js/config.js caricati prima.
+import { authStorage } from './session.js';
+
 let client = null;
 
 export function getSupabase() {
@@ -6,7 +8,7 @@ export function getSupabase() {
   const cfg = window.MR_CONFIG;
   if (!window.supabase || !cfg || !cfg.SUPABASE_URL || !cfg.SUPABASE_KEY) return null;
   client = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_KEY, {
-    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storage: authStorage },
   });
   return client;
 }
