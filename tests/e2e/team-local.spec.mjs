@@ -28,3 +28,29 @@ test('modalità locale: si usa senza account e i dati restano nel browser', asyn
   await expect(page.locator('#local-card')).toBeVisible();
   await expect(page.locator('#mfa-card')).toBeHidden();
 });
+
+test('libreria del team: l\'amministratore la crea, l\'editor la usa', async ({ page }) => {
+  await login(page);
+  await page.goto('team.html');
+  await page.fill('#create-team-name', 'Studio Rossi');
+  await page.click('#btn-create-team');
+  await expect(page.locator('#page-root')).toBeVisible();
+  await page.goto('account.html#libreria');
+  await expect(page.locator('#lib-source-box')).toBeVisible();
+  await page.selectOption('#lib-source', { index: 1 });
+  await page.click('#lib-team-create');
+  await expect(page.locator('#lib-source-note')).toContainText('Studio Rossi');
+  await expect.poll(() => page.evaluate(() => window.__fakeSupabase.db.tables.team_libraries.length)).toBe(1);
+  await page.locator('.lib-tree__item', { hasText: 'RX TORACE 2PR' }).first().click();
+  await page.getByRole('button', { name: 'Aggiungi indicazione' }).click();
+  await page.locator('.lib-section input[aria-label^="Indicazione"]').last().fill('Indicazione del team');
+  await expect.poll(() => page.evaluate(() => JSON.stringify(window.__fakeSupabase.db.tables.team_libraries[0].data))).toContain('Indicazione del team');
+  const personal = await page.evaluate(() => JSON.stringify((window.__fakeSupabase.db.tables.user_data[0] || {}).data || {}));
+  expect(personal).not.toContain('Indicazione del team');
+  await page.goto('app.html');
+  await expect(page.locator('#lib-source-editor-box')).toBeVisible();
+  await page.selectOption('#lib-source-editor', { label: 'Studio Rossi' });
+  await page.locator('#metodica-row .chip', { hasText: 'RX' }).click();
+  await page.locator('#esame-body .chip', { hasText: 'RX TORACE 2PR' }).click();
+  await expect(page.locator('#indicazione-body .chip', { hasText: 'Indicazione del team' })).toBeVisible();
+});

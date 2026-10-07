@@ -1,10 +1,13 @@
 // Il mio account (account.html): profilo, libreria personale, importazione referti, carte intestate.
 import { getSupabase, pageUrl } from '../lib/supabase.js';
-import { $, escapeHtml, setMessage, iconHtml } from '../lib/dom.js';
+import { $, escapeHtml, setMessage, icon, iconHtml, formatDateTime } from '../lib/dom.js';
 import { authErrorMessage } from '../lib/auth-messages.js';
 import { LibraryStore, cloneDefaults } from '../lib/library.js';
-import { DEFAULT_LIBRARY } from '../lib/default-library.js';
-import { attachDictation, stopAllDictation, dictationDisabled, setDictationDisabled } from '../lib/dictation.js';
+import {
+  attachDictation, stopAllDictation, dictationDisabled, setDictationDisabled, localDictationPreferred, setLocalDictationPreferred,
+  voiceCommandsEnabled, setVoiceCommandsEnabled, localDictationStatus,
+} from '../lib/dictation.js';
+import { validAbbreviation } from '../lib/voice-text.js';
 import { passwordProblem } from '../lib/auth-policy.js';
 import { requireSession, needsMfa } from '../lib/session.js';
 import { detectPII, splitIntoSentences, classifyFinding } from '../lib/import-analysis.js';
@@ -12,7 +15,9 @@ import { alertDialog, confirmDialog, promptDialog } from '../lib/dialog.js';
 import { toast } from '../lib/toast.js';
 import { createLibraryEditor } from '../lib/library-editor.js';
 import { migrateLibrary } from '../lib/library.js';
+import { newPhraseId } from '../lib/library-merge.js';
 import { isLocalMode, setLocalMode, clearLocalData } from '../lib/local-backend.js';
+import { saveVersion, listVersions, loadVersion, deleteVersion, VERSION_REASONS } from '../lib/library-versions.js';
 
 const LETTERHEAD_MAX_BYTES = 5 * 1024 * 1024;
 const sb = getSupabase();
@@ -99,6 +104,12 @@ async function loadLibrary() {
   DATA = res.data;
   libraryReady = true;
   setLibraryLocked(false);
+  if (res.changed && res.raw) {
+    saveVersion(sb, currentUser.id, res.raw, { reason: 'aggiornamento' }).catch(() => {});
+    persist();
+    const r = res.report;
+    if (r && (r.esamiAggiunti.length || r.frasiAggiunte)) toast('Libreria aggiornata: ' + r.esamiAggiunti.length + ' esami e ' + r.frasiAggiunte + ' frasi nuove (le tue modifiche sono state mantenute).', { duration: 7000 });
+  }
 }
 
 document.querySelectorAll('[data-lib-retry]').forEach((b) => {
@@ -146,6 +157,7 @@ let editor = null;
 function refreshLibraryViews() {
   if (editor) editor.render();
   refreshAiSelects();
+  renderAbbreviations();
 }
 
 $('lib-export').onclick = () => {
@@ -170,6 +182,9 @@ $('lib-import-file').addEventListener('change', async (e) => {
   const data = parsed && parsed.kind === 'libreria' && parsed.data;
   if (!data || !Array.isArray(data.metodiche)) { setMessage($('lib-tools-message'), 'Il file non è una libreria ModReport valida.', 'error'); return; }
   if (!await confirmDialog('Sostituire la libreria?', 'La libreria attuale verrà sostituita da quella del file (' + data.metodiche.length + ' metodiche). Se ti serve, esportala prima.', { okText: 'Sostituisci' })) return;
+  try { await saveVersion(sb, currentUser.id, DATA, { reason: 'importazione' }); } catch (e) {
+    if (!await confirmDialog('Versione non salvata', 'Non è stato possibile salvare una copia della libreria attuale. Importare comunque?', { okText: 'Importa' })) return;
+  }
   DATA = migrateLibrary(data).data;
   persist();
   refreshLibraryViews();
@@ -177,10 +192,112 @@ $('lib-import-file').addEventListener('change', async (e) => {
 });
 
 $('btn-reset-data').onclick = async () => {
-  if (!await confirmDialog('Ripristinare la libreria predefinita?', 'Le personalizzazioni andranno perse. Prima viene scaricata automaticamente una copia della libreria attuale.', { okText: 'Ripristina', danger: true })) return;
-  $('lib-export').click();
-  DATA = JSON.parse(JSON.stringify(DEFAULT_LIBRARY));
+  if (!await confirmDialog('Ripristinare la libreria predefinita?', 'Le personalizzazioni vengono sostituite dai predefiniti. Prima viene salvata una versione che puoi ripristinare da "Versioni".', { okText: 'Ripristina', danger: true })) return;
+  try { await saveVersion(sb, currentUser.id, DATA, { reason: 'ripristino' }); } catch (e) { $('lib-export').click(); }
+  DATA = cloneDefaults();
   persist();
+  refreshLibraryViews();
+};
+
+// Crea la libreria del team copiando la libreria personale (che resta invariata).
+$('lib-team-create').onclick = async () => {
+  const btn = $('lib-team-create');
+  btn.disabled = true;
+  try {
+    const personal = await new LibraryStore({ supabase: sb, userId: currentUser.id }).load();
+    if (personal.status === 'error') throw new Error(personal.error && personal.error.message ? personal.error.message : 'libreria personale non disponibile');
+    DATA = JSON.parse(JSON.stringify(personal.data));
+    libraryReady = true;
+    store.schedule(() => DATA);
+    await store.flush();
+    btn.hidden = true;
+    refreshLibraryViews();
+    setMessage($('lib-tools-message'), 'Libreria del team creata: ora la vedono tutti i membri nell\'editor.', 'ok');
+  } catch (e) {
+    setMessage($('lib-tools-message'), 'Libreria del team non creata: ' + e.message, 'error');
+  }
+  btn.disabled = false;
+};
+
+$('lib-source').onchange = async () => {
+  await store.flush();
+  librarySource = $('lib-source').value;
+  
+  // Creazione del nuovo store
+  let newStore;
+  if (librarySource === 'personale') {
+    newStore = new LibraryStore({ 
+      supabase: sb, 
+      userId: currentUser.id, 
+      onStatus: renderStatus,
+      table: 'user_data',
+      keyColumn: 'user_id',
+      keyValue: currentUser.id
+    });
+  } else {
+    // Team library store
+    newStore = new LibraryStore({ 
+      supabase: sb, 
+      userId: currentUser.id, 
+      onStatus: renderStatus,
+      table: 'team_libraries',
+      keyColumn: 'team_id',
+      keyValue: librarySource
+    });
+  }
+  
+  const res = await newStore.load();
+  if (res.status === 'error') {
+    setMessage($('lib-tools-message'), 'Errore nel caricamento della libreria: ' + (res.error?.message || 'Errore sconosciuto'), 'error');
+    librarySource = 'personale';
+    $('lib-source').value = 'personale';
+    return;
+  }
+  
+  if (res.status === 'empty') {
+    // Per un team, se è vuota inizializza con dati vuoti
+    DATA = { 
+      metodiche: [], 
+      esamiByMetodica: {}, 
+      indicazioniByEsame: {}, 
+      refertoByEsame: {}, 
+      removedBase: [] 
+    };
+    libraryReady = false;
+    
+    // Se è un team e la libreria è vuota, mostra il pulsante per crearla
+    if (librarySource !== 'personale') {
+      $('lib-team-create').hidden = false;
+    }
+  } else {
+    DATA = res.data;
+    libraryReady = true;
+    
+    // Nascondi il pulsante di creazione se non è un team vuoto
+    $('lib-team-create').hidden = true;
+  }
+  
+  store = newStore;
+  
+  // Gestione della nota sorgente
+  const noteElement = $('lib-source-note');
+  if (librarySource !== 'personale') {
+    // Trova il nome del team per mostrare nella nota
+    const teamName = Array.from($('lib-source').options).find(option => option.value === librarySource)?.text || 'il team';
+    noteElement.textContent = `Stai modificando la libreria condivisa del team ${teamName}: i membri la vedranno nell'editor.`;
+    noteElement.hidden = false;
+  } else {
+    noteElement.hidden = true;
+  }
+  
+  // Gestione delle versioni
+  const versionsButton = $('lib-versions');
+  if (librarySource !== 'personale' && versionsButton) {
+    versionsButton.disabled = true;
+  } else if (librarySource === 'personale' && versionsButton) {
+    versionsButton.disabled = false;
+  }
+  
   refreshLibraryViews();
 };
 
@@ -350,7 +467,7 @@ function addSingleVoceToLibrary(voce) {
   if (!voce.cls) { setMessage(msg, 'Scegli se la voce è un reperto normale o patologico.', 'error'); return; }
   DATA.refertoByEsame[esame] = DATA.refertoByEsame[esame] || {};
   DATA.refertoByEsame[esame][group] = DATA.refertoByEsame[esame][group] || [];
-  DATA.refertoByEsame[esame][group].push({ label, text, neg: voce.cls === 'patologico' });
+  DATA.refertoByEsame[esame][group].push({ id: newPhraseId(), label, text, neg: voce.cls === 'patologico' });
   persist();
   refreshLibraryViews();
   aiProposedVoci = aiProposedVoci.filter((v) => v !== voce);
@@ -421,6 +538,76 @@ $('pref-dictation-off').checked = dictationDisabled();
 $('pref-dictation-off').addEventListener('change', (e) => {
   setDictationDisabled(e.target.checked);
   window.location.reload();
+});
+
+const LOCAL_STATUS = {
+  available: 'Pronto: questo browser elabora la voce sul computer.',
+  downloadable: 'Disponibile: al primo utilizzo il browser scaricherà una sola volta il modello per l\'italiano.',
+  downloading: 'Il browser sta scaricando il modello per l\'italiano…',
+  unavailable: 'Questo browser non supporta l\'italiano sul dispositivo: con l\'opzione attiva la dettatura non parte.',
+  unsupported: 'Questo browser non elabora la voce sul dispositivo: con l\'opzione attiva la dettatura non parte.',
+};
+async function showLocalDictationStatus() {
+  const box = $('pref-dictation-local-status');
+  box.textContent = $('pref-dictation-local').checked ? (LOCAL_STATUS[await localDictationStatus()] || '') : '';
+}
+$('pref-dictation-local').checked = localDictationPreferred();
+$('pref-dictation-local').addEventListener('change', (e) => { setLocalDictationPreferred(e.target.checked); showLocalDictationStatus(); });
+showLocalDictationStatus();
+$('pref-voice-commands').checked = voiceCommandsEnabled();
+$('pref-voice-commands').addEventListener('change', (e) => setVoiceCommandsEnabled(e.target.checked));
+try { $('pref-check-dose').checked = localStorage.getItem('mr-check-dose') !== 'off'; } catch (e) { $('pref-check-dose').checked = true; }
+$('pref-check-dose').addEventListener('change', (e) => {
+  try { if (e.target.checked) localStorage.removeItem('mr-check-dose'); else localStorage.setItem('mr-check-dose', 'off'); } catch (err) { /* ignora */ }
+});
+
+// Abbreviazioni personali (salvate nella libreria, quindi su tutte le postazioni).
+function renderAbbreviations() {
+  const list = $('abbr-list');
+  list.innerHTML = '';
+  const abbr = DATA.abbreviazioni || {};
+  const keys = Object.keys(abbr).sort();
+  if (!keys.length) { list.innerHTML = '<p class="subtle">Nessuna abbreviazione.</p>'; return; }
+  keys.forEach((k) => {
+    const row = document.createElement('div');
+    row.className = 'abbr-row';
+    const code = document.createElement('code');
+    code.textContent = k;
+    const text = document.createElement('span');
+    text.textContent = abbr[k];
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'btn btn--ghost btn--icon btn--sm';
+    del.setAttribute('aria-label', 'Elimina l\'abbreviazione ' + k);
+    del.title = 'Elimina';
+    del.appendChild(icon('trash-2'));
+    del.onclick = () => {
+      if (!libraryReady) return;
+      delete DATA.abbreviazioni[k];
+      persist();
+      renderAbbreviations();
+    };
+    row.append(code, text, del);
+    list.appendChild(row);
+  });
+}
+$('abbr-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const msg = $('abbr-message');
+  const key = $('abbr-key').value.trim();
+  const value = $('abbr-value').value.trim();
+  if (!libraryReady) { setMessage(msg, 'Libreria non caricata: riprova prima di aggiungere abbreviazioni.', 'error'); return; }
+  if (!validAbbreviation(key)) { setMessage(msg, 'L\'abbreviazione deve avere da 2 a 20 caratteri, senza spazi.', 'error'); return; }
+  if (!value) { setMessage(msg, 'Scrivi il testo completo.', 'error'); return; }
+  if (detectPII(value).length) { setMessage(msg, 'Il testo contiene possibili dati del paziente: toglili.', 'error'); return; }
+  DATA.abbreviazioni = DATA.abbreviazioni || {};
+  DATA.abbreviazioni[key] = value;
+  persist();
+  renderAbbreviations();
+  $('abbr-key').value = '';
+  $('abbr-value').value = '';
+  setMessage(msg, 'Abbreviazione salvata.', 'ok');
+  $('abbr-key').focus();
 });
 
 attachDictation($('mic-ai-report-text'), () => $('ai-report-text'), { onError: (m) => toast(m, { type: 'error', duration: 8000 }) });
@@ -528,6 +715,7 @@ $('lh-save-btn').onclick = async () => {
 $('update-name-btn').onclick = async () => {
   const nome = $('profile-nome').value.trim();
   const cognome = $('profile-cognome').value.trim();
+  const titolo = $('profile-titolo').value;
   const msg = $('name-message');
   if (!nome || !cognome) { setMessage(msg, 'Inserisci sia nome che cognome.', 'error'); return; }
   const btn = $('update-name-btn');
@@ -535,13 +723,13 @@ $('update-name-btn').onclick = async () => {
   setMessage(msg, 'Salvataggio in corso…');
   try {
     if (nome.length > 80 || cognome.length > 80) throw new Error('Nome e cognome possono avere al massimo 80 caratteri.');
-    const { error: authError } = await sb.auth.updateUser({ data: { nome, cognome } });
+    const { error: authError } = await sb.auth.updateUser({ data: { nome, cognome, titolo } });
     if (authError) throw authError;
-    currentUser.user_metadata = Object.assign({}, currentUser.user_metadata, { nome, cognome });
+    currentUser.user_metadata = Object.assign({}, currentUser.user_metadata, { nome, cognome, titolo });
     await sb.from('profiles').upsert({ id: currentUser.id, nome, cognome });
     const { error: rpcError } = await sb.rpc('update_my_display_name', { new_nome: nome + ' ' + cognome });
     if (rpcError) setMessage(msg, 'Nome salvato, ma non aggiornato nella chat di team (' + rpcError.message + ').', 'warn');
-    else setMessage(msg, 'Nome e cognome salvati.', 'ok');
+    else setMessage(msg, 'Profilo salvato.', 'ok');
   } catch (e) {
     setMessage(msg, authErrorMessage(e), 'error');
   }
@@ -717,6 +905,120 @@ if (window.MR_THEME) {
   $('pref-scale').onchange = (e) => window.MR_THEME.setScale(e.target.value);
 }
 
+// Carica i team di cui l'utente è admin/owner per il caricamento della libreria condivisa
+async function loadAdminTeams() {
+  if (isLocalMode()) return;
+  
+  const { data } = await sb.from('team_members').select('team_id, role').eq('user_id', currentUser.id);
+  if (!data) return;
+  
+  const adminTeams = data.filter(row => row.role === 'owner' || row.role === 'admin');
+  if (adminTeams.length === 0) return;
+  
+  const teamIds = adminTeams.map(row => row.team_id);
+  const { data: teams } = await sb.from('teams').select('id, nome').in('id', teamIds);
+  if (!teams || teams.length === 0) return;
+  
+  const sourceSelect = $('lib-source');
+  teams.forEach(team => {
+    const option = document.createElement('option');
+    option.value = team.id;
+    option.textContent = 'Team: ' + team.nome;
+    sourceSelect.appendChild(option);
+  });
+  
+  $('lib-source-box').hidden = false;
+}
+
+let librarySource = 'personale';
+
+// ============================================================
+// VERSIONI DELLA LIBRERIA
+// ============================================================
+async function renderVersions() {
+  const listEl = $('versions-list');
+  const msgEl = $('versions-message');
+  listEl.innerHTML = '';
+  try {
+    const versions = await listVersions(sb, currentUser.id);
+    if (versions.length === 0) {
+      const p = document.createElement('p');
+      p.className = 'subtle';
+      p.textContent = 'Nessuna versione salvata.';
+      listEl.appendChild(p);
+    } else {
+      for (const v of versions) {
+        const row = document.createElement('div');
+        row.className = 'version-row';
+        const text = document.createElement('span');
+        text.textContent = formatDateTime(v.created_at) + ' · ' + (v.label || VERSION_REASONS[v.reason] || 'Sconosciuto');
+        row.appendChild(text);
+        const restoreBtn = document.createElement('button');
+        restoreBtn.type = 'button';
+        restoreBtn.className = 'btn btn--sm';
+        restoreBtn.dataset.restore = v.id;
+        restoreBtn.textContent = 'Ripristina';
+        row.appendChild(restoreBtn);
+        const deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.className = 'btn btn--sm btn--danger';
+        deleteBtn.dataset.delete = v.id;
+        deleteBtn.textContent = 'Elimina';
+        row.appendChild(deleteBtn);
+        listEl.appendChild(row);
+      }
+    }
+  } catch (err) {
+    setMessage(msgEl, err.message, 'error');
+  }
+}
+
+// Eventi della finestra delle versioni
+$('lib-versions').addEventListener('click', () => {
+  setMessage($('versions-message'), '');
+  $('versions-dialog').showModal();
+  renderVersions();
+});
+$('versions-dialog').querySelectorAll('[data-close]').forEach((btn) => btn.addEventListener('click', () => $('versions-dialog').close()));
+
+$('version-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const msg = $('versions-message');
+  if (!libraryReady) { setMessage(msg, 'Libreria non caricata: riprova prima di salvare una versione.', 'error'); return; }
+  try {
+    await saveVersion(sb, currentUser.id, DATA, { label: $('version-label').value.trim(), reason: 'manuale' });
+    $('version-label').value = '';
+    setMessage(msg, 'Versione salvata.', 'ok');
+    await renderVersions();
+  } catch (err) {
+    setMessage(msg, 'Errore: ' + err.message, 'error');
+  }
+});
+
+$('versions-list').addEventListener('click', async (e) => {
+  const btn = e.target.closest('[data-restore], [data-delete]');
+  if (!btn) return;
+  const msg = $('versions-message');
+  if (!libraryReady) { setMessage(msg, 'Libreria non caricata: riprova più tardi.', 'error'); return; }
+  try {
+    if (btn.dataset.restore) {
+      if (!await confirmDialog('Ripristinare questa versione?', 'La libreria attuale viene prima salvata come versione, così puoi tornare indietro.', { okText: 'Ripristina' })) return;
+      await saveVersion(sb, currentUser.id, DATA, { label: 'Prima del ripristino', reason: 'ripristino' });
+      DATA = migrateLibrary(await loadVersion(sb, btn.dataset.restore)).data;
+      persist();
+      refreshLibraryViews();
+      $('versions-dialog').close();
+      toast('Versione ripristinata');
+    } else {
+      if (!await confirmDialog('Eliminare questa versione?', 'Non si potrà più ripristinare.', { okText: 'Elimina', danger: true })) return;
+      await deleteVersion(sb, btn.dataset.delete);
+      await renderVersions();
+    }
+  } catch (err) {
+    setMessage(msg, 'Errore: ' + err.message, 'error');
+  }
+});
+
 (async function init() {
   if (!sb) {
     $('gate').textContent = 'Configurazione cloud mancante.';
@@ -727,6 +1029,8 @@ if (window.MR_THEME) {
   $('profile-email').value = currentUser.email || '';
   $('profile-nome').value = (currentUser.user_metadata && currentUser.user_metadata.nome) || '';
   $('profile-cognome').value = (currentUser.user_metadata && currentUser.user_metadata.cognome) || '';
+  const titolo = currentUser.user_metadata && currentUser.user_metadata.titolo;
+  $('profile-titolo').value = typeof titolo === 'string' ? titolo : 'Dott.';
   await loadLibrary();
   editor = createLibraryEditor($('library-editor'), { getData: () => DATA, onChange: persist });
   refreshLibraryViews();
@@ -737,6 +1041,7 @@ if (window.MR_THEME) {
     $('local-card').hidden = false;
   } else {
     await refreshMfa();
+    await loadAdminTeams();
   }
   $('gate').hidden = true;
   $('page-root').hidden = false;

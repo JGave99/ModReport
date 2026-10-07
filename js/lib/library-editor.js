@@ -3,6 +3,7 @@
 import { icon } from './dom.js';
 import { confirmDialog, promptDialog } from './dialog.js';
 import { toast } from './toast.js';
+import { newPhraseId, isBaseId, tomb } from './library-merge.js';
 
 const move = (arr, i, d) => { const j = i + d; if (j < 0 || j >= arr.length) return; [arr[i], arr[j]] = [arr[j], arr[i]]; };
 
@@ -29,6 +30,19 @@ export function createLibraryEditor(root, { getData, onChange }) {
     return Object.values(D().esamiByMetodica).some((list) => (list || []).includes(name));
   }
 
+  // Ciò che l'utente elimina dalla libreria predefinita non deve tornare con gli aggiornamenti.
+  function markRemoved(keys) {
+    const d = D();
+    d.removedBase = Array.isArray(d.removedBase) ? d.removedBase : [];
+    keys.filter(Boolean).forEach((k) => { if (!d.removedBase.includes(k)) d.removedBase.push(k); });
+  }
+  function unmarkRemoved(keys) {
+    const d = D();
+    if (Array.isArray(d.removedBase)) d.removedBase = d.removedBase.filter((k) => !keys.includes(k));
+  }
+  const baseIdsIn = (groups) => Object.values(groups || {}).flat().map((p) => p && p.id).filter(isBaseId);
+  const newPhrase = () => ({ id: newPhraseId(), label: 'Nuova frase', text: '', neg: false });
+
   // ---------- Operazioni ----------
   async function addMetodica() {
     const nome = await promptDialog('Nuova metodica', { label: 'Nome', validate: (v) => (!v.trim() ? 'Scrivi un nome.' : D().metodiche.includes(v.trim()) ? 'Esiste già.' : null) });
@@ -45,6 +59,7 @@ export function createLibraryEditor(root, { getData, onChange }) {
     d.metodiche[d.metodiche.indexOf(m)] = nome.trim();
     d.esamiByMetodica[nome.trim()] = d.esamiByMetodica[m] || [];
     delete d.esamiByMetodica[m];
+    markRemoved([tomb.metodica(m)]);
     if (selected && selected.metodica === m) selected.metodica = nome.trim();
     changed();
   }
@@ -56,6 +71,7 @@ export function createLibraryEditor(root, { getData, onChange }) {
     const d = D();
     d.metodiche = d.metodiche.filter((x) => x !== m);
     delete d.esamiByMetodica[m];
+    markRemoved([tomb.metodica(m)]);
     changed();
   }
 
@@ -79,6 +95,7 @@ export function createLibraryEditor(root, { getData, onChange }) {
     list[list.indexOf(esame)] = nome.trim();
     if (d.indicazioniByEsame[esame]) { d.indicazioniByEsame[nome.trim()] = d.indicazioniByEsame[esame]; delete d.indicazioniByEsame[esame]; }
     if (d.refertoByEsame[esame]) { d.refertoByEsame[nome.trim()] = d.refertoByEsame[esame]; delete d.refertoByEsame[esame]; }
+    markRemoved([tomb.esame(esame)]);
     selected.esame = nome.trim();
     changed();
   }
@@ -87,6 +104,7 @@ export function createLibraryEditor(root, { getData, onChange }) {
     const { metodica, esame } = selected;
     if (!await confirmDialog('Eliminare l\'esame "' + esame + '"?', 'Verranno eliminate anche le sue indicazioni e frasi.', { okText: 'Elimina', danger: true })) return;
     const d = D();
+    markRemoved([tomb.esame(esame), ...baseIdsIn(d.refertoByEsame[esame]), ...(d.indicazioniByEsame[esame] || []).map((t) => tomb.ind(esame, t))]);
     d.esamiByMetodica[metodica] = d.esamiByMetodica[metodica].filter((e) => e !== esame);
     delete d.indicazioniByEsame[esame];
     delete d.refertoByEsame[esame];
@@ -100,11 +118,12 @@ export function createLibraryEditor(root, { getData, onChange }) {
     changed();
   }
 
-  // Elimina con possibilità di annullare (toast).
-  function removeWithUndo(arr, index, what) {
+  // Elimina con possibilità di annullare (toast). keys: voci della base da non riproporre.
+  function removeWithUndo(arr, index, what, keys = []) {
     const [item] = arr.splice(index, 1);
+    markRemoved(keys);
     changed();
-    toast(what + ' eliminata', { duration: 7000, action: { label: 'Annulla', run: () => { arr.splice(index, 0, item); changed(); } } });
+    toast(what + ' eliminata', { duration: 7000, action: { label: 'Annulla', run: () => { arr.splice(index, 0, item); unmarkRemoved(keys); changed(); } } });
   }
 
   async function renameGroup(name) {
@@ -119,6 +138,7 @@ export function createLibraryEditor(root, { getData, onChange }) {
 
   async function deleteGroup(name) {
     if (!await confirmDialog('Eliminare il gruppo "' + name + '"?', 'Verranno eliminate tutte le sue frasi.', { okText: 'Elimina', danger: true })) return;
+    markRemoved(baseIdsIn({ [name]: D().refertoByEsame[selected.esame][name] }));
     delete D().refertoByEsame[selected.esame][name];
     changed();
   }
@@ -137,7 +157,7 @@ export function createLibraryEditor(root, { getData, onChange }) {
     const groups = (D().refertoByEsame[selected.esame] = D().refertoByEsame[selected.esame] || {});
     const nome = await promptDialog('Nuovo gruppo / distretto', { label: 'Nome (es. Parenchima, Tecnica, Conclusioni)', validate: (v) => (!v.trim() ? 'Scrivi un nome.' : groups[v.trim()] ? 'Esiste già.' : null) });
     if (nome === null) return;
-    groups[nome.trim()] = [{ label: 'Nuova frase', text: '', neg: false }];
+    groups[nome.trim()] = [newPhrase()];
     changed();
   }
 
@@ -227,11 +247,14 @@ export function createLibraryEditor(root, { getData, onChange }) {
       input.value = txt;
       input.setAttribute('aria-label', 'Indicazione ' + (i + 1));
       input.oninput = () => { ind[i] = input.value; onChange(); };
-      input.onchange = () => { if (!input.value.trim()) removeWithUndo(ind, i, 'Indicazione'); };
+      input.onchange = () => {
+        if (!input.value.trim()) removeWithUndo(ind, i, 'Indicazione', [tomb.ind(esame, txt)]);
+        else if (input.value !== txt) markRemoved([tomb.ind(esame, txt)]); // indicazione predefinita riscritta
+      };
       row.append(input,
         btn('Sposta su', 'arrow-up', () => { move(ind, i, -1); changed(); }),
         btn('Sposta giù', 'arrow-down', () => { move(ind, i, 1); changed(); }),
-        btn('Elimina indicazione', 'trash-2', () => removeWithUndo(ind, i, 'Indicazione')));
+        btn('Elimina indicazione', 'trash-2', () => removeWithUndo(ind, i, 'Indicazione', [tomb.ind(esame, txt)])));
       indSec.appendChild(row);
     });
     indSec.appendChild(btn('Aggiungi indicazione', 'plus', () => { ind.push(''); changed(); setTimeout(() => { const inputs = indSec.querySelectorAll('input'); if (inputs.length) inputs[inputs.length - 1].focus(); }, 0); }, { cls: 'btn btn--sm' }));
@@ -256,7 +279,7 @@ export function createLibraryEditor(root, { getData, onChange }) {
       const phrases = groups[g];
       phrases.forEach((p, i) => {
         const card = document.createElement('div');
-        card.className = 'lib-phrase' + (p.neg ? ' lib-phrase--abnormal' : '');
+        card.className = 'lib-phrase' + (p.neg ? ' lib-phrase--abnormal' : '') + (p.opz ? ' lib-phrase--optional' : '');
         const label = document.createElement('input');
         label.className = 'input';
         label.value = p.label;
@@ -265,10 +288,19 @@ export function createLibraryEditor(root, { getData, onChange }) {
         label.oninput = () => { p.label = label.value; onChange(); };
         const kind = document.createElement('select');
         kind.className = 'input';
-        kind.setAttribute('aria-label', 'Tipo di reperto');
-        kind.innerHTML = '<option value="normale">Normale</option><option value="patologico">Patologico / da approfondire</option>';
-        kind.value = p.neg ? 'patologico' : 'normale';
-        kind.onchange = () => { p.neg = kind.value === 'patologico'; card.classList.toggle('lib-phrase--abnormal', p.neg); onChange(); };
+        kind.setAttribute('aria-label', 'Tipo di frase');
+        kind.innerHTML = '<option value="normale">Normale</option>'
+          + '<option value="patologico">Patologica (sostituisce la normale)</option>'
+          + '<option value="aggiuntiva">Aggiuntiva (fuori dal referto normale)</option>'
+          + '<option value="aggiuntiva-patologica">Aggiuntiva patologica</option>';
+        kind.value = (p.opz ? 'aggiuntiva' : '') + (p.opz && p.neg ? '-patologica' : '') || (p.neg ? 'patologico' : 'normale');
+        kind.onchange = () => {
+          p.neg = kind.value === 'patologico' || kind.value === 'aggiuntiva-patologica';
+          if (kind.value.startsWith('aggiuntiva')) p.opz = true; else delete p.opz;
+          card.classList.toggle('lib-phrase--abnormal', p.neg);
+          card.classList.toggle('lib-phrase--optional', !!p.opz);
+          onChange();
+        };
         const text = document.createElement('textarea');
         text.className = 'input';
         text.rows = 2;
@@ -281,11 +313,11 @@ export function createLibraryEditor(root, { getData, onChange }) {
         top.append(label, kind,
           btn('Sposta su', 'arrow-up', () => { move(phrases, i, -1); changed(); }),
           btn('Sposta giù', 'arrow-down', () => { move(phrases, i, 1); changed(); }),
-          btn('Elimina frase', 'trash-2', () => removeWithUndo(phrases, i, 'Frase')));
+          btn('Elimina frase', 'trash-2', () => removeWithUndo(phrases, i, 'Frase', isBaseId(p.id) ? [p.id] : [])));
         card.append(top, text);
         sec.appendChild(card);
       });
-      sec.appendChild(btn('Aggiungi frase', 'plus', () => { phrases.push({ label: 'Nuova frase', text: '', neg: false }); changed(); }, { cls: 'btn btn--sm' }));
+      sec.appendChild(btn('Aggiungi frase', 'plus', () => { phrases.push(newPhrase()); changed(); }, { cls: 'btn btn--sm' }));
       container.appendChild(sec);
     });
     container.appendChild(btn('Aggiungi gruppo / distretto', 'plus', addGroup, { cls: 'btn btn--sm' }));

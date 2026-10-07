@@ -11,6 +11,7 @@
 <link rel="icon" href="assets/icons/favicon-32.png" type="image/png" sizes="32x32">
 <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
 <link rel="manifest" href="manifest.webmanifest">
+<script src="js/pwa.js" defer></script>
 <script src="js/theme.js"></script>
 <link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/tokens.css">
@@ -173,6 +174,8 @@
 
   <div class="workspace" id="workspace" data-pane="compose">
     <aside class="builder" aria-label="Composizione del referto">
+  <div class="lib-source-editor" id="lib-source-editor-box" hidden><label for="lib-source-editor">Libreria</label>
+    <select id="lib-source-editor" class="input"><option value="personale">Personale</option></select></div>
       <div class="banner banner--warn" id="lib-banner" role="alert" hidden>
         <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#triangle-alert"></use></svg>
         <span class="banner__text">La tua libreria personale non è stata caricata (problema di connessione): stai vedendo le frasi predefinite.</span>
@@ -206,11 +209,23 @@
             <button class="chip" id="btn-presa-visione">Presa visione</button>
             <button class="chip" id="btn-non-precedenti">Non precedenti</button>
           </div>
+          <div class="dose-row" id="dose-row" hidden>
+            <div class="group__label" id="dose-label">Classe di dose <span class="subtle">(D.Lgs. 101/2020)</span></div>
+            <div class="chip-row" role="group" aria-labelledby="dose-label">
+              <button class="chip" data-dose="I" aria-pressed="false" title="Meno di 1 mSv">I <span class="subtle">&lt; 1 mSv</span></button>
+              <button class="chip" data-dose="II" aria-pressed="false" title="Da 1 a 5 mSv">II <span class="subtle">1-5 mSv</span></button>
+              <button class="chip" data-dose="III" aria-pressed="false" title="Da 5 a 10 mSv">III <span class="subtle">5-10 mSv</span></button>
+              <button class="chip" data-dose="IV" aria-pressed="false" title="Più di 10 mSv">IV <span class="subtle">&gt; 10 mSv</span></button>
+            </div>
+          </div>
         </div>
       </section>
 
       <section class="block" aria-labelledby="b5">
-        <div class="block__head"><span class="block__num">05</span><h2 class="block__title" id="b5">Referto</h2><span class="block__hint">filtrato per esame</span></div>
+        <div class="block__head">
+          <span class="block__num">05</span><h2 class="block__title" id="b5">Referto</h2><span class="block__hint">filtrato per esame</span>
+          <button class="btn btn--sm" id="btn-normal" hidden title="Inserisce la frase normale di ogni distretto (Alt+N)"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#circle-check"></use></svg>Referto normale</button>
+        </div>
         <div class="block__body" id="referto-body"></div>
       </section>
     </aside>
@@ -220,21 +235,116 @@
       <div class="report__toolbar">
         <button class="btn" id="btn-mic-report" aria-pressed="false" title="Detta nel referto"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#mic"></use></svg><span>Detta</span></button>
         <span class="rec-pill" id="rec-pill" hidden>In ascolto</span>
+        <button class="btn btn--ghost" id="btn-palette" title="Cerca esami, frasi e comandi (Ctrl+K)"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#search"></use></svg><span>Cerca</span> <kbd>Ctrl K</kbd></button>
         <span class="spacer"></span>
         <button class="btn btn--ghost" id="btn-reset"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#eraser"></use></svg><span>Svuota</span></button>
         <button class="btn" id="btn-open-print"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#printer"></use></svg><span>Stampa</span></button>
         <button class="btn" id="btn-archive"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#save"></use></svg><span>Salva</span></button>
-        <button class="btn btn--primary" id="btn-copy" aria-keyshortcuts="Control+Enter"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#copy"></use></svg><span>Copia</span> <kbd>Ctrl ↵</kbd></button>
+        <div class="split menu" id="copy-split">
+          <button class="btn btn--primary" id="btn-copy" aria-keyshortcuts="Control+Enter"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#copy"></use></svg><span>Copia</span> <kbd>Ctrl ↵</kbd></button>
+          <button class="btn btn--primary btn--icon split__more" id="btn-copy-more" aria-haspopup="menu" aria-expanded="false" aria-controls="copy-menu" aria-label="Copia solo una sezione"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#chevron-down"></use></svg></button>
+          <div class="menu__list" id="copy-menu" role="menu" hidden>
+            <button role="menuitem" data-copy="all">Tutto il referto</button>
+            <button role="menuitem" data-copy="indicazione">Solo l'indicazione</button>
+            <button role="menuitem" data-copy="referto">Solo il referto (senza indicazione e conclusioni)</button>
+            <button role="menuitem" data-copy="conclusioni">Solo le conclusioni</button>
+          </div>
+        </div>
       </div>
       <div class="report__doc">
         <div class="report__meta" id="report-context">Nessun esame selezionato</div>
+        <div class="field-bar" id="field-bar" role="toolbar" aria-label="Opzioni del campo selezionato" hidden>
+          <span class="field-bar__label">Scegli:</span>
+          <div class="chip-row" id="field-options"></div>
+          <span class="field-bar__hint subtle">numero o clic · Tab: campo successivo</span>
+        </div>
         <label class="visually-hidden" for="report-text">Testo del referto</label>
         <textarea class="report__text" id="report-text" autocomplete="off" spellcheck="true" placeholder="Il referto composto apparirà qui. Puoi anche scrivere o correggere liberamente."></textarea>
-        <div class="report__footer subtle"><span id="report-stats">0 righe · 0 caratteri</span><span>Ctrl+Z annulla l'ultimo inserimento</span></div>
+        <div class="report__footer subtle"><span id="report-stats">0 righe · 0 caratteri</span><span>Ctrl+Z annulla · <button class="link-btn" id="btn-shortcuts">Scorciatoie</button></span></div>
       </div>
     </main>
   </div>
 </div>
+
+<dialog class="dialog dialog--wide" id="onboarding" aria-labelledby="onb-title">
+  <div class="dialog__head">
+    <h2 id="onb-title">Benvenuto in ModReport</h2>
+    <span class="subtle" id="onb-step-label">Passo 1 di 3</span>
+  </div>
+  <div class="dialog__body">
+    <section class="onb-step" data-step="1">
+      <div class="field">
+        <label for="onb-titolo">Titolo</label>
+        <select id="onb-titolo">
+          <option value="">Nessuno</option>
+          <option value="Dott.">Dott.</option>
+          <option value="Dott.ssa">Dott.ssa</option>
+          <option value="Prof.">Prof.</option>
+          <option value="Prof.ssa">Prof.ssa</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="onb-nome">Nome</label>
+        <input type="text" id="onb-nome">
+      </div>
+      <div class="field">
+        <label for="onb-cognome">Cognome</label>
+        <input type="text" id="onb-cognome">
+      </div>
+    </section>
+    <section class="onb-step" data-step="2" hidden>
+      <div id="onb-metodiche" class="stack"></div>
+      <p class="msg" id="onb-msg"></p>
+    </section>
+    <section class="onb-step" data-step="3" hidden>
+      <label class="check">
+        <input type="radio" name="onb-dettatura" value="browser" checked>
+        Servizio vocale del browser
+      </label>
+      <label class="check">
+        <input type="radio" name="onb-dettatura" value="locale">
+        Solo su questo computer, se il browser lo consente
+      </label>
+      <label class="check">
+        <input type="radio" name="onb-dettatura" value="off">
+        Non uso la dettatura
+      </label>
+      <p class="subtle">Scorciatoie: Ctrl+K ricerca, Alt+N referto normale, Tab per i campi da compilare. <a href="tutorial.html">Guarda il tutorial</a></p>
+    </section>
+  </div>
+  <div class="dialog__actions">
+    <button class="btn btn--ghost" id="onb-skip">Salta</button>
+    <button class="btn" id="onb-back">Indietro</button>
+    <button class="btn btn--primary" id="onb-next">Avanti</button>
+  </div>
+</dialog>
+
+<dialog class="dialog dialog--palette" id="palette" aria-label="Ricerca rapida">
+  <div class="palette">
+    <div class="palette__search"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#search"></use></svg><input type="text" id="palette-input" autocomplete="off" spellcheck="false" placeholder="Cerca esami, frasi, indicazioni, comandi…" role="combobox" aria-expanded="true" aria-controls="palette-list" aria-autocomplete="list" aria-label="Cerca"></div>
+    <ul class="palette__list" id="palette-list" role="listbox" aria-label="Risultati"></ul>
+    <div class="palette__foot subtle">↑ ↓ per scegliere · Invio per confermare · Esc per chiudere</div>
+  </div>
+</dialog>
+
+<dialog class="dialog" id="shortcuts-dialog" aria-labelledby="shortcuts-title">
+  <div class="dialog__head"><h2 id="shortcuts-title">Scorciatoie da tastiera</h2><button class="btn btn--ghost btn--icon" id="shortcuts-close" aria-label="Chiudi"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#x"></use></svg></button></div>
+  <div class="dialog__body">
+    <dl class="shortcuts">
+      <dt><kbd>Ctrl</kbd> <kbd>K</kbd></dt><dd>Ricerca rapida di esami, frasi e comandi</dd>
+      <dt><kbd>Ctrl</kbd> <kbd>Invio</kbd></dt><dd>Copia il referto</dd>
+      <dt><kbd>Alt</kbd> <kbd>N</kbd></dt><dd>Referto normale</dd>
+      <dt><kbd>Tab</kbd> / <kbd>Maiusc</kbd> <kbd>Tab</kbd></dt><dd>Campo da compilare successivo / precedente</dd>
+      <dt><kbd>1</kbd>…<kbd>9</kbd></dt><dd>Scelta nel campo selezionato</dd>
+      <dt><kbd>Alt</kbd> <kbd>1</kbd>…<kbd>5</kbd></dt><dd>Passa al referto 1-5</dd>
+      <dt><kbd>Ctrl</kbd> <kbd>S</kbd></dt><dd>Salva nell'archivio</dd>
+      <dt><kbd>Ctrl</kbd> <kbd>P</kbd></dt><dd>Stampa</dd>
+      <dt><kbd>Ctrl</kbd> <kbd>Z</kbd></dt><dd>Annulla l'ultimo inserimento</dd>
+      <dt><kbd>Ctrl</kbd> <kbd>/</kbd></dt><dd>Questo elenco</dd>
+    </dl>
+    <p class="subtle">Su Mac usa <kbd>⌘</kbd> al posto di <kbd>Ctrl</kbd>. Le abbreviazioni (es. <code>/nn</code> + spazio) si impostano in Account → Preferenze.</p>
+  </div>
+</dialog>
 
 <dialog class="dialog dialog--wide" id="print-overlay" aria-labelledby="print-title">
   <div class="dialog__head">
@@ -248,12 +358,24 @@
         <select id="print-letterhead-select"><option value="">Nessuna (pagina bianca)</option></select>
         <span class="field__hint" id="print-letterhead-hint"></span>
       </div>
-      <fieldset class="form-grid" id="print-manual-margins" style="border:0; padding:0; margin:0;">
-        <legend class="field__label" style="margin-bottom:6px;">Posizione del testo (mm)</legend>
+      <fieldset class="form-grid print-fieldset" id="print-manual-margins">
+        <legend class="field__label">Posizione del testo (mm)</legend>
         <div class="field"><label for="margin-top">Margine superiore</label><input type="number" id="margin-top" value="40" min="0" max="200" step="1" inputmode="decimal"></div>
         <div class="field"><label for="margin-left">Margine sinistro</label><input type="number" id="margin-left" value="20" min="0" max="100" step="1" inputmode="decimal"></div>
         <div class="field"><label for="margin-right">Margine destro</label><input type="number" id="margin-right" value="20" min="0" max="100" step="1" inputmode="decimal"></div>
       </fieldset>
+      <fieldset class="print-fieldset" id="print-patient">
+        <legend class="field__label">Dati del paziente <span class="subtle">(facoltativi, solo per questa stampa: non vengono salvati)</span></legend>
+        <div class="form-grid">
+          <div class="field"><label for="print-patient-name">Cognome e nome</label><input type="text" id="print-patient-name" autocomplete="off" spellcheck="false" maxlength="120"></div>
+          <div class="field"><label for="print-patient-birth">Data di nascita</label><input type="text" id="print-patient-birth" autocomplete="off" inputmode="numeric" placeholder="gg/mm/aaaa" maxlength="10"></div>
+          <div class="field"><label for="print-patient-id">N. accettazione / ID esame</label><input type="text" id="print-patient-id" autocomplete="off" spellcheck="false" maxlength="40"></div>
+        </div>
+      </fieldset>
+      <div class="form-grid">
+        <div class="field"><label for="print-place">Luogo</label><input type="text" id="print-place" maxlength="60" autocomplete="off" placeholder="es. Milano"></div>
+        <div class="field"><label for="print-date">Data</label><input type="date" id="print-date"></div>
+      </div>
       <p class="msg" id="print-signature-info"></p>
       <div class="msg" id="print-message" role="status"></div>
       <div class="row" style="justify-content:flex-end;"><button class="btn btn--primary" id="print-generate-btn">Genera anteprima</button></div>
@@ -270,6 +392,7 @@
     </div>
   </div>
 </dialog>
+
 
 </body>
 </html>

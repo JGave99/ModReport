@@ -42,7 +42,7 @@ test('Svuota si può annullare; la bozza sopravvive al ricaricamento', async ({ 
   await login(page);
   await chip(page, '#metodica-row', 'RX');
   await chip(page, '#esame-body', 'RX TORACE 2PR');
-  await page.locator('#referto-body .phrase', { hasText: 'Pleura libera' }).click();
+  await page.locator('#referto-body .phrase', { hasText: 'Cardiomegalia' }).click();
   const full = await page.inputValue('#report-text');
   await page.click('#btn-reset');
   await expect(page.locator('#report-text')).toHaveValue('RX TORACE 2PR\n');
@@ -76,4 +76,72 @@ test('archivio: il referto si salva solo su questo computer', async ({ page }) =
   await expect(page.locator('.archive-item')).toHaveCount(1);
   const cloud = await page.evaluate(() => window.__fakeSupabase.db.tables.report_archive.length);
   expect(cloud).toBe(0);
+});
+
+test('configurazione guidata: le metodiche non scelte spariscono', async ({ page }) => {
+  // Accesso senza helper login
+  await openFake(page, 'app.html');
+  await page.fill('#login-email', DEMO.email);
+  await page.fill('#login-password', DEMO.password);
+  await page.click('#btn-signin');
+  const consent = page.locator('#view-consent');
+  await expect(consent.or(page.locator('#app-root:not(.hidden)'))).toBeVisible();
+  if (await consent.isVisible()) {
+    await page.check('#consent-terms');
+    await page.check('#consent-clauses');
+    await page.click('#btn-consent');
+  }
+  const onboarding = page.locator('#onboarding');
+  await expect(onboarding).toBeVisible();
+  await page.click('#onb-next');
+  // Rimuove la spunta alla casella con value 'RMN'
+  await page.locator('#onb-metodiche input[value="RMN"]').uncheck();
+  await page.click('#onb-next');
+  await page.click('#onb-next');
+  await expect(onboarding).not.toBeVisible();
+  await expect(page.locator('#metodica-row button', { hasText: 'RMN' })).toHaveCount(0);
+  await expect(page.locator('#metodica-row button', { hasText: 'RX' })).toHaveCount(1);
+});
+
+test('referto strutturato: normale, variante, campi con Tab, dose, controlli, copia per sezione, Ctrl+K', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await login(page);
+  await chip(page, '#metodica-row', 'RX');
+  await chip(page, '#esame-body', 'RX TORACE 2PR');
+  await page.click('#btn-normal');
+  const ta = page.locator('#report-text');
+  await expect(ta).toHaveValue(/Conclusioni:\n/);
+  const normal = await ta.inputValue();
+  // La variante patologica sostituisce la frase normale dello stesso distretto
+  await page.locator('#referto-body .phrase--abnormal', { hasText: 'Versamento' }).first().click();
+  const withVariant = await ta.inputValue();
+  expect(withVariant.split('\n').length).toBe(normal.split('\n').length);
+  expect(withVariant).toMatch(/\[[^\]]+\]/);
+  // Tab porta al campo; la barra propone le scelte; un numero sceglie
+  await ta.click();
+  await ta.press('Control+Home');
+  await ta.press('Tab');
+  const selected = await ta.evaluate((t) => t.value.slice(t.selectionStart, t.selectionEnd));
+  expect(selected).toMatch(/^(\[.+\]|_{3,})$/);
+  // Classe di dose
+  await page.locator('#dose-row [data-dose="II"]').click();
+  await expect(ta).toHaveValue(/Classe di dose: II/);
+  // Con campi ancora da compilare, copiare chiede conferma
+  await page.click('#btn-copy');
+  await expect(page.locator('dialog[open]')).toContainText('campi da compilare');
+  await page.locator('dialog[open] button[type=submit]').click();
+  await expect(page.locator('.toast').last()).toContainText('Copiato');
+  // Copia solo le conclusioni
+  await page.click('#btn-copy-more');
+  await page.click('#copy-menu [data-copy="conclusioni"]');
+  await page.locator('dialog[open] button[type=submit]').click();
+  const clip = await page.evaluate(() => navigator.clipboard.readText());
+  expect(clip).not.toContain('Conclusioni:');
+  expect(clip).not.toContain('Classe di dose');
+  // Ricerca rapida
+  await page.keyboard.press('Control+k');
+  await expect(page.locator('#palette')).toBeVisible();
+  await page.fill('#palette-input', 'tc encefalo');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#report-context')).toContainText('TC ENCEFALO');
 });

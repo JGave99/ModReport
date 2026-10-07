@@ -1,6 +1,9 @@
 /* Editor dei referti (app.html) */
 body.page-app{ height: 100vh; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
 
+.lib-source-editor{ display: flex; align-items: center; gap: var(--s-2); font-size: var(--fs-sm); }
+.lib-source-editor select{ width: auto; min-height: var(--h-sm); }
+
 /* ---------- Accesso ---------- */
 .auth{ position: fixed; inset: 0; z-index: 60; overflow: auto; display: flex; align-items: center; justify-content: center; padding: var(--s-5); background: var(--bg); }
 .auth.hidden{ display: none; }
@@ -58,7 +61,51 @@ body.page-app{ height: 100vh; height: 100dvh; display: flex; flex-direction: col
 .mini-toggle{ height: 26px; padding: 0 10px; border-radius: var(--r-pill); border: 1px solid var(--border-strong); background: transparent; color: var(--text-muted); font-size: var(--fs-xs); font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
 .mini-toggle[aria-pressed="true"]{ background: var(--danger-solid); border-color: var(--danger-solid); color: #fff; }
 
+/* ---------- Frasi: gruppi di sezione, opzionali, classe di dose ---------- */
+.group--section .group__label{ color: var(--primary); }
+.phrase--optional{ border-left-color: var(--border-strong); }
+.phrase--optional .icon{ color: var(--text-muted); }
+.dose-row{ display: flex; flex-direction: column; gap: 6px; padding-top: var(--s-2); border-top: 1px dashed var(--border); }
+.dose-row .chip .subtle{ font-size: var(--fs-xs); }
+.block__head #btn-normal{ margin-left: var(--s-2); }
+
+/* ---------- Copia (pulsante diviso) ---------- */
+.split{ display: inline-flex; }
+.split > .btn:first-child{ border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.split__more{ border-top-left-radius: 0; border-bottom-left-radius: 0; border-left: 1px solid rgba(255, 255, 255, .28); width: 30px; }
+
+/* ---------- Campi da compilare ---------- */
+.field-bar{ display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-2); padding: 6px var(--s-4); border-bottom: 1px solid var(--border); background: var(--info-bg); }
+.field-bar__label{ font-size: var(--fs-xs); font-weight: 700; color: var(--primary); }
+.field-bar .chip{ min-height: 28px; padding: 3px 10px; }
+.field-bar kbd{ margin-right: 2px; }
+.field-bar__hint{ margin-left: auto; font-size: var(--fs-xs); }
+#report-stats.has-fields{ color: var(--abnormal); font-weight: 600; }
+
+/* ---------- Ricerca rapida ---------- */
+dialog.dialog--palette{ width: min(640px, 94vw); margin-top: 12vh; }
+.palette__search{ display: flex; align-items: center; gap: var(--s-2); padding: var(--s-3) var(--s-4); border-bottom: 1px solid var(--border); }
+.palette__search .icon{ color: var(--text-muted); }
+.palette__search input{ flex: 1; border: 0; background: none; font-size: var(--fs-lg); color: var(--text); outline: none; }
+.palette__list{ list-style: none; margin: 0; padding: var(--s-2); max-height: 52vh; overflow-y: auto; }
+.palette__group{ padding: var(--s-2) var(--s-2) 4px; font-size: var(--fs-xs); font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--text-subtle); }
+.palette__item{ display: flex; align-items: center; gap: var(--s-2); padding: 8px 10px; border-radius: var(--r-sm); cursor: pointer; font-size: var(--fs-sm); }
+.palette__item[aria-selected="true"]{ background: var(--primary-soft); }
+.palette__item .icon{ color: var(--text-muted); }
+.palette__label{ flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.palette__hint{ color: var(--text-subtle); font-size: var(--fs-xs); white-space: nowrap; }
+.palette__empty{ padding: var(--s-4); color: var(--text-muted); text-align: center; }
+.palette__foot{ padding: 8px var(--s-4); border-top: 1px solid var(--border); font-size: var(--fs-xs); }
+.shortcuts{ display: grid; grid-template-columns: auto 1fr; gap: 8px var(--s-4); margin: 0; align-items: baseline; }
+.shortcuts dt{ white-space: nowrap; }
+.shortcuts dd{ margin: 0; color: var(--text-muted); font-size: var(--fs-sm); }
+
+/* ---------- Onboarding ---------- */
+.onb-step{ display: flex; flex-direction: column; gap: var(--s-3); }
+
 /* ---------- Stampa ---------- */
+.print-fieldset{ border: 0; padding: 0; margin: 0; min-width: 0; }
+.print-fieldset legend{ margin-bottom: 6px; }
 .print-preview iframe{ width: 100%; height: 62vh; border: 1px solid var(--border); border-radius: var(--r-sm); background: #fff; }
 
 /* ---------- Schermi medi: barra compatta ---------- */

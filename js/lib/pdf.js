@@ -82,8 +82,9 @@ export function toWinAnsi(text, canEncode) {
 
 // Crea il PDF. template: ArrayBuffer della carta intestata (o null per pagina bianca).
 // margins in mm: { top, left, right, bottom }. signature: stringa o null.
+// header: righe { label, value } in testa (dati del paziente, solo per la stampa). dateLine: "Luogo, data" accanto alla firma.
 // Restituisce { bytes, pages, fontFallback, replacedChars }.
-export async function buildReportPdf({ text, template = null, margins = {}, signature = null, base, libs = null }) {
+export async function buildReportPdf({ text, template = null, margins = {}, signature = null, header = [], dateLine = null, base, libs = null }) {
   const { PDFLib, fontkit, fonts } = libs || await loadPdfLibs(base);
   const { PDFDocument, StandardFonts, rgb } = PDFLib;
   const m = { top: 40, left: 20, right: 20, bottom: 20, ...margins };
@@ -100,7 +101,7 @@ export async function buildReportPdf({ text, template = null, margins = {}, sign
     doc.registerFontkit(fontkit);
     // Font intero: il sottoinsieme (subset) di pdf-lib 1.17 perde glifi con Inter.
     font = await doc.embedFont(fonts.regular);
-    bold = signature ? await doc.embedFont(fonts.bold) : font;
+    bold = signature || header.length ? await doc.embedFont(fonts.bold) : font;
   } else {
     font = await doc.embedFont(StandardFonts.Helvetica);
     bold = await doc.embedFont(StandardFonts.HelveticaBold);
@@ -109,6 +110,8 @@ export async function buildReportPdf({ text, template = null, margins = {}, sign
 
   let body = String(text);
   let sign = signature;
+  let date = dateLine;
+  let head = header.filter((h) => h && String(h.value || '').trim()).map((h) => ({ label: String(h.label), value: String(h.value).trim() }));
   let replacedChars = [];
   if (fontFallback) {
     const canEncode = (ch) => { try { font.encodeText(ch); return true; } catch { return false; } };
@@ -116,6 +119,8 @@ export async function buildReportPdf({ text, template = null, margins = {}, sign
     body = r1.text;
     replacedChars = r1.replaced;
     if (sign) sign = toWinAnsi(sign, canEncode).text;
+    if (date) date = toWinAnsi(date, canEncode).text;
+    head = head.map((h) => ({ label: toWinAnsi(h.label, canEncode).text, value: toWinAnsi(h.value, canEncode).text }));
   }
 
   // Prima pagina della carta intestata per la pagina 1; la seconda (se c'è) per le successive.
@@ -137,6 +142,21 @@ export async function buildReportPdf({ text, template = null, margins = {}, sign
   const bottom = mmToPt(m.bottom);
   let y = height - mmToPt(m.top);
 
+  // Dati del paziente in testa: etichetta in grassetto, valore a capo per parole.
+  if (head.length) {
+    for (const { label, value } of head) {
+      const lab = label + ': ';
+      const lw = bold.widthOfTextAtSize(lab, fontSize);
+      const valueLines = wrapText(value, (s) => font.widthOfTextAtSize(s, fontSize), Math.max(60, maxWidth - lw));
+      valueLines.forEach((vl, i) => {
+        y -= lineHeight;
+        if (i === 0) page.drawText(lab, { x: mmToPt(m.left), y, size: fontSize, font: bold, color: rgb(0, 0, 0) });
+        page.drawText(vl, { x: mmToPt(m.left) + lw, y, size: fontSize, font, color: rgb(0, 0, 0) });
+      });
+    }
+    y -= lineHeight;
+  }
+
   const lines = wrapText(body, (s) => font.widthOfTextAtSize(s, fontSize), maxWidth);
   for (const line of lines) {
     if (y - lineHeight < bottom) {
@@ -148,7 +168,7 @@ export async function buildReportPdf({ text, template = null, margins = {}, sign
     if (line) page.drawText(line, { x: mmToPt(m.left), y, size: fontSize, font, color: rgb(0, 0, 0) });
   }
 
-  if (sign) {
+  if (sign || date) {
     const needed = lineHeight * 3;
     if (y - needed < bottom) {
       page = await addPage();
@@ -156,8 +176,11 @@ export async function buildReportPdf({ text, template = null, margins = {}, sign
       y = height - mmToPt(m.top);
     }
     y -= lineHeight * 3;
-    const w = bold.widthOfTextAtSize(sign, fontSize);
-    page.drawText(sign, { x: width - mmToPt(m.right) - w, y, size: fontSize, font: bold, color: rgb(0, 0, 0) });
+    if (date) page.drawText(date, { x: mmToPt(m.left), y, size: fontSize, font, color: rgb(0, 0, 0) });
+    if (sign) {
+      const w = bold.widthOfTextAtSize(sign, fontSize);
+      page.drawText(sign, { x: width - mmToPt(m.right) - w, y, size: fontSize, font: bold, color: rgb(0, 0, 0) });
+    }
   }
 
   const pages = doc.getPageCount();

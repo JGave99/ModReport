@@ -10,6 +10,7 @@ export default defineConfig({
     baseURL: 'http://127.0.0.1:8766',
     locale: 'it-IT',
     trace: 'retain-on-failure',
+    serviceWorkers: 'block'
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'], viewport: { width: 1366, height: 860 } } }],
   webServer: {

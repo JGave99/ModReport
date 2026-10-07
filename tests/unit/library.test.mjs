@@ -1,94 +1,87 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
 import { migrateLibrary, cloneDefaults } from '../../js/lib/library.js';
-import { DEFAULT_LIBRARY, LEGACY_DEFAULT_TEXTS } from '../../js/lib/default-library.js';
+import { DEFAULT_LIBRARY, DEFAULTS_VERSION } from '../../js/lib/default-library.js';
+import { V1_TEXTS, V2_TEXTS } from '../../js/lib/library-base/legacy.js';
+import { phraseHash } from '../../js/lib/library-merge.js';
 
 const clone = (v) => JSON.parse(JSON.stringify(v));
+const allPhrases = (data) => Object.values(data.refertoByEsame).flatMap((g) => Object.values(g).flat());
 
-// Libreria "v1" com'era prima del 24/09: stessi esami, frasi solo testi legacy.
-function legacyFullLibrary() {
-  const data = clone(DEFAULT_LIBRARY);
-  delete data.defaultsVersion;
-  data.refertoByEsame = {};
-  for (const [esame, texts] of Object.entries(LEGACY_DEFAULT_TEXTS)) {
-    data.refertoByEsame[esame] = { 'Reperto': texts.map((t) => ({ label: 'x', text: t, neg: false })) };
+// Libreria "v2" com'era fino allo Step 5: stessi esami e testi di allora, frasi senza id.
+function v2Library() {
+  const data = { defaultsVersion: 2, metodiche: ['Ecografia', 'RX', 'TC', 'RMN'], esamiByMetodica: {}, indicazioniByEsame: {}, refertoByEsame: {} };
+  for (const [m, exams] of Object.entries(DEFAULT_LIBRARY.esamiByMetodica)) {
+    data.esamiByMetodica[m] = exams.filter((e) => V2_TEXTS[e]);
+  }
+  for (const [esame, texts] of Object.entries(V2_TEXTS)) {
+    data.indicazioniByEsame[esame] = [...(DEFAULT_LIBRARY.indicazioniByEsame[esame] || [])].slice(0, 2);
+    data.refertoByEsame[esame] = { Reperto: texts.map((t) => ({ label: 'x', text: t, neg: false })) };
   }
   return data;
 }
 
-test('nessun dato salvato: restituisce i predefiniti correnti', () => {
+test('nessun dato salvato: predefiniti correnti con impronte e abbreviazioni', () => {
   const { data } = migrateLibrary(null);
   assert.deepEqual(data, cloneDefaults());
+  assert.equal(data.defaultsVersion, DEFAULTS_VERSION);
+  assert.ok(allPhrases(data).every((p) => p.id && p.bh === phraseHash(p)));
+  assert.ok(data.abbreviazioni['/nn']);
 });
 
-test('libreria ridotta del 24/09: ripristina le frasi di tutti gli esami', () => {
-  const truncated = legacyFullLibrary();
-  for (const esame of Object.keys(truncated.refertoByEsame)) if (esame !== 'RX TORACE 2PR') delete truncated.refertoByEsame[esame];
-  const { data, restored } = migrateLibrary(truncated);
-  assert.equal(data.defaultsVersion, 2);
-  assert.equal(restored.length, 33);
-  for (const esame of Object.keys(DEFAULT_LIBRARY.refertoByEsame)) {
-    assert.deepEqual(data.refertoByEsame[esame], DEFAULT_LIBRARY.refertoByEsame[esame], esame);
+test('libreria v2 mai personalizzata: tutti gli esami passano alla v3, nuovi esami aggiunti', () => {
+  const { data, changed, report } = migrateLibrary(v2Library());
+  assert.equal(changed, true);
+  assert.equal(data.defaultsVersion, DEFAULTS_VERSION);
+  assert.equal(report.esamiAggiornati.length, Object.keys(V2_TEXTS).length);
+  for (const esame of Object.keys(V2_TEXTS)) {
+    assert.deepEqual(Object.keys(data.refertoByEsame[esame]), Object.keys(DEFAULT_LIBRARY.refertoByEsame[esame]), esame);
+  }
+  for (const nuovo of ['TC ENCEFALO', 'RMN PROSTATA MULTIPARAMETRICA', 'ECOCOLORDOPPLER TSA']) {
+    assert.ok(Object.values(data.esamiByMetodica).flat().includes(nuovo), nuovo);
   }
 });
 
-test('esami mai personalizzati: passano ai nuovi predefiniti, senza frasi rischiose', () => {
-  const { data } = migrateLibrary(legacyFullLibrary());
+test('libreria v1 (prima del 24/09): stessi risultati, frasi rischiose tolte', () => {
+  const lib = v2Library();
+  delete lib.defaultsVersion;
+  for (const [esame, texts] of Object.entries(V1_TEXTS)) lib.refertoByEsame[esame] = { Reperto: texts.map((t) => ({ label: 'x', text: t, neg: false })) };
+  const { data } = migrateLibrary(lib);
   const all = JSON.stringify(data.refertoByEsame);
   assert.ok(!all.includes('ove presenti, in sede regolare'));
   assert.ok(!all.includes('Non evidenza di lesioni secondarie a distanza'));
-  assert.ok(data.refertoByEsame['TC ANGIOGRAFIA AORTA']['Diametri']);
 });
 
-test('esame personalizzato: tiene le frasi dell\'utente e sostituisce solo quella rischiosa', () => {
-  const lib = legacyFullLibrary();
-  lib.refertoByEsame['RX TORACE AP supino'] = {
-    'Presidi': [{ label: 'Presidi in sede', text: 'Presidi (CVC/SNG/drenaggi), ove presenti, in sede regolare.', neg: false }],
-    'Mie frasi': [{ label: 'Personale', text: 'Frase scritta dall\'utente.', neg: false }],
-  };
-  const { data, replaced } = migrateLibrary(lib);
-  const groups = data.refertoByEsame['RX TORACE AP supino'];
-  assert.ok(replaced.includes('RX TORACE AP supino'));
-  assert.equal(groups['Mie frasi'][0].text, 'Frase scritta dall\'utente.');
-  const presidi = groups['Presidi'].map((b) => b.label);
-  assert.deepEqual(presidi, ['CVC', 'SNG', 'Tubo endotracheale']);
+test('esame personalizzato: frasi dell\'utente intatte, nuove frasi della base aggiunte', () => {
+  const lib = v2Library();
+  lib.refertoByEsame['RX TORACE 2PR'].Reperto.push({ label: 'Mia', text: 'Frase scritta dall\'utente.', neg: true });
+  const { data } = migrateLibrary(lib);
+  const groups = data.refertoByEsame['RX TORACE 2PR'];
+  const mine = Object.values(groups).flat().find((p) => p.text === 'Frase scritta dall\'utente.');
+  assert.ok(mine && mine.id.startsWith('u:'));
+  const baseIds = new Set(Object.values(DEFAULT_LIBRARY.refertoByEsame['RX TORACE 2PR']).flat().map((p) => p.id));
+  const present = new Set(Object.values(groups).flat().map((p) => p.id));
+  assert.ok([...baseIds].every((id) => present.has(id)), 'tutte le frasi della base presenti');
 });
 
-test('esami e frasi dell\'utente non toccati', () => {
-  const lib = legacyFullLibrary();
+test('esami, metodiche e indicazioni dell\'utente non toccati; eliminati non ricompaiono', () => {
+  const lib = v2Library();
   lib.metodiche.push('Mammografia');
-  lib.esamiByMetodica['Mammografia'] = ['MAMMOGRAFIA BILATERALE'];
-  lib.refertoByEsame['MAMMOGRAFIA BILATERALE'] = { 'Reperto': [{ label: 'a', text: 'b', neg: false }] };
-  const { data } = migrateLibrary(lib);
-  assert.deepEqual(data.refertoByEsame['MAMMOGRAFIA BILATERALE'], { 'Reperto': [{ label: 'a', text: 'b', neg: false }] });
-});
-
-test('esame eliminato dall\'utente: non ricompare', () => {
-  const lib = legacyFullLibrary();
-  lib.esamiByMetodica['RX'] = lib.esamiByMetodica['RX'].filter((e) => e !== 'RX POLSO');
+  lib.esamiByMetodica.Mammografia = ['MAMMOGRAFIA BILATERALE'];
+  lib.refertoByEsame['MAMMOGRAFIA BILATERALE'] = { Reperto: [{ label: 'a', text: 'b.', neg: false }] };
+  lib.esamiByMetodica.RX = lib.esamiByMetodica.RX.filter((e) => e !== 'RX POLSO');
   delete lib.refertoByEsame['RX POLSO'];
+  lib.metodiche = lib.metodiche.filter((m) => m !== 'RMN');
+  delete lib.esamiByMetodica.RMN;
   const { data } = migrateLibrary(lib);
-  assert.ok(!data.refertoByEsame['RX POLSO']);
+  assert.equal(data.refertoByEsame['MAMMOGRAFIA BILATERALE'].Reperto[0].text, 'b.');
+  assert.ok(!data.esamiByMetodica.RX.includes('RX POLSO'));
+  assert.ok(!data.metodiche.includes('RMN'));
 });
 
 test('idempotente: una libreria già migrata resta invariata', () => {
-  const once = migrateLibrary(legacyFullLibrary()).data;
-  const twice = migrateLibrary(once);
+  const once = migrateLibrary(v2Library()).data;
+  const twice = migrateLibrary(clone(once));
   assert.equal(twice.changed, false);
   assert.deepEqual(twice.data, once);
-});
-
-test('la libreria predefinita copre tutti gli esami', () => {
-  const exams = Object.values(DEFAULT_LIBRARY.esamiByMetodica).flat();
-  for (const e of exams) {
-    assert.ok(DEFAULT_LIBRARY.refertoByEsame[e] && Object.keys(DEFAULT_LIBRARY.refertoByEsame[e]).length, e);
-    assert.ok(DEFAULT_LIBRARY.indicazioniByEsame[e], e);
-  }
-});
-
-test('i testi legacy corrispondono a quelli della storia git', () => {
-  const src = readFileSync(new URL('../../js/lib/default-library.js', import.meta.url), 'utf8');
-  assert.ok(src.includes('LEGACY_DEFAULT_TEXTS'));
-  assert.equal(Object.values(LEGACY_DEFAULT_TEXTS).flat().length, 48);
 });

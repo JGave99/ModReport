@@ -75,6 +75,19 @@ test('PDF: carta intestata su ogni pagina, senza ripetere il testo della pagina 
   assert.ok(!p2.includes(hex('Riga 0')));
 });
 
+test('PDF: dati del paziente in testa e luogo e data accanto alla firma', async () => {
+  const r = await buildReportPdf({
+    text: 'Referto.', signature: 'Dott.ssa Test', dateLine: 'Milano, 05/10/2026',
+    header: [{ label: 'Paziente', value: 'Rossi Mario' }, { label: 'Data di nascita', value: '' }],
+    libs: { PDFLib, fontkit: null, fonts: null },
+  });
+  const doc = await PDFLib.PDFDocument.load(r.bytes);
+  const p1 = pageText(doc, doc.getPages()[0]);
+  const hex = (s) => '<' + Buffer.from(s, 'latin1').toString('hex').toUpperCase() + '>';
+  for (const s of ['Paziente: ', 'Rossi Mario', 'Milano, 05/10/2026', 'Dott.ssa Test', 'Referto.']) assert.ok(p1.includes(hex(s)), s);
+  assert.ok(!p1.includes(hex('Data di nascita: ')), 'i campi vuoti non si stampano');
+});
+
 test('PDF: margini troppo grandi danno un errore chiaro', async () => {
   await assert.rejects(
     buildReportPdf({ text: 'x', margins: { left: 150, right: 150 }, libs: { PDFLib, fontkit: null, fonts: null } }),

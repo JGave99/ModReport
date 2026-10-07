@@ -5,13 +5,20 @@ import { toast } from '../lib/toast.js';
 import { confirmDialog } from '../lib/dialog.js';
 import { authErrorMessage, isExistingUserSignup, readAuthErrorFromHash } from '../lib/auth-messages.js';
 import { LibraryStore, cloneDefaults } from '../lib/library.js';
-import { attachDictation, stopAllDictation } from '../lib/dictation.js';
+import { attachDictation, stopAllDictation, setDictationDisabled, setLocalDictationPreferred } from '../lib/dictation.js';
 import { buildReportPdf } from '../lib/pdf.js';
 import { passwordProblem } from '../lib/auth-policy.js';
 import { isSharedDevice, setSharedDevice, needsMfa, startIdleLogout } from '../lib/session.js';
 import { addEntry } from '../lib/local-archive.js';
 import { appendText, replaceRange, insertAtCursor, clearField } from '../lib/text-insert.js';
 import { isLocalMode, setLocalMode } from '../lib/local-backend.js';
+import {
+  HEADER_RE, findPhrase, planToggle, normalReport, isConclusionGroup, isTechniqueGroup, nextField, fieldAt, prepareMeasure,
+  findFields, splitSections, checkReport, isIonizing, readDoseClass, doseEdit,
+} from '../lib/report-text.js';
+import { abbreviationEdit } from '../lib/voice-text.js';
+import { createPalette } from '../lib/palette.js';
+import { tomb } from '../lib/library-merge.js';
 
 // Il fragment dell'URL va letto prima che supabase-js lo consumi.
 const initialHash = window.location.hash;
@@ -53,6 +60,8 @@ const el = {
   context: $('report-context'),
   stats: $('report-stats'),
   tabs: $('workspace-tabs'),
+  libSourceEditorBox: $('lib-source-editor-box'),
+  libSourceEditor: $('lib-source-editor'),
 };
 
 function flash(text, ms = 2500, action = null) {
@@ -132,7 +141,10 @@ function renderWorkspaceTabs() {
 function updateStats() {
   const v = el.reportText.value;
   const lines = v ? v.split('\n').filter((l) => l.trim()).length : 0;
-  el.stats.textContent = lines + (lines === 1 ? ' riga' : ' righe') + ' · ' + v.length + ' caratteri';
+  const fields = findFields(v).length;
+  el.stats.textContent = lines + (lines === 1 ? ' riga' : ' righe') + ' · ' + v.length + ' caratteri' +
+    (fields ? ' · ' + fields + (fields === 1 ? ' campo da compilare (Tab)' : ' campi da compilare (Tab)') : '');
+  el.stats.classList.toggle('has-fields', fields > 0);
 }
 
 // ============================================================
@@ -168,16 +180,19 @@ function renderEsame() {
     b.className = 'chip';
     b.setAttribute('aria-pressed', state.esame === e ? 'true' : 'false');
     b.textContent = e;
-    b.onclick = () => {
-      if (state.esame === e) return;
-      const previous = state.esame;
-      state.esame = e;
-      renderAll();
-      insertEsameLine(e, previous);
-    };
+    b.onclick = () => selectExam(state.metodica, e);
     row.appendChild(b);
   });
   el.esameBody.appendChild(row);
+}
+
+function selectExam(metodica, esame) {
+  if (state.esame === esame && state.metodica === metodica) return;
+  const previous = state.esame;
+  state.metodica = metodica;
+  state.esame = esame;
+  renderAll();
+  insertEsameLine(esame, previous);
 }
 
 function renderIndicazione() {
@@ -231,42 +246,52 @@ function toggleIndicazione(txt) {
   renderIndicazione();
 }
 
+// Gruppi dell'esame corrente nel formato di report-text.js.
+function currentGroups() {
+  const groups = (state.esame && DATA.refertoByEsame[state.esame]) || {};
+  return Object.entries(groups).map(([name, phrases]) => ({ name, phrases: Array.isArray(phrases) ? phrases : [] }));
+}
+
 function renderReferto() {
   el.refertoBody.innerHTML = '';
+  $('btn-normal').hidden = true;
   if (!state.esame) {
     el.refertoBody.innerHTML = '<p class="empty-hint">Seleziona prima un esame.</p>';
     return;
   }
-  const groups = DATA.refertoByEsame[state.esame];
-  if (!groups || Object.keys(groups).length === 0) {
+  const groups = currentGroups();
+  if (!groups.length) {
     el.refertoBody.innerHTML = '<p class="empty-hint">Nessuna frase per questo esame. Aggiungine dalla <a href="account.html#libreria">libreria delle frasi</a>.</p>';
     return;
   }
+  $('btn-normal').hidden = !groups.some((g) => g.phrases.some((p) => !p.neg && !p.opz));
   const note = document.createElement('p');
   note.className = 'sample-note';
-  note.textContent = 'Frasi di esempio: verificale e adattale alla tua pratica. Un secondo clic toglie la frase dal referto.';
+  note.textContent = 'Frasi di esempio da verificare. Una frase patologica sostituisce quella normale dello stesso distretto; un secondo clic la toglie.';
   el.refertoBody.appendChild(note);
 
-  Object.entries(groups).forEach(([groupName, buttons]) => {
+  groups.forEach((group, gi) => {
     const g = document.createElement('div');
+    g.className = 'group' + (isTechniqueGroup(group.name) || isConclusionGroup(group.name) ? ' group--section' : '');
     const label = document.createElement('div');
     label.className = 'group__label';
-    label.textContent = groupName;
+    label.textContent = group.name;
     g.appendChild(label);
     const row = document.createElement('div');
     row.className = 'chip-row';
-    (buttons || []).forEach((btnData) => {
+    group.phrases.forEach((btnData, pi) => {
       const b = document.createElement('button');
-      b.className = 'chip phrase' + (btnData.neg ? ' phrase--abnormal' : '');
-      b.dataset.text = btnData.text;
+      b.className = 'chip phrase' + (btnData.neg ? ' phrase--abnormal' : '') + (btnData.opz ? ' phrase--optional' : '');
+      b.dataset.gi = gi;
+      b.dataset.pi = pi;
       b.title = btnData.text;
-      b.appendChild(icon(btnData.neg ? 'circle-alert' : 'circle-check'));
+      b.appendChild(icon(btnData.opz ? 'plus' : btnData.neg ? 'circle-alert' : 'circle-check'));
       b.append(btnData.label);
       const kind = document.createElement('span');
       kind.className = 'visually-hidden';
-      kind.textContent = btnData.neg ? ' (reperto patologico)' : ' (reperto normale)';
+      kind.textContent = btnData.opz ? ' (frase aggiuntiva)' : btnData.neg ? ' (reperto patologico)' : ' (reperto normale)';
       b.appendChild(kind);
-      b.onclick = () => togglePhrase(btnData.text);
+      b.onclick = () => togglePhrase(gi, pi);
       row.appendChild(b);
     });
     g.appendChild(row);
@@ -275,27 +300,82 @@ function renderReferto() {
   refreshPressed();
 }
 
-// Frasi già presenti nel testo: evidenziate (aria-pressed) e rimovibili con un secondo clic.
+// Frasi già presenti nel testo (anche con i campi compilati): evidenziate e rimovibili con un secondo clic.
 function refreshPressed() {
   const text = el.reportText.value;
+  const groups = currentGroups();
   el.refertoBody.querySelectorAll('.phrase').forEach((b) => {
-    b.setAttribute('aria-pressed', text.includes(b.dataset.text) ? 'true' : 'false');
+    const p = groups[b.dataset.gi] && groups[b.dataset.gi].phrases[b.dataset.pi];
+    b.setAttribute('aria-pressed', p && findPhrase(text, p.text) ? 'true' : 'false');
   });
+  renderDose();
 }
 
-function togglePhrase(text) {
+// Applica al testo una serie di modifiche (dall'ultima alla prima), ognuna annullabile con Ctrl+Z.
+function applyEditsToReport(edits) {
   const ta = el.reportText;
-  const idx = ta.value.indexOf(text);
-  if (idx === -1) {
-    insertReferto(text);
-  } else {
-    const end = ta.value[idx + text.length] === '\n' ? idx + text.length + 1 : idx + text.length;
-    replaceRange(ta, idx, end, '');
-    caret = null;
-    renderWorkspaceTabs();
-    saveDraft();
-  }
+  [...edits].sort((a, b) => b.start - a.start).forEach((e) => replaceRange(ta, e.start, e.end, e.insert));
+  caret = null;
+  renderWorkspaceTabs();
+  saveDraft();
   refreshPressed();
+}
+
+// Sostituisce tutto il testo con newText toccando solo la parte cambiata (un solo passo di annullamento).
+function replaceWhole(newText) {
+  const ta = el.reportText;
+  const old = ta.value;
+  let a = 0;
+  while (a < old.length && a < newText.length && old[a] === newText[a]) a += 1;
+  let b = 0;
+  while (b < old.length - a && b < newText.length - a && old[old.length - 1 - b] === newText[newText.length - 1 - b]) b += 1;
+  replaceRange(ta, a, old.length - b, newText.slice(a, newText.length - b));
+  return { start: a, end: newText.length - b };
+}
+
+// Con mouse e tastiera, dopo un inserimento il primo campo da compilare viene selezionato.
+const finePointer = window.matchMedia && window.matchMedia('(pointer: fine)').matches;
+function selectFirstFieldIn(start, end) {
+  if (!finePointer) return;
+  const ta = el.reportText;
+  const f = findFields(ta.value).find((x) => x.start >= start && x.end <= end);
+  if (f) selectField(f);
+}
+
+function togglePhrase(gi, pi) {
+  const groups = currentGroups();
+  const group = groups[gi];
+  const phrase = group && group.phrases[pi];
+  if (!phrase) return;
+  const ta = el.reportText;
+  const plan = planToggle(ta.value, groups, gi, pi, { blankBefore: pendingEsameOpen });
+  if (plan.action === 'insert' && caret && !isConclusionGroup(group.name)) {
+    // Il cursore è stato messo nel testo: la frase entra lì.
+    const at = caret.start;
+    insertReferto(phrase.text);
+    selectFirstFieldIn(at, at + phrase.text.length + 2);
+    return;
+  }
+  const first = plan.edits.reduce((m, e) => Math.min(m, e.start), Infinity);
+  applyEditsToReport(plan.edits);
+  if (plan.action === 'insert') pendingEsameOpen = false;
+  if (plan.action === 'replace') flash('Sostituita: «' + plan.replaced.map((p) => p.label).join('», «') + '»', 2500);
+  if (plan.action !== 'remove') selectFirstFieldIn(first, first + phrase.text.length + 2);
+}
+
+function insertNormalReport() {
+  const groups = currentGroups();
+  if (!groups.length) { flash('Scegli prima un esame con frasi in libreria.', 2500); return; }
+  const { text, added } = normalReport(el.reportText.value, groups, { blankBefore: pendingEsameOpen });
+  if (!added.length) { flash('Ogni distretto ha già una frase.', 2500); return; }
+  const range = replaceWhole(text);
+  pendingEsameOpen = false;
+  caret = null;
+  renderWorkspaceTabs();
+  saveDraft();
+  refreshPressed();
+  flash('Referto normale: ' + added.length + (added.length === 1 ? ' frase inserita' : ' frasi inserite') + '. Una variante patologica sostituisce la frase del suo distretto.', 4000);
+  selectFirstFieldIn(range.start, range.end);
 }
 
 function renderContext() {
@@ -342,9 +422,8 @@ function computeHeader() {
   return label + indicazioneLines.join('; ') + '\n\n';
 }
 
-// L'intestazione è la prima riga se inizia con "Indicazione" o con la formula d'urgenza,
+// L'intestazione (HEADER_RE) è la prima riga se inizia con "Indicazione" o con la formula d'urgenza,
 // anche se l'utente l'ha modificata a mano: così non si duplica mai.
-const HEADER_RE = /^(Indicazion[ei]\b|Esame eseguito in regime d'urgenza)[^\n]*(\n\n?|$)/i;
 
 function rebuildHeader() {
   const ta = el.reportText;
@@ -447,16 +526,163 @@ $('btn-reset').onclick = () => {
   });
 };
 
-$('btn-copy').onclick = async () => {
-  if (!el.reportText.value.trim()) { flash('Il referto è vuoto: niente da copiare', 1800); return; }
-  try {
-    await navigator.clipboard.writeText(el.reportText.value);
-  } catch (e) {
-    el.reportText.select();
-    document.execCommand('copy');
+// ============================================================
+// CAMPI DA COMPILARE ([___], [a/b]): Tab per spostarsi, numeri o pulsanti per scegliere
+// ============================================================
+let currentChoice = null;
+
+function selectField(f) {
+  const ta = el.reportText;
+  ta.focus({ preventScroll: true });
+  const prep = prepareMeasure(f);
+  if (prep) {
+    replaceRange(ta, prep.edit.start, prep.edit.end, prep.edit.insert);
+    ta.setSelectionRange(prep.select[0], prep.select[1]);
+  } else {
+    ta.setSelectionRange(f.start, f.end);
   }
-  flash('Copiato negli appunti', 1400);
-};
+  // Porta il campo in vista: il textarea scorre fino alla selezione.
+  ta.blur();
+  ta.focus({ preventScroll: false });
+  updateFieldBar();
+}
+
+function updateFieldBar() {
+  const ta = el.reportText;
+  const bar = $('field-bar');
+  const f = document.activeElement === ta ? fieldAt(ta.value, ta.selectionStart, ta.selectionEnd) : null;
+  if (!f || f.kind !== 'scelta') { bar.hidden = true; currentChoice = null; return; }
+  if (currentChoice && currentChoice.start === f.start && currentChoice.raw === f.raw && !bar.hidden) return;
+  currentChoice = f;
+  const box = $('field-options');
+  box.innerHTML = '';
+  f.options.forEach((opt, i) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'chip';
+    if (i < 9) { const k = document.createElement('kbd'); k.textContent = String(i + 1); b.appendChild(k); }
+    b.append(opt);
+    b.addEventListener('mousedown', (e) => e.preventDefault()); // il cursore resta nel testo
+    b.onclick = () => chooseOption(i);
+    box.appendChild(b);
+  });
+  bar.hidden = false;
+}
+
+function chooseOption(i) {
+  const ta = el.reportText;
+  const f = currentChoice && fieldAt(ta.value, ta.selectionStart, ta.selectionEnd);
+  if (!f || !f.options || !f.options[i]) return;
+  replaceRange(ta, f.start, f.end, f.options[i]);
+  const after = f.start + f.options[i].length;
+  // Campo successivo sulla stessa riga: si passa direttamente a quello.
+  const next = findFields(ta.value).find((x) => x.start >= after && !ta.value.slice(after, x.start).includes('\n'));
+  if (next) selectField(next); else { ta.setSelectionRange(after, after); updateFieldBar(); }
+  saveDraft();
+  refreshPressed();
+}
+
+el.reportText.addEventListener('keydown', (e) => {
+  const ta = el.reportText;
+  if (e.key === 'Tab' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    const f = nextField(ta.value, ta.selectionStart, ta.selectionEnd, { backwards: e.shiftKey });
+    if (!f) return; // nessun campo: Tab esce dal testo come di consueto
+    e.preventDefault();
+    selectField(f);
+    return;
+  }
+  if (currentChoice && /^[1-9]$/.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    const f = fieldAt(ta.value, ta.selectionStart, ta.selectionEnd);
+    if (f && f.kind === 'scelta' && f.options[Number(e.key) - 1]) {
+      e.preventDefault();
+      chooseOption(Number(e.key) - 1);
+    }
+  }
+});
+['select', 'keyup', 'mouseup', 'focus'].forEach((ev) => el.reportText.addEventListener(ev, () => setTimeout(updateFieldBar, 0)));
+el.reportText.addEventListener('blur', () => setTimeout(updateFieldBar, 0));
+
+// Abbreviazioni personali (Account → Preferenze): "/nn" + spazio → "nei limiti della norma".
+function expandAbbreviation(field, e) {
+  if (e.inputType !== 'insertText' || !e.data || e.data.length !== 1) return;
+  const edit = abbreviationEdit(field.value, field.selectionStart, DATA.abbreviazioni);
+  if (!edit) return;
+  replaceRange(field, edit.start, edit.end, edit.insert);
+  const caretAt = edit.start + edit.insert.length + 1;
+  field.setSelectionRange(caretAt, caretAt);
+}
+el.reportText.addEventListener('input', (e) => expandAbbreviation(el.reportText, e));
+
+// ============================================================
+// CONTROLLI PRIMA DI COPIARE, STAMPARE O SALVARE
+// ============================================================
+function reportIssues() {
+  const issues = checkReport(el.reportText.value, { groups: currentGroups(), esame: state.esame || '', metodica: state.metodica || '' });
+  let doseOff = false;
+  try { doseOff = localStorage.getItem('mr-check-dose') === 'off'; } catch (e) { /* ignora */ }
+  return issues.filter((i) => !(i.type === 'dose' && doseOff));
+}
+
+// true = si procede. Con avvisi chiede conferma; se si sceglie di correggere, seleziona il primo campo vuoto.
+async function confirmChecks(verb, okText) {
+  const issues = reportIssues();
+  if (!issues.length) return true;
+  const ok = await confirmDialog('Prima di ' + verb + ', controlla', '• ' + issues.map((i) => i.message).join('\n• '), { okText });
+  if (!ok) {
+    const first = findFields(el.reportText.value)[0];
+    if (first) selectField(first); else el.reportText.focus();
+  }
+  return ok;
+}
+
+// ============================================================
+// COPIA (tutto o per sezione), ARCHIVIO
+// ============================================================
+const SECTION_LABEL = { indicazione: 'indicazione', referto: 'referto senza indicazione e conclusioni', conclusioni: 'conclusioni' };
+
+async function copyText(which = 'all') {
+  const text = el.reportText.value;
+  if (!text.trim()) { flash('Il referto è vuoto: niente da copiare', 1800); return; }
+  let out = text;
+  if (which !== 'all') {
+    out = splitSections(text)[which];
+    if (!out) { flash('Nel referto non c\'è la sezione "' + SECTION_LABEL[which] + '".', 2500); return; }
+  }
+  if (which !== 'indicazione' && !(await confirmChecks('copiare', 'Copia comunque'))) return;
+  try {
+    await navigator.clipboard.writeText(out);
+  } catch (e) {
+    const tmp = document.createElement('textarea');
+    tmp.value = out;
+    tmp.setAttribute('readonly', '');
+    tmp.className = 'visually-hidden';
+    document.body.appendChild(tmp);
+    tmp.select();
+    document.execCommand('copy');
+    tmp.remove();
+  }
+  flash(which === 'all' ? 'Copiato negli appunti' : 'Copiato: ' + SECTION_LABEL[which], 1600);
+}
+
+$('btn-copy').onclick = () => copyText('all');
+
+const copyMenuBtn = $('btn-copy-more');
+const copyMenu = $('copy-menu');
+function setCopyMenu(open) {
+  copyMenu.hidden = !open;
+  copyMenuBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (open) copyMenu.querySelector('button').focus();
+}
+copyMenuBtn.onclick = () => setCopyMenu(copyMenu.hidden);
+copyMenu.querySelectorAll('[data-copy]').forEach((b) => b.addEventListener('click', () => { setCopyMenu(false); copyText(b.dataset.copy); }));
+copyMenu.addEventListener('keydown', (e) => {
+  const items = [...copyMenu.querySelectorAll('button')];
+  const i = items.indexOf(document.activeElement);
+  if (e.key === 'Escape') { setCopyMenu(false); copyMenuBtn.focus(); }
+  if (e.key === 'ArrowDown') { e.preventDefault(); items[(i + 1) % items.length].focus(); }
+  if (e.key === 'ArrowUp') { e.preventDefault(); items[(i - 1 + items.length) % items.length].focus(); }
+});
+document.addEventListener('click', (e) => { if (!copyMenu.hidden && !e.target.closest('#copy-split')) setCopyMenu(false); });
 
 $('btn-archive').onclick = async () => {
   const testo = el.reportText.value.trim();
@@ -466,6 +692,7 @@ $('btn-archive').onclick = async () => {
     toast('Su una postazione condivisa l\'archivio non è disponibile: copia o stampa il referto.', { duration: 6000 });
     return;
   }
+  if (!(await confirmChecks('salvare', 'Salva comunque'))) return;
   if (!await confirmDialog('Salvare nell\'archivio di questo computer?', 'Il referto resta solo in questo browser e non viene inviato al cloud. Togli comunque i dati che identificano il paziente.', { okText: 'Salva' })) return;
   const btn = $('btn-archive');
   btn.disabled = true;
@@ -478,21 +705,91 @@ $('btn-archive').onclick = async () => {
   btn.disabled = false;
 };
 
-document.addEventListener('keydown', (e) => {
-  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-    e.preventDefault();
-    $('btn-copy').click();
-  }
-});
-
 attachDictation($('btn-mic-report'), () => el.reportText, {
   onError: (m) => toast(m, { type: 'error', duration: 8000 }),
   onStateChange: (on) => { $('rec-pill').hidden = !on; },
 });
 
-$('btn-confronto').onclick = () => insertConfronto('Confronto con precedente analogo del ');
-$('btn-presa-visione').onclick = () => insertConfronto('Presa visione di precedente analogo del ');
+// ============================================================
+// CONFRONTO, CLASSE DI DOSE, REFERTO NORMALE
+// ============================================================
+function insertComparison(txt) {
+  const before = el.reportText.value.length;
+  insertConfronto(txt);
+  selectFirstFieldIn(before, el.reportText.value.length);
+}
+$('btn-confronto').onclick = () => insertComparison('Confronto con precedente analogo del [data].');
+$('btn-presa-visione').onclick = () => insertComparison('Presa visione di precedente analogo del [data].');
 $('btn-non-precedenti').onclick = () => insertConfronto('Non disponibili precedenti per confronto.');
+$('btn-normal').onclick = insertNormalReport;
+
+function renderDose() {
+  const row = $('dose-row');
+  row.hidden = !isIonizing(state.metodica);
+  if (row.hidden) return;
+  const current = readDoseClass(el.reportText.value);
+  row.querySelectorAll('[data-dose]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.dose === current ? 'true' : 'false'));
+}
+document.querySelectorAll('#dose-row [data-dose]').forEach((b) => {
+  b.addEventListener('click', () => {
+    const text = el.reportText.value;
+    const value = b.dataset.dose;
+    const edit = doseEdit(text, readDoseClass(text) === value ? null : value);
+    if (edit) applyEditsToReport([edit]);
+  });
+});
+
+// ============================================================
+// SCORCIATOIE DA TASTIERA
+// ============================================================
+document.addEventListener('keydown', (e) => {
+  if (appRoot.classList.contains('hidden') || document.querySelector('dialog[open]')) return;
+  const mod = e.ctrlKey || e.metaKey;
+  if (mod && e.key === 'Enter') { e.preventDefault(); copyText('all'); return; }
+  if (mod && !e.shiftKey && (e.key === 'k' || e.key === 'K')) { e.preventDefault(); openPalette(); return; }
+  if (mod && !e.shiftKey && (e.key === 's' || e.key === 'S')) { e.preventDefault(); $('btn-archive').click(); return; }
+  if (mod && !e.shiftKey && (e.key === 'p' || e.key === 'P')) { e.preventDefault(); $('btn-open-print').click(); return; }
+  if (mod && e.key === '/') { e.preventDefault(); $('shortcuts-dialog').showModal(); return; }
+  if (e.altKey && !mod && e.code === 'KeyN') { e.preventDefault(); insertNormalReport(); return; }
+  if (e.altKey && !mod && /^Digit[1-5]$/.test(e.code)) { e.preventDefault(); switchWorkspace(Number(e.code.slice(5)) - 1); }
+});
+// ============================================================
+// RICERCA RAPIDA (Ctrl+K)
+// ============================================================
+function paletteItems() {
+  const items = [
+    { group: 'Comandi', icon: 'copy', label: 'Copia il referto', hint: 'Ctrl+Invio', run: () => copyText('all') },
+    { group: 'Comandi', icon: 'copy', label: 'Copia solo le conclusioni', run: () => copyText('conclusioni') },
+    { group: 'Comandi', icon: 'copy', label: 'Copia solo il referto', hint: 'senza indicazione e conclusioni', run: () => copyText('referto') },
+    { group: 'Comandi', icon: 'copy', label: 'Copia solo l\'indicazione', run: () => copyText('indicazione') },
+    { group: 'Comandi', icon: 'circle-check', label: 'Referto normale', hint: 'Alt+N', run: insertNormalReport },
+    { group: 'Comandi', icon: 'printer', label: 'Stampa', hint: 'Ctrl+P', run: () => $('btn-open-print').click() },
+    { group: 'Comandi', icon: 'save', label: 'Salva nell\'archivio', hint: 'Ctrl+S', run: () => $('btn-archive').click() },
+    { group: 'Comandi', icon: 'mic', label: 'Detta nel referto', run: () => $('btn-mic-report').click() },
+    { group: 'Comandi', icon: 'eraser', label: 'Svuota il referto', run: () => $('btn-reset').click() },
+    { group: 'Comandi', icon: 'library-big', label: 'Libreria delle frasi', keywords: 'modifica account', run: () => { window.location.href = 'account.html#libreria'; } },
+    { group: 'Comandi', icon: 'keyboard', label: 'Scorciatoie da tastiera', hint: 'Ctrl+/', run: () => $('shortcuts-dialog').showModal() },
+  ];
+  for (let i = 0; i < WORKSPACE_COUNT; i++) items.push({ group: 'Comandi', icon: 'file-text', label: 'Vai al referto ' + (i + 1), hint: 'Alt+' + (i + 1), keywords: 'scheda', run: () => switchWorkspace(i) });
+  if (state.esame) {
+    currentGroups().forEach((g, gi) => g.phrases.forEach((p, pi) => items.push({
+      group: 'Frasi · ' + state.esame, icon: p.opz ? 'plus' : p.neg ? 'circle-alert' : 'circle-check',
+      label: p.label, hint: g.name, keywords: p.text, rank: -1, run: () => togglePhrase(gi, pi),
+    })));
+    (DATA.indicazioniByEsame[state.esame] || []).forEach((txt) => items.push({ group: 'Indicazioni', icon: 'info', label: txt, run: () => toggleIndicazione(txt) }));
+  }
+  DATA.metodiche.forEach((m) => (DATA.esamiByMetodica[m] || []).forEach((e) => items.push({
+    group: 'Esami', icon: 'chevron-right', label: e, hint: m, run: () => selectExam(m, e),
+  })));
+  return items;
+}
+
+const palette = createPalette({ dialog: $('palette'), input: $('palette-input'), list: $('palette-list'), getItems: paletteItems });
+function openPalette() { palette.open(); }
+$('btn-palette').onclick = openPalette;
+
+$('btn-shortcuts').onclick = () => $('shortcuts-dialog').showModal();
+$('shortcuts-close').onclick = () => $('shortcuts-dialog').close();
 
 // ============================================================
 // STAMPA PDF (anteprima in pagina: niente popup bloccati)
@@ -517,12 +814,24 @@ function setMsg(node, text, kind) {
   node.textContent = text || '';
 }
 
+// Firma: titolo scelto in Account → Profilo (Dott., Dott.ssa, Prof., Prof.ssa o nessuno) + nome e cognome.
 function doctorSignature() {
   const meta = (currentUser && currentUser.user_metadata) || {};
   const nome = (meta.nome || '').trim();
   const cognome = (meta.cognome || '').trim();
   if (!nome && !cognome) return null;
-  return 'Dott. ' + [nome, cognome].filter(Boolean).join(' ');
+  const titolo = typeof meta.titolo === 'string' ? meta.titolo.trim() : 'Dott.';
+  return [titolo, nome, cognome].filter(Boolean).join(' ');
+}
+
+const PATIENT_FIELDS = [['print-patient-name', 'Paziente'], ['print-patient-birth', 'Data di nascita'], ['print-patient-id', 'N. accettazione']];
+function clearPatientFields() { PATIENT_FIELDS.forEach(([id]) => { $(id).value = ''; }); }
+const todayIso = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
+function dateLineValue() {
+  const place = $('print-place').value.trim();
+  const iso = $('print-date').value;
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso.split('-').reverse().join('/') : '';
+  return [place, date].filter(Boolean).join(', ') || null;
 }
 
 function revokePreview() {
@@ -536,6 +845,8 @@ function showPrintSetup() {
   print.setup.hidden = false;
   revokePreview();
 }
+// I dati del paziente servono solo per il PDF corrente: chiudendo la finestra si cancellano.
+print.overlay.addEventListener('close', clearPatientFields);
 
 function closePrint() {
   if (print.overlay.open) print.overlay.close();
@@ -551,7 +862,11 @@ $('btn-open-print').onclick = async () => {
     toast('Il referto è vuoto: componi o scrivi del testo prima di stampare.');
     return;
   }
+  if (!(await confirmChecks('stampare', 'Stampa comunque'))) return;
   showPrintSetup();
+  clearPatientFields();
+  $('print-date').value = todayIso();
+  try { $('print-place').value = localStorage.getItem('mr-print-place') || ''; } catch (e) { /* ignora */ }
   setMsg(print.msg, '');
   print.select.innerHTML = '<option value="">Nessuna (pagina bianca)</option>';
   print.letterheads = [];
@@ -580,7 +895,7 @@ $('btn-open-print').onclick = async () => {
   const sign = doctorSignature();
   setMsg(print.signatureInfo, sign
     ? 'Firma in calce: ' + sign
-    : 'Nome e cognome non impostati: la firma non verrà stampata. Puoi aggiungerli in "Il mio account".', sign ? '' : 'warn');
+    : 'Nome e cognome non impostati: la firma non verrà stampata. Puoi aggiungerli in Account → Profilo.', sign ? '' : 'warn');
   print.overlay.showModal();
 };
 
@@ -610,7 +925,9 @@ $('print-generate-btn').onclick = async () => {
     } else {
       margins = { top: readMm('margin-top', 40), left: readMm('margin-left', 20), right: readMm('margin-right', 20) };
     }
-    const result = await buildReportPdf({ text: el.reportText.value, template, margins, signature: doctorSignature() });
+    const header = PATIENT_FIELDS.map(([id, label]) => ({ label, value: $(id).value }));
+    try { localStorage.setItem('mr-print-place', $('print-place').value.trim()); } catch (e) { /* ignora */ }
+    const result = await buildReportPdf({ text: el.reportText.value, template, margins, signature: doctorSignature(), header, dateLine: dateLineValue() });
     revokePreview();
     print.url = URL.createObjectURL(new Blob([result.bytes], { type: 'application/pdf' }));
     print.frame.src = print.url;
@@ -759,6 +1076,83 @@ async function afterSignIn() {
   await showApp();
 }
 
+/**
+ * Carica le librerie dei team dell'utente
+ */
+async function loadTeamSources() {
+  if (isLocalMode()) return;
+  
+  const { data: teamMembers, error: teamMembersError } = await sb.from('team_members').select('team_id').eq('user_id', currentUser.id);
+  if (teamMembersError) return;
+  
+  // Se l'utente non è in nessun team, nascondi il selettore
+  if (!teamMembers || teamMembers.length === 0) {
+    el.libSourceEditorBox.hidden = true;
+    return;
+  }
+  
+  const teamIds = teamMembers.map(m => m.team_id);
+  
+  // Trova i team che hanno una libreria
+  const { data: teamLibraries, error: teamLibrariesError } = await sb.from('team_libraries').select('team_id').in('team_id', teamIds);
+  if (teamLibrariesError) return;
+  
+  if (!teamLibraries || teamLibraries.length === 0) {
+    el.libSourceEditorBox.hidden = true;
+    return;
+  }
+  
+  const libraryTeamIds = teamLibraries.map(l => l.team_id);
+  
+  // Carica i nomi dei team
+  const { data: teams, error: teamsError } = await sb.from('teams').select('id, nome').in('id', libraryTeamIds);
+  if (teamsError) return;
+  
+  if (!teams || teams.length === 0) {
+    el.libSourceEditorBox.hidden = true;
+    return;
+  }
+  
+  // Aggiungi le opzioni per i team
+  const select = el.libSourceEditor;
+  teams.forEach(team => {
+    const option = document.createElement('option');
+    option.value = team.id;
+    option.textContent = team.nome;
+    select.appendChild(option);
+  });
+  
+  // Mostra il selettore
+  el.libSourceEditorBox.hidden = false;
+  
+  // Al cambio si carica la libreria scelta (nell'editor è solo in lettura: non si salva mai).
+  select.addEventListener('change', async () => {
+    const selectedValue = select.value;
+    try { localStorage.setItem('mr-lib-source-' + currentUser.id, selectedValue); } catch (e) { /* ignora */ }
+    if (selectedValue === 'personale') {
+      await loadLibrary();
+    } else {
+      const res = await new LibraryStore({ supabase: sb, userId: currentUser.id, table: 'team_libraries', keyColumn: 'team_id', keyValue: selectedValue }).load();
+      if (res.status === 'ok') {
+        DATA = res.data;
+      } else {
+        toast('Libreria del team non disponibile', { type: 'error' });
+        select.value = 'personale';
+        await loadLibrary();
+      }
+    }
+    renderAll();
+  });
+
+  // Ripristina la scelta precedente (se il team ha ancora una libreria).
+  let saved = null;
+  try { saved = localStorage.getItem('mr-lib-source-' + currentUser.id); } catch (e) { saved = null; }
+  if (saved && saved !== 'personale' && [...select.options].some((o) => o.value === saved)) {
+    select.value = saved;
+    select.dispatchEvent(new Event('change'));
+  }
+}
+
 // Termini o informativa cambiati (o accettazione mai registrata): si chiede di nuovo il consenso.
 async function needsConsent() {
   if (isLocalMode() || !LEGAL.TERMS_VERSION || !LEGAL.PRIVACY_VERSION) return false;
@@ -884,16 +1278,30 @@ function showLogin(message, ok) {
   showAuthView(params.get('view') === 'signup' ? 'signup' : 'login', message, ok);
 }
 
+// La libreria caricata resta anche in una copia locale, usata se il server non risponde (offline).
+const libCacheKey = () => 'mr-lib-cache-' + currentUser.id;
+const libCacheStore = () => (isSharedDevice() ? sessionStorage : localStorage);
+let libraryWasEmpty = false;
+
 async function loadLibrary() {
   const store = new LibraryStore({ supabase: sb, userId: currentUser.id });
   const res = await store.load();
+  libraryWasEmpty = res.status === 'empty';
+  const banner = $('lib-banner');
+  const bannerText = banner.querySelector('.banner__text');
   if (res.status === 'error') {
-    DATA = cloneDefaults();
-    $('lib-banner').hidden = false;
-  } else {
-    DATA = res.data;
-    $('lib-banner').hidden = true;
+    let cached = null;
+    try { cached = JSON.parse(libCacheStore().getItem(libCacheKey())); } catch (e) { cached = null; }
+    DATA = cached || cloneDefaults();
+    bannerText.textContent = cached
+      ? 'Sei offline o il server non risponde: stai usando la copia della tua libreria salvata su questo computer.'
+      : 'La tua libreria personale non è stata caricata (problema di connessione): stai vedendo le frasi predefinite.';
+    banner.hidden = false;
+    return;
   }
+  DATA = res.data;
+  banner.hidden = true;
+  try { libCacheStore().setItem(libCacheKey(), JSON.stringify(DATA)); } catch (e) { /* spazio esaurito: si continua senza copia */ }
 }
 
 $('btn-lib-retry').onclick = () => withBusy($('btn-lib-retry'), async () => {
@@ -922,10 +1330,13 @@ async function showApp() {
   $('user-badge').textContent = displayName;
   $('user-avatar').textContent = displayName.split(/[\s@.]+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('') || '?';
   await loadLibrary();
+  await loadTeamSources();
   const draft = readDraft();
   workspaces = draft ? draft.workspaces : Array.from({ length: WORKSPACE_COUNT }, emptyWorkspace);
   loadWorkspace(draft ? draft.activeWorkspace : 0);
   if (draft) flash('Bozza ripristinata', 2500);
+  if (needsOnboarding()) openOnboarding();
+  document.body.dataset.ready = '1';
 }
 
 // "Esci": ferma la dettatura e ricarica la pagina, così nessun dato del referto resta in memoria
@@ -938,6 +1349,14 @@ $('btn-local-mode').onclick = () => {
 $('btn-logout').onclick = async () => {
   stopAllDictation();
   if (isLocalMode()) setLocalMode(false);
+  
+  // Cancella la cache della libreria
+  const cacheKey = 'mr-lib-cache-' + currentUser.id;
+  try {
+    sessionStorage.removeItem(cacheKey);
+    localStorage.removeItem(cacheKey);
+  } catch (e) { /* ignora */ }
+  
   try { sessionStorage.removeItem(draftKey()); } catch (e) { /* ignora */ }
   el.reportText.value = '';
   workspaces = [];
@@ -981,3 +1400,92 @@ $('btn-logout').onclick = async () => {
   }
   $('login-shared').checked = isSharedDevice();
 })();
+
+// ============================================================
+// CONFIGURAZIONE GUIDATA AL PRIMO ACCESSO
+// ============================================================
+let onbStep = 1;
+const onbFirstStep = () => (isLocalMode() ? 2 : 1);
+
+function needsOnboarding() {
+  if (!libraryWasEmpty || isSharedDevice()) return false;
+  if (isLocalMode()) { try { return localStorage.getItem('mr-onboarded-local') !== '1'; } catch (e) { return false; } }
+  return !(currentUser.user_metadata || {}).onboarded_at;
+}
+
+function showOnbStep(step) {
+  onbStep = step;
+  document.querySelectorAll('#onboarding .onb-step').forEach((sec) => { sec.hidden = Number(sec.dataset.step) !== step; });
+  const first = onbFirstStep();
+  $('onb-step-label').textContent = 'Passo ' + (step - first + 1) + ' di ' + (4 - first);
+  $('onb-back').hidden = step === first;
+  $('onb-next').textContent = step === 3 ? 'Inizia' : 'Avanti';
+  $('onb-msg').textContent = '';
+}
+
+function openOnboarding() {
+  const meta = currentUser.user_metadata || {};
+  $('onb-titolo').value = typeof meta.titolo === 'string' ? meta.titolo : 'Dott.';
+  $('onb-nome').value = meta.nome || '';
+  $('onb-cognome').value = meta.cognome || '';
+  const box = $('onb-metodiche');
+  box.innerHTML = '';
+  DATA.metodiche.forEach((m) => {
+    const label = document.createElement('label');
+    label.className = 'check';
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.value = m;
+    input.checked = true;
+    label.append(input, ' ' + m);
+    box.appendChild(label);
+  });
+  showOnbStep(onbFirstStep());
+  $('onboarding').showModal();
+}
+
+async function markOnboarded(extra = {}) {
+  if (isLocalMode()) {
+    try { localStorage.setItem('mr-onboarded-local', '1'); } catch (e) { /* ignora */ }
+    return;
+  }
+  const data = { ...extra, onboarded_at: new Date().toISOString() };
+  const { error } = await sb.auth.updateUser({ data });
+  if (!error) currentUser.user_metadata = { ...(currentUser.user_metadata || {}), ...data };
+}
+
+async function finishOnboarding() {
+  const chosen = [...$('onb-metodiche').querySelectorAll('input:checked')].map((i) => i.value);
+  const profile = isLocalMode() ? {} : { titolo: $('onb-titolo').value, nome: $('onb-nome').value.trim(), cognome: $('onb-cognome').value.trim() };
+  await markOnboarded(profile);
+  const removed = DATA.metodiche.filter((m) => !chosen.includes(m));
+  if (removed.length) {
+    DATA.metodiche = DATA.metodiche.filter((m) => chosen.includes(m));
+    DATA.removedBase = Array.isArray(DATA.removedBase) ? DATA.removedBase : [];
+    removed.forEach((m) => { delete DATA.esamiByMetodica[m]; DATA.removedBase.push(tomb.metodica(m)); });
+  }
+  const store = new LibraryStore({ supabase: sb, userId: currentUser.id });
+  const res = await store.load();
+  if (res.status !== 'error') { store.schedule(() => DATA); await store.flush(); }
+  const dettatura = (document.querySelector('input[name="onb-dettatura"]:checked') || {}).value;
+  if (dettatura === 'off') setDictationDisabled(true);
+  if (dettatura === 'locale') setLocalDictationPreferred(true);
+  $('onboarding').close();
+  if (state.metodica && !DATA.metodiche.includes(state.metodica)) { state.metodica = null; state.esame = null; }
+  renderAll();
+  toast('Tutto pronto: buon lavoro!');
+  if (dettatura === 'off') window.location.reload();
+}
+
+$('onb-next').onclick = () => {
+  if (onbStep === 2 && !$('onb-metodiche').querySelector('input:checked')) {
+    $('onb-msg').textContent = 'Lascia almeno una metodica.';
+    $('onb-msg').className = 'msg msg--error';
+    return;
+  }
+  if (onbStep < 3) showOnbStep(onbStep + 1);
+  else withBusy($('onb-next'), finishOnboarding);
+};
+$('onb-back').onclick = () => showOnbStep(Math.max(onbFirstStep(), onbStep - 1));
+$('onb-skip').onclick = async () => { $('onboarding').close(); await markOnboarded(); };
+$('onboarding').addEventListener('cancel', () => { markOnboarded(); });

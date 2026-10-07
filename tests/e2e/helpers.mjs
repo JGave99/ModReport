@@ -23,6 +23,13 @@ export async function login(page, { shared = false } = {}) {
     await page.click('#btn-consent');
   }
   await expect(page.locator('#app-root')).not.toHaveClass(/hidden/);
+  // Configurazione guidata del primo accesso: nei test si salta.
+  await expect(page.locator('body[data-ready]')).toHaveCount(1);
+  const onboarding = page.locator('#onboarding');
+  if (await onboarding.isVisible()) {
+    await page.click('#onb-skip');
+    await expect(onboarding).not.toBeVisible();
+  }
 }
 
 export async function chip(page, container, text) {

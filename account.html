@@ -11,6 +11,7 @@
 <link rel="icon" href="assets/icons/favicon-32.png" type="image/png" sizes="32x32">
 <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
 <link rel="manifest" href="manifest.webmanifest">
+<script src="js/pwa.js" defer></script>
 <script src="js/theme.js"></script>
 <link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/tokens.css">
@@ -59,11 +60,21 @@
           <div class="card stack">
             <h2 class="section-title">Profilo</h2>
             <div class="form-grid">
+              <div class="field">
+                <label for="profile-titolo">Titolo</label>
+                <select id="profile-titolo">
+                  <option value="Dott.">Dott.</option>
+                  <option value="Dott.ssa">Dott.ssa</option>
+                  <option value="Prof.">Prof.</option>
+                  <option value="Prof.ssa">Prof.ssa</option>
+                  <option value="">Nessuno</option>
+                </select>
+              </div>
               <div class="field"><label for="profile-nome">Nome</label><input type="text" id="profile-nome" autocomplete="given-name" maxlength="80"></div>
               <div class="field"><label for="profile-cognome">Cognome</label><input type="text" id="profile-cognome" autocomplete="family-name" maxlength="80"></div>
             </div>
-            <p class="subtle">Compare nella chat di team e nella firma del referto stampato.</p>
-            <div class="row"><button class="btn btn--primary" id="update-name-btn">Salva nome e cognome</button></div>
+            <p class="subtle">Titolo, nome e cognome compaiono nella firma del referto stampato; nome e cognome anche nella chat di team.</p>
+            <div class="row"><button class="btn btn--primary" id="update-name-btn">Salva profilo</button></div>
             <div class="msg" id="name-message" role="status"></div>
           </div>
 
@@ -122,11 +133,17 @@
           <span class="banner__text">La libreria non è stata caricata (problema di connessione): le modifiche sono bloccate per non sovrascrivere i tuoi dati.</span>
           <button class="btn btn--sm" data-lib-retry>Riprova</button>
         </div>
-        <div class="lib-toolbar">
+        <div class="lib-source" id="lib-source-box" hidden>
+  <div class="field"><label for="lib-source">Libreria da modificare</label><select id="lib-source"><option value="personale">La mia libreria</option></select></div>
+  <p class="subtle" id="lib-source-note" hidden></p>
+  <button class="btn btn--sm" id="lib-team-create" type="button" hidden>Crea la libreria del team copiando la mia libreria</button>
+</div>
+<div class="lib-toolbar">
           <button class="btn btn--sm" id="lib-export"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#download"></use></svg>Esporta (file)</button>
           <label class="btn btn--sm" for="lib-import-file"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#upload"></use></svg>Importa da file</label>
           <input type="file" id="lib-import-file" accept="application/json,.json" class="visually-hidden">
           <span class="spacer"></span>
+          <button class="btn btn--sm" id="lib-versions"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#rotate-ccw"></use></svg>Versioni</button>
           <button class="btn btn--sm btn--danger" id="btn-reset-data"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#rotate-ccw"></use></svg>Ripristina i predefiniti</button>
         </div>
         <div class="msg" id="lib-tools-message" role="status"></div>
@@ -219,11 +236,52 @@
               </select>
             </div>
           </div>
-          <label class="check"><input type="checkbox" id="pref-dictation-off"><span>Disattiva la dettatura vocale su questo computer (usa il servizio vocale del browser, che riceve l'audio)</span></label>
+        </div>
+        <div class="card stack">
+          <h2 class="section-title">Dettatura</h2>
+          <label class="check"><input type="checkbox" id="pref-dictation-off"><span>Disattiva la dettatura vocale su questo computer</span></label>
+          <label class="check"><input type="checkbox" id="pref-dictation-local"><span>Elabora la voce solo su questo computer: l'audio non lascia il dispositivo (serve un browser che lo supporti, come Chrome aggiornato)</span></label>
+          <p class="subtle" id="pref-dictation-local-status" role="status"></p>
+          <label class="check"><input type="checkbox" id="pref-voice-commands"><span>Comandi vocali: «punto», «virgola», «due punti», «punto e virgola», «a capo», «nuovo paragrafo», «apri parentesi», «chiudi parentesi»</span></label>
+        </div>
+        <div class="card stack">
+          <h2 class="section-title">Controlli prima di copiare e stampare</h2>
+          <label class="check"><input type="checkbox" id="pref-check-dose"><span>Ricordami la classe di dose negli esami con radiazioni ionizzanti (togli la spunta se la aggiunge già il tuo RIS)</span></label>
+        </div>
+        <div class="card stack" id="abbr-card">
+          <h2 class="section-title">Abbreviazioni</h2>
+          <p class="muted">Scrivi l'abbreviazione seguita da spazio o punteggiatura e diventa il testo completo, nel referto e nell'indicazione libera. Per non espandere parole vere falle iniziare con «/». Si salvano con la libreria.</p>
+          <div id="abbr-list" class="abbr-list"></div>
+          <form id="abbr-form" class="abbr-form" novalidate>
+            <div class="field"><label for="abbr-key">Abbreviazione</label><input type="text" id="abbr-key" maxlength="20" placeholder="/nn" autocomplete="off" spellcheck="false"></div>
+            <div class="field abbr-form__value"><label for="abbr-value">Testo completo</label><input type="text" id="abbr-value" maxlength="300" placeholder="nei limiti della norma" autocomplete="off"></div>
+            <button class="btn" type="submit"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#plus"></use></svg>Aggiungi</button>
+          </form>
+          <div class="msg" id="abbr-message" role="status"></div>
         </div>
       </section>
     </main>
   </div>
+
+  <dialog class="dialog dialog--wide" id="versions-dialog" aria-labelledby="versions-title">
+    <div class="dialog__head">
+      <h2 id="versions-title">Versioni della libreria</h2>
+      <button class="btn btn--sm" data-close aria-label="Chiudi"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#x"></use></svg></button>
+    </div>
+    <div class="dialog__body">
+      <p>Una versione è una copia della libreria che puoi ripristinare. Ne viene salvata una automaticamente prima di un ripristino, di un'importazione da file e degli aggiornamenti della libreria predefinita; si tengono le ultime 30.</p>
+      <form id="version-form">
+        <div class="field">
+          <label for="version-label">Nome (facoltativo)</label>
+          <input type="text" id="version-label" maxlength="80">
+        </div>
+        <button type="submit" class="btn btn--primary">Salva la versione attuale</button>
+      </form>
+      <div class="msg" id="versions-message" role="status"></div>
+      <div id="versions-list"></div>
+    </div>
+  </dialog>
+
 </div>
 
 </body>

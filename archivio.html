@@ -12,6 +12,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="robots" content="noindex">
 <script src="assets/vendor/supabase.js"></script>
+<script src="js/pwa.js" defer></script>
 <script src="js/config.js"></script>
 <script type="module" src="js/pages/archivio.js"></script>
 <script src="js/theme.js"></script>
@@ -72,6 +73,19 @@
 
     <div id="archive-list"></div>
     <div id="empty-state" class="empty hidden">Nessun referto archiviato su questo computer.</div>
+    
+    <section id="stats-section" class="card stats" hidden aria-labelledby="stats-title">
+      <div class="stats__head">
+        <h2 class="section-title" id="stats-title">Statistiche</h2>
+        <button class="btn btn--sm" id="btn-export-csv"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#download"></use></svg>Esporta per il libretto (CSV)</button>
+      </div>
+      <p class="subtle">Calcolate solo su questo computer, dai referti salvati nell'archivio: <strong id="stats-total">0</strong> in totale.</p>
+      <div class="stats__grid">
+        <div><h3 class="stats__title">Per metodica</h3><div id="chart-metodica" class="bars"></div></div>
+        <div><h3 class="stats__title">Esami più frequenti</h3><div id="chart-esame" class="bars"></div></div>
+        <div><h3 class="stats__title">Ultimi 12 mesi</h3><div id="chart-mese" class="bars"></div></div>
+      </div>
+    </section>
   </main>
 </div>
 

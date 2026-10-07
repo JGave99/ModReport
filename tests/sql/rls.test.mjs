@@ -241,3 +241,46 @@ test('dopo l\'eliminazione resta solo la prova pseudonima dei consensi', async (
   assert.equal(rows.length, 3);
   assert.ok(rows.every((r) => r.user_id === null));
 });
+
+const D = 'd0000000-0000-4000-8000-00000000000d'; // creato nel test dei consensi
+const E = 'e0000000-0000-4000-8000-00000000000e';
+
+test('versioni della libreria: solo le proprie, le ultime 30, nessuna modifica; spariscono con l\'account', async () => {
+  await as(D, async () => {
+    for (let i = 0; i < 32; i++) await q(`insert into public.library_versions (user_id, label, data) values ('${D}', 'v${i}', '{"n":${i}}')`);
+    assert.equal((await q('select id from public.library_versions')).length, 30);
+    const [{ ok }] = await q(`select created_at > now() - interval '1 minute' as ok from public.library_versions limit 1`);
+    assert.equal(ok, true);
+    await assert.rejects(q(`insert into public.library_versions (user_id, data) values ('${C}', '{}')`), /row-level security/);
+    await assert.rejects(q(`insert into public.library_versions (user_id, reason, data) values ('${D}', 'altro', '{}')`), /check constraint/);
+    await assert.rejects(q(`insert into public.library_versions (user_id, data) values ('${D}', '[]')`), /check constraint/);
+    assert.equal((await q(`update public.library_versions set label = 'x' returning id`)).length, 0);
+  });
+  await as(C, async () => {
+    assert.equal((await q('select * from public.library_versions')).length, 0);
+    assert.equal((await q('delete from public.library_versions returning id')).length, 0);
+  });
+  await as(D, () => q('select public.delete_my_account()'));
+  assert.equal((await q(`select id from public.library_versions where user_id = '${D}'`)).length, 0);
+});
+
+test('libreria del team: la leggono i membri, la modificano proprietario e amministratori', async () => {
+  await q(`insert into auth.users (id, email, raw_user_meta_data) values ('${E}', 'elena@studio.it', '{"nome":"Elena","cognome":"Neri"}')`);
+  const [{ create_team_invite: code }] = await as(C, () => q(`select public.create_team_invite('${teamC}', 1, 7)`));
+  await as(E, () => q(`select public.join_team_with_code('${code}')`));
+  await as(E, () => assert.rejects(q(`insert into public.team_libraries (team_id, data) values ('${teamC}', '{}')`), /row-level security/));
+  const [row] = await as(C, () => q(`insert into public.team_libraries (team_id, data, updated_by) values ('${teamC}', '{"metodiche":[]}', '${E}') returning updated_by`));
+  assert.equal(row.updated_by, C, 'autore deciso dal server');
+  await as(E, async () => {
+    assert.equal((await q('select team_id from public.team_libraries')).length, 1);
+    assert.equal((await q(`update public.team_libraries set data = '{"x":1}' returning team_id`)).length, 0);
+    assert.equal((await q('delete from public.team_libraries returning team_id')).length, 0);
+  });
+  await as(X, async () => assert.equal((await q('select team_id from public.team_libraries')).length, 0, 'fuori dal team non si vede'));
+  await as(C, () => q(`select public.set_team_member_role('${teamC}', '${E}', 'admin')`));
+  await as(E, async () => {
+    const [u] = await q(`update public.team_libraries set data = '{"x":2}', team_id = gen_random_uuid() returning updated_by, team_id`);
+    assert.equal(u.updated_by, E);
+    assert.equal(u.team_id, teamC, 'il team non cambia');
+  });
+});

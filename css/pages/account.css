@@ -14,6 +14,7 @@
 
 /* Editor della libreria */
 .lib-toolbar{ display: flex; flex-wrap: wrap; gap: var(--s-2); align-items: center; margin-bottom: var(--s-4); }
+.lib-source{ display: flex; flex-direction: column; gap: var(--s-2); margin-bottom: var(--s-3); max-width: 420px; }
 .lib-editor{ display: grid; grid-template-columns: 280px 1fr; gap: var(--s-4); align-items: start; }
 .lib-tree{ position: sticky; top: 64px; display: flex; flex-direction: column; gap: var(--s-2); max-height: calc(100vh - 90px); overflow: auto; padding-right: 4px; }
 .lib-tree__list{ display: flex; flex-direction: column; gap: var(--s-3); }
@@ -37,6 +38,8 @@
 .lib-row .input{ flex: 1; }
 .lib-phrase{ border: 1px solid var(--border); border-left: 3px solid var(--normal); border-radius: var(--r-sm); padding: var(--s-2); display: flex; flex-direction: column; gap: 6px; background: var(--bg); }
 .lib-phrase--abnormal{ border-left-color: var(--abnormal); }
+.lib-phrase--optional{ border-left-style: dashed; }
+.lib-phrase--optional:not(.lib-phrase--abnormal){ border-left-color: var(--border-strong); }
 .lib-phrase__top{ display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
 .lib-phrase__top .input:first-child{ flex: 1; min-width: 160px; }
 .lib-phrase__top select.input{ width: auto; }
@@ -56,3 +59,12 @@
   .lib-editor{ grid-template-columns: 1fr; }
   .lib-tree{ position: static; max-height: 260px; }
 }
+
+/* Abbreviazioni (Preferenze) */
+.abbr-list{ display: flex; flex-direction: column; gap: 4px; }
+.abbr-row{ display: flex; align-items: center; gap: var(--s-3); padding: 6px 0; border-bottom: 1px solid var(--border); }
+.abbr-row code{ min-width: 90px; color: var(--primary); }
+.abbr-row span{ flex: 1; min-width: 0; color: var(--text-muted); overflow-wrap: anywhere; }
+.abbr-form{ display: flex; gap: var(--s-2); align-items: flex-end; flex-wrap: wrap; }
+.abbr-form .field{ width: 140px; }
+.abbr-form .abbr-form__value{ flex: 1; min-width: 200px; width: auto; }

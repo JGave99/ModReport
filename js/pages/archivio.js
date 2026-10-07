@@ -4,6 +4,7 @@ import { $, escapeHtml, formatDateTime, setMessage, iconHtml } from '../lib/dom.
 import { requireSession, isSharedDevice } from '../lib/session.js';
 import { confirmDialog, alertDialog } from '../lib/dialog.js';
 import { listEntries, addEntry, deleteEntry, clearEntries, exportEntries, importEntries } from '../lib/local-archive.js';
+import { computeStats, statsCsv } from '../lib/archive-stats.js';
 
 const sb = getSupabase();
 let currentUser = null;
@@ -83,6 +84,13 @@ function renderList() {
     };
     list.appendChild(item);
   });
+  
+  // Disegna le statistiche dopo ogni render
+  try {
+    drawStats();
+  } catch (e) {
+    console.error('Errore nel disegno delle statistiche:', e);
+  }
 }
 
 $('search-input').addEventListener('input', renderList);
@@ -119,6 +127,21 @@ $('btn-clear').onclick = async () => {
   if (!await confirmDialog('Svuotare l\'archivio?', 'Tutti i referti salvati su questo computer verranno eliminati. Se ti servono, scarica prima una copia.', { okText: 'Svuota', danger: true })) return;
   await clearEntries(currentUser.id);
   await loadEntries();
+};
+
+$('btn-export-csv').onclick = () => {
+  const csv = statsCsv(allEntries);
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const now = new Date();
+  const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  a.download = `modreport-statistiche-${dateStr}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
 };
 
 // ---- Spostamento dell'archivio salvato nel cloud (versioni precedenti) ----
@@ -160,6 +183,40 @@ $('btn-move-cloud').onclick = async () => {
   }
   btn.disabled = false;
 };
+
+function drawBars(box, rows) {
+  box.innerHTML = '';
+  const max = Math.max(1, ...rows.map((r) => r.n));
+  rows.forEach((r) => {
+    const row = document.createElement('div');
+    row.className = 'bar';
+    const label = document.createElement('span');
+    label.className = 'bar__label';
+    label.textContent = r.nome;
+    const track = document.createElement('span');
+    track.className = 'bar__track';
+    const fill = document.createElement('span');
+    fill.className = 'bar__fill';
+    fill.style.width = (r.n / max) * 100 + '%';
+    track.appendChild(fill);
+    const value = document.createElement('span');
+    value.className = 'bar__value';
+    value.textContent = r.n;
+    row.append(label, track, value);
+    box.appendChild(row);
+  });
+}
+
+function drawStats() {
+  const section = $('stats-section');
+  section.hidden = !allEntries.length;
+  if (!allEntries.length) return;
+  const stats = computeStats(allEntries);
+  $('stats-total').textContent = stats.totale;
+  drawBars($('chart-metodica'), stats.perMetodica);
+  drawBars($('chart-esame'), stats.perEsame);
+  drawBars($('chart-mese'), stats.perMese.map((m) => ({ nome: m.etichetta, n: m.n })));
+}
 
 (async function init() {
   if (!sb) { $('gate').textContent = 'Configurazione cloud mancante.'; return; }

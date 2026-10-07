@@ -1,89 +1,50 @@
 // Libreria personale (metodiche, esami, indicazioni, frasi): caricamento, migrazione e salvataggio sicuro.
-import { DEFAULT_LIBRARY, DEFAULTS_VERSION, DEPRECATED_DEFAULTS, LEGACY_DEFAULT_TEXTS } from './default-library.js';
+// La logica di aggiornamento (ID stabili, base versionata, modifiche dell'utente) è in library-merge.js.
+import { DEFAULT_LIBRARY, DEFAULTS_VERSION } from './default-library.js';
+import { V1_TEXTS, V2_TEXTS, DEPRECATED_TEXTS, V2_METODICHE } from './library-base/legacy.js';
+import { baseForUser, mergeBase, migrateFromV2, normalize } from './library-merge.js';
+import { DEFAULT_ABBREVIATIONS } from './voice-text.js';
 
-const clone = (v) => JSON.parse(JSON.stringify(v));
 const isObj = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
 
 export function cloneDefaults() {
-  return clone(DEFAULT_LIBRARY);
-}
-
-function phrasesOf(groups) {
-  return isObj(groups) ? Object.values(groups).filter(Array.isArray).flat().filter(Boolean) : [];
-}
-
-function mergeGroups(target, source, groupNames) {
-  for (const name of groupNames) {
-    if (!source || !Array.isArray(source[name])) continue;
-    target[name] = Array.isArray(target[name]) ? target[name] : [];
-    for (const phrase of source[name]) {
-      if (!target[name].some((b) => b && b.text === phrase.text)) target[name].push(clone(phrase));
-    }
-  }
+  const data = baseForUser(DEFAULT_LIBRARY);
+  data.abbreviazioni = { ...DEFAULT_ABBREVIATIONS };
+  return data;
 }
 
 // Porta una libreria salvata alla versione corrente dei predefiniti senza perdere le personalizzazioni.
-// Idempotente: può essere eseguita a ogni caricamento.
+// Idempotente. report: { esamiAggiunti, frasiAggiunte, esamiAggiornati } quando cambia qualcosa.
 export function migrateLibrary(raw) {
-  if (!isObj(raw)) return { data: cloneDefaults(), changed: false, restored: [], replaced: [] };
-  const data = clone(raw);
-  data.metodiche = Array.isArray(data.metodiche) ? data.metodiche : [];
-  data.esamiByMetodica = isObj(data.esamiByMetodica) ? data.esamiByMetodica : {};
-  data.indicazioniByEsame = isObj(data.indicazioniByEsame) ? data.indicazioniByEsame : {};
-  data.refertoByEsame = isObj(data.refertoByEsame) ? data.refertoByEsame : {};
-
-  const restored = [];
-  const replaced = [];
+  if (!isObj(raw)) return { data: cloneDefaults(), changed: false, report: null };
+  const version = Number(raw.defaultsVersion) || 1;
+  let data;
+  let report = null;
   let changed = false;
-
-  if ((Number(data.defaultsVersion) || 1) < 2) {
-    const defaults = DEFAULT_LIBRARY.refertoByEsame;
-    const userExams = new Set(Object.values(data.esamiByMetodica).filter(Array.isArray).flat());
-
-    for (const esame of Object.keys(defaults)) {
-      if (!userExams.has(esame)) continue;
-      const phrases = phrasesOf(data.refertoByEsame[esame]);
-      const legacy = new Set(LEGACY_DEFAULT_TEXTS[esame] || []);
-      // Esame vuoto (riduzione del 24/09) o mai personalizzato: passa ai nuovi predefiniti.
-      if (!phrases.length || phrases.every((b) => legacy.has(b.text))) {
-        data.refertoByEsame[esame] = clone(defaults[esame]);
-        restored.push(esame);
-      }
-    }
-
-    // Esami personalizzati: sostituisce solo le frasi predefinite rischiose rimaste identiche.
-    for (const dep of DEPRECATED_DEFAULTS) {
-      const groups = data.refertoByEsame[dep.esame];
-      if (!isObj(groups) || restored.includes(dep.esame)) continue;
-      let found = false;
-      for (const name of Object.keys(groups)) {
-        if (!Array.isArray(groups[name])) continue;
-        const before = groups[name].length;
-        groups[name] = groups[name].filter((b) => !b || b.text !== dep.text);
-        if (groups[name].length !== before) found = true;
-        if (!groups[name].length) delete groups[name];
-      }
-      if (found) {
-        mergeGroups(groups, defaults[dep.esame], dep.groups);
-        replaced.push(dep.esame);
-      }
-    }
-
-    data.defaultsVersion = DEFAULTS_VERSION;
+  if (version < DEFAULTS_VERSION) {
+    ({ data, report } = version < 3
+      ? migrateFromV2(raw, DEFAULT_LIBRARY, { V1_TEXTS, V2_TEXTS, DEPRECATED_TEXTS, V2_METODICHE })
+      : mergeBase(raw, DEFAULT_LIBRARY));
     changed = true;
+  } else {
+    data = normalize(raw);
   }
-
-  return { data, changed, restored, replaced };
+  if (data.abbreviazioni === undefined) { data.abbreviazioni = { ...DEFAULT_ABBREVIATIONS }; changed = true; }
+  return { data, changed, report, fromVersion: version };
 }
 
-// Gestisce lettura e scrittura della riga user_data con controllo dei conflitti:
+// Gestisce lettura e scrittura della riga della libreria (user_data, o team_libraries per la libreria
+// condivisa del team) con controllo dei conflitti:
 // - un errore di lettura NON viene confuso con "libreria vuota";
 // - ogni errore di salvataggio viene segnalato;
 // - se un'altra scheda o postazione ha salvato nel frattempo, non sovrascrive in silenzio.
 export class LibraryStore {
-  constructor({ supabase, userId, onStatus }) {
+  constructor({ supabase, userId, onStatus, table = 'user_data', keyColumn = 'user_id', keyValue = userId }) {
     this.sb = supabase;
     this.userId = userId;
+    this.table = table;
+    this.keyColumn = keyColumn;
+    this.keyValue = keyValue;
     this.onStatus = onStatus || (() => {});
     this.updatedAt = null; // valore letto dal database (null = riga non ancora creata)
     this.loaded = false;
@@ -95,9 +56,9 @@ export class LibraryStore {
 
   async load() {
     const { data, error } = await this.sb
-      .from('user_data')
+      .from(this.table)
       .select('data, updated_at')
-      .eq('user_id', this.userId)
+      .eq(this.keyColumn, this.keyValue)
       .maybeSingle();
     if (error) return { status: 'error', error };
     this.loaded = true;
@@ -107,7 +68,7 @@ export class LibraryStore {
     }
     this.updatedAt = data.updated_at;
     const migrated = migrateLibrary(data.data);
-    return { status: 'ok', ...migrated };
+    return { status: 'ok', ...migrated, raw: migrated.changed ? data.data : null };
   }
 
   // Programma un salvataggio (debounce). getData restituisce lo stato corrente della libreria.
@@ -147,8 +108,8 @@ export class LibraryStore {
     const payload = { data: this.getData(), updated_at: new Date().toISOString() };
     let result;
     if (this.updatedAt === null) {
-      result = await this.sb.from('user_data')
-        .insert({ user_id: this.userId, ...payload })
+      result = await this.sb.from(this.table)
+        .insert({ [this.keyColumn]: this.keyValue, ...payload })
         .select('updated_at').maybeSingle();
       if (result.error && result.error.code === '23505') {
         this.dirty = true;
@@ -156,7 +117,7 @@ export class LibraryStore {
         return;
       }
     } else {
-      let q = this.sb.from('user_data').update(payload).eq('user_id', this.userId);
+      let q = this.sb.from(this.table).update(payload).eq(this.keyColumn, this.keyValue);
       if (!force) q = q.eq('updated_at', this.updatedAt);
       result = await q.select('updated_at').maybeSingle();
       if (!result.error && !result.data) {

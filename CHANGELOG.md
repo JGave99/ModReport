@@ -24,6 +24,16 @@
 - Modalità locale ("Prova senza account").
 - Test end-to-end e integrazione continua.
 
+### Step 6 — Funzionalità
+- Libreria v3 (bozza da validare): 38 esami con tecnica, frase normale per distretto, varianti patologiche e conclusioni; categorie RADS come liste di scelta.
+- ID stabili: gli aggiornamenti della libreria predefinita non toccano le frasi personalizzate né ripropongono quelle eliminate.
+- Editor: "Referto normale" in un clic, varianti che sostituiscono la frase del distretto, frasi inserite nell'ordine dei distretti, conclusioni in fondo.
+- Campi da compilare con Tab e scelte con i numeri; avvisi prima di copiare o stampare (campi vuoti, lato, frasi in contraddizione, classe di dose).
+- Copia per sezione, ricerca rapida (Ctrl+K), scorciatoie, abbreviazioni personali, comandi vocali, dettatura sul dispositivo dove supportata.
+- Stampa: titolo, luogo e data, dati del paziente solo per il PDF (mai salvati).
+- Versioni salvate della libreria, libreria condivisa del team, configurazione guidata al primo accesso.
+- Statistiche dell'archivio con esportazione CSV per il libretto; app installabile con uso offline.
+
 ### Step 5 — Grafica e UX
 - Nuovo design system condiviso da tutte le pagine (tema scuro e chiaro, dimensione del testo regolabile) e icone al posto delle emoji.
 - Editor riorganizzato: barra superiore più ordinata, frasi normali e patologiche riconoscibili, frasi inserite evidenziate, stato del microfono visibile.

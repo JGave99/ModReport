@@ -62,24 +62,25 @@ Origine: audit del 03-04/10/2026. Legenda: `[x]` fatto · `[ ]` da fare · 👤 
 - 👤 [ ] Dominio definitivo in canonical/Open Graph di `index.html`, `sitemap.xml` e `robots.txt` (lo segnala `npm run check:lancio`)
 
 ## Step 6 — Funzionalità
-- [ ] Libreria con ID stabili: base versionata + modifiche utente
-- [ ] Libreria v1 ampliata (bozza clinica da validare): tecnica, normale completo per distretto, varianti patologiche, conclusioni
-- [ ] "Referto normale" in un clic; varianti che sostituiscono la frase del distretto; blocchi Tecnica e Conclusioni
-- [ ] Campi da compilare con Tab (`[___ mm]`, `{dx|sx}`, `[data]`) e avviso se vuoti
-- [ ] PDF: titolo (Dott./Dott.ssa/Prof.), data, anteprima, campi paziente solo per la stampa, classe di dose
-- [ ] Export/import della libreria e versioni salvate
-- [ ] Configurazione guidata al primo accesso
-- [ ] Ricerca rapida (Ctrl+K), abbreviazioni, scorciatoie
-- [ ] Comandi vocali (punto, virgola, a capo…)
-- [ ] Controlli di coerenza locali (lato, campi vuoti, normale+patologico)
-- [ ] Libreria condivisa di studio/reparto
-- [ ] Copia per sezione
-- [ ] App installabile (PWA) con uso offline
-- [ ] Modelli semi-strutturati con categorie RADS a scelta (non calcolate)
-- [ ] Statistiche per specializzandi (dall'archivio locale)
-- [ ] Estensione browser con scorciatoia sopra il RIS (prototipo)
-- [ ] Dettatura sul dispositivo (Whisper) (prototipo)
-- 👤 [ ] Revisione clinica della libreria da parte di 2-3 radiologi
+- [x] Libreria con ID stabili: base versionata + modifiche utente
+- [x] Libreria v3 ampliata (bozza clinica da validare, vedi docs/libreria-revisione.md): tecnica, normale per distretto, varianti patologiche, conclusioni; 38 esami
+- [x] "Referto normale" in un clic; varianti che sostituiscono la frase del distretto; blocchi Tecnica e Conclusioni
+- [x] Campi da compilare con Tab (`[___ mm]`, `[a/b]`, `[data]`) e avviso se vuoti
+- [x] PDF: titolo (Dott./Dott.ssa/Prof.), luogo e data, anteprima, campi paziente solo per la stampa, classe di dose
+- [x] Export/import della libreria e versioni salvate
+- [x] Configurazione guidata al primo accesso
+- [x] Ricerca rapida (Ctrl+K), abbreviazioni, scorciatoie
+- [x] Comandi vocali (punto, virgola, a capo…) e dettatura elaborata sul dispositivo dove il browser lo consente
+- [x] Controlli di coerenza locali (lato, campi vuoti, normale+patologico, classe di dose)
+- [x] Libreria condivisa di studio/reparto
+- [x] Copia per sezione
+- [x] App installabile (PWA) con uso offline
+- [x] Modelli semi-strutturati con categorie RADS a scelta (non calcolate)
+- [x] Statistiche per specializzandi (dall'archivio locale, CSV per il libretto)
+- [ ] Estensione browser con scorciatoia sopra il RIS (prototipo) — sospeso: bozza in extension/, non verificata né inclusa
+- [ ] Dettatura sul dispositivo con Whisper (prototipo) — sospeso: bozza in labs/, non verificata né inclusa
+- 👤 [ ] Revisione clinica della libreria da parte di 2-3 radiologi (punti in docs/libreria-revisione.md)
+- 👤 [ ] Applicare la migrazione 20261005120000_libreria.sql in produzione
 
 ## Step 7 — Pagamento
 - [ ] Piani Free / Pro / Specializzandi / Studio con limiti applicati dal server

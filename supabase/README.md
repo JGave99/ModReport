@@ -9,6 +9,8 @@ Le regole di sicurezza vere stanno qui (RLS, funzioni, trigger, policy dello Sto
 | `migrations/20261004120000_baseline.sql` | Tabelle usate dall'app (idempotente, non tocca i dati esistenti) |
 | `migrations/20261004120100_teams.sql` | Team per organizzazione; converte il team unico in "Team ModReport" e fa scadere i vecchi inviti |
 | `migrations/20261004120200_security.sql` | RLS, funzioni RPC, trigger, limiti di dimensione, Storage, MFA obbligatoria per chi l'ha attivata |
+| `migrations/20261004130000_privacy.sql` | Consensi (versioni di termini e informativa), registro dei consensi |
+| `migrations/20261005120000_libreria.sql` | Versioni salvate della libreria (ultime 30) e libreria condivisa del team |
 | `tests/supabase-shim.sql` | Ambiente Supabase minimo per i test (non va applicato in produzione) |
 
 Test: `npm run test:sql` esegue le migrazioni su un Postgres in memoria (PGlite) e verifica le regole con utenti di prova.
