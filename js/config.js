@@ -15,7 +15,21 @@
   }
 })();
 
-window.MR_CONFIG = Object.freeze({
-  SUPABASE_URL: 'https://umejthggxihtyqvcszgm.supabase.co',
-  SUPABASE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVtZWp0aGdneGlodHlxdmNzemdtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg4NzI0MzEsImV4cCI6MjEwNDQ0ODQzMX0.BPaujgB70aLpWSifk5nH93fuyyyfOe8Uw4RupV1YQQE',
-});
+// Ambienti. "prova" vale per le anteprime (Cloudflare Pages *.pages.dev, Netlify *.netlify.app) e usa un progetto
+// Supabase separato: chi prova non tocca mai i dati reali. Finché il progetto di prova non è configurato le anteprime
+// funzionano solo in modalità locale ("Prova senza account"). L'host di ogni progetto va anche nella CSP (pagine e _headers).
+(function () {
+  var ENVS = {
+    produzione: {
+      SUPABASE_URL: 'https://umejthggxihtyqvcszgm.supabase.co',
+      SUPABASE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVtZWp0aGdneGlodHlxdmNzemdtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg4NzI0MzEsImV4cCI6MjEwNDQ0ODQzMX0.BPaujgB70aLpWSifk5nH93fuyyyfOe8Uw4RupV1YQQE',
+    },
+    prova: {
+      SUPABASE_URL: '',
+      SUPABASE_KEY: '',
+    },
+  };
+  var preview = /\.(pages\.dev|netlify\.app)$/.test(window.location.hostname);
+  window.MR_ENV = preview ? 'prova' : 'produzione';
+  window.MR_CONFIG = Object.freeze(ENVS[window.MR_ENV]);
+})();

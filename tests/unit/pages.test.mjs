@@ -6,7 +6,8 @@ import { readFileSync, readdirSync } from 'node:fs';
 const root = new URL('../../', import.meta.url);
 const pages = readdirSync(root).filter((f) => f.endsWith('.html'));
 const config = readFileSync(new URL('js/config.js', root), 'utf8');
-const supabaseHost = new URL(config.match(/SUPABASE_URL:\s*'([^']+)'/)[1]).host;
+// Tutti i progetti Supabase configurati (produzione e prova) devono essere ammessi dalla CSP.
+const supabaseHosts = [...config.matchAll(/SUPABASE_URL:\s*'([^']+)'/g)].map((m) => new URL(m[1]).host);
 const headers = readFileSync(new URL('_headers', root), 'utf8');
 
 test('ogni pagina ha la CSP con l\'host Supabase configurato', () => {
@@ -14,7 +15,9 @@ test('ogni pagina ha la CSP con l\'host Supabase configurato', () => {
     const html = readFileSync(new URL(p, root), 'utf8');
     const csp = (html.match(/http-equiv="Content-Security-Policy" content="([^"]+)"/) || [])[1];
     assert.ok(csp, p + ': CSP mancante');
-    assert.ok(csp.includes('https://' + supabaseHost) && csp.includes('wss://' + supabaseHost), p + ': connect-src non allineato a js/config.js');
+    for (const host of supabaseHosts) {
+      assert.ok(csp.includes('https://' + host) && csp.includes('wss://' + host), p + ': connect-src non allineato a js/config.js (' + host + ')');
+    }
     assert.ok(headers.includes(csp), p + ': CSP diversa da quella in _headers');
   }
 });

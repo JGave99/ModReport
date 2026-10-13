@@ -1366,7 +1366,9 @@ $('btn-logout').onclick = async () => {
 
 (async function init() {
   if (!sb) {
-    showLogin('Servizio non configurato: impossibile collegarsi al cloud.');
+    showLogin(window.MR_ENV === 'prova'
+      ? 'Versione di prova: gli account non sono ancora attivi. Usa "Prova senza account" qui sotto.'
+      : 'Servizio non configurato: impossibile collegarsi al cloud.');
     return;
   }
   sb.auth.onAuthStateChange((event) => {
