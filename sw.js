@@ -73,6 +73,9 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   if (url.origin !== location.origin) return;
   
+  // Video e richieste parziali (Range) vanno sempre diretti in rete: i browser li gestiscono meglio senza service worker.
+  if (event.request.destination === 'video' || event.request.headers.has('range')) return;
+
   // Non servire da cache se contiene ?fake=
   if (url.searchParams.has('fake')) return;
   
