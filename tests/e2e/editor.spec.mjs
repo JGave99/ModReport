@@ -103,15 +103,18 @@ test('configurazione guidata: le metodiche non scelte spariscono', async ({ page
   await expect(page.locator('#metodica-row button', { hasText: 'RX' })).toHaveCount(1);
 });
 
-test('referto strutturato: normale, variante, campi con Tab, dose, controlli, copia per sezione, Ctrl+K', async ({ page, context }) => {
+test('referto strutturato: negativo, variante, campi con Tab, controlli, copia per sezione, Ctrl+K', async ({ page, context }) => {
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await login(page);
   await chip(page, '#metodica-row', 'RX');
   await chip(page, '#esame-body', 'RX TORACE 2PR');
-  await page.click('#btn-normal');
+  await expect(page.locator('#referto-body')).not.toContainText('Conclusioni');
+  await expect(page.locator('#dose-row')).toHaveCount(0);
+  await page.click('#btn-negativo');
   const ta = page.locator('#report-text');
-  await expect(ta).toHaveValue(/Conclusioni:\n/);
+  await expect(ta).toHaveValue(/Non versamento pleurico bilateralmente\./);
   const normal = await ta.inputValue();
+  expect(normal).not.toContain('Conclusioni');
   // La variante patologica sostituisce la frase normale dello stesso distretto
   await page.locator('#referto-body .phrase--abnormal', { hasText: 'Versamento' }).first().click();
   const withVariant = await ta.inputValue();
@@ -123,25 +126,54 @@ test('referto strutturato: normale, variante, campi con Tab, dose, controlli, co
   await ta.press('Tab');
   const selected = await ta.evaluate((t) => t.value.slice(t.selectionStart, t.selectionEnd));
   expect(selected).toMatch(/^(\[.+\]|_{3,})$/);
-  // Classe di dose
-  await page.locator('#dose-row [data-dose="II"]').click();
-  await expect(ta).toHaveValue(/Classe di dose: II/);
   // Con campi ancora da compilare, copiare chiede conferma
   await page.click('#btn-copy');
   await expect(page.locator('dialog[open]')).toContainText('campi da compilare');
   await page.locator('dialog[open] button[type=submit]').click();
   await expect(page.locator('.toast').last()).toContainText('Copiato');
-  // Copia solo le conclusioni
+  // Copia solo il referto, senza indicazione
   await page.click('#btn-copy-more');
-  await page.click('#copy-menu [data-copy="conclusioni"]');
+  await expect(page.locator('#copy-menu [data-copy="conclusioni"]')).toHaveCount(0);
+  await page.click('#copy-menu [data-copy="referto"]');
   await page.locator('dialog[open] button[type=submit]').click();
   const clip = await page.evaluate(() => navigator.clipboard.readText());
-  expect(clip).not.toContain('Conclusioni:');
-  expect(clip).not.toContain('Classe di dose');
+  expect(clip).toContain('Versamento pleurico');
   // Ricerca rapida
   await page.keyboard.press('Control+k');
   await expect(page.locator('#palette')).toBeVisible();
   await page.fill('#palette-input', 'tc encefalo');
   await page.keyboard.press('Enter');
   await expect(page.locator('#report-context')).toContainText('TC ENCEFALO');
+});
+
+test('referto negativo personalizzato: si scelgono le frasi, si salvano nella libreria, si torna ai predefiniti', async ({ page }) => {
+  await login(page);
+  await chip(page, '#metodica-row', 'RX');
+  await chip(page, '#esame-body', 'RX TORACE 2PR');
+  await page.click('#btn-negativo-config');
+  const dialog = page.locator('#negativo-dialog');
+  await expect(dialog).toBeVisible();
+  await expect(dialog.locator('#negativo-esame')).toHaveText('RX TORACE 2PR');
+  // Tengo solo la frase del versamento pleurico
+  const boxes = dialog.locator('input[type=checkbox]');
+  const count = await boxes.count();
+  for (let i = 0; i < count; i++) await boxes.nth(i).uncheck();
+  await dialog.locator('label', { hasText: 'Non versamento pleurico bilateralmente.' }).locator('input').check();
+  await page.click('#negativo-save');
+  await expect(dialog).not.toBeVisible();
+  await page.click('#btn-negativo');
+  const ta = page.locator('#report-text');
+  await expect(ta).toHaveValue(/Non versamento pleurico bilateralmente\./);
+  expect((await ta.inputValue()).match(/\.\n/g).length).toBe(1);
+  // La scelta resta dopo il ricaricamento (salvata nella libreria)
+  await page.reload();
+  await page.waitForSelector('body[data-ready="1"]');
+  await chip(page, '#metodica-row', 'RX');
+  await chip(page, '#esame-body', 'RX TORACE 2PR');
+  await page.click('#btn-negativo-config');
+  await expect(dialog.locator('input:checked')).toHaveCount(1);
+  await page.click('#negativo-default');
+  await expect(dialog).not.toBeVisible();
+  await page.click('#btn-negativo-config');
+  expect(await dialog.locator('input:checked').count()).toBeGreaterThan(3);
 });

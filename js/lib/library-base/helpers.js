@@ -2,11 +2,12 @@
 //
 // Regole della libreria (valgono anche per le frasi dell'utente):
 // - ogni gruppo è un distretto (o un aspetto) del referto; i gruppi compaiono nel referto nell'ordine
-//   in cui sono scritti. "Tecnica" va per primo, "Conclusioni" per ultimo (sezione con intestazione);
-// - nel gruppo, la prima frase normale (neg: false) è quella del "Referto normale";
+//   in cui sono scritti. Niente gruppi "Tecnica" e "Conclusioni" nella libreria predefinita (issue #1):
+//   chi li vuole li aggiunge nella sua libreria, e il motore del referto li gestisce ancora;
+// - nel gruppo, la prima frase normale (neg: false) è quella proposta nel "Referto negativo";
 // - le frasi patologiche (neg: true) sono varianti: inserite nel referto sostituiscono la frase
 //   normale dello stesso gruppo (e viceversa). Più frasi patologiche dello stesso gruppo possono coesistere;
-// - le frasi "opzionali" (opz: true) non entrano nel referto normale e non sostituiscono nulla
+// - le frasi "opzionali" (opz: true) non entrano nel referto negativo predefinito e non sostituiscono nulla
 //   (presidi, misure aggiuntive, note);
 // - campi da compilare: [___] o [___ mm] = campo libero, [a/b/c] = scelta tra opzioni. Mai dati del paziente.
 //

@@ -1,11 +1,11 @@
 // Libreria predefinita — TC. BOZZA da validare clinicamente (revisione di 2-3 radiologi prima del lancio).
 //
 // Note per la revisione:
-// - O(..., true) = reperto patologico "in aggiunta": non entra nel referto normale e non sostituisce la
+// - O(..., true) = reperto patologico "in aggiunta": non entra nel referto negativo e non sostituisce la
 //   frase normale del gruppo perché non la contraddice (es. enfisema accanto a "parenchima privo di
 //   alterazioni densitometriche focali", ateromasia accanto a "calibro regolare");
 // - le affermazioni valide solo con il mezzo di contrasto sono opzionali (es. "Non embolia (con mdc)"),
-//   così il referto normale resta corretto anche per gli esami senza mdc;
+//   così il referto negativo resta corretto anche per gli esami senza mdc;
 // - classificazioni solo come liste di scelta compilate dal medico (Bosniak 2019, Stanford, tipo di
 //   endoleak, grado di listesi), mai calcolate; nessun punteggio, nessuna raccomandazione di follow-up
 //   o di ulteriori esami legata ai reperti.
@@ -39,13 +39,6 @@ export const INDICAZIONI = {
 
 // -------------------------------------------------------------------------------------------------
 // Frasi comuni a più esami (exam() le copia e antepone all'ID il codice dell'esame).
-
-// Tecnica e confronto
-const TECNICA_TC = N('tecnica', 'Tecnica', 'Esame eseguito [senza/senza e con] mezzo di contrasto iodato e.v. ([___] ml di [prodotto]).');
-const TECNICA_OSSO = N('tecnica', 'Tecnica', 'Esame eseguito senza mezzo di contrasto, con ricostruzioni multiplanari sagittali e coronali.');
-const CONFRONTO = O('tecnica.confronto', 'Confronto', 'Confronto con precedente esame TC del [data].');
-const ARTEFATTI = O('tecnica.artefatti', 'Artefatti', 'Valutazione parzialmente limitata da artefatti da [movimento/respiro/materiale metallico].');
-const CONCL_CONFRONTO = O('concl.confronto', 'Confronto', 'Quadro [invariato/in miglioramento/in peggioramento] rispetto al precedente esame del [data].');
 
 // Torace
 const POLMONE_NODULO = P('polmone.nodulo', 'Nodulo', 'Nodulo [solido/parzialmente solido/a vetro smerigliato] del [lobo] di [___ mm] (immagine [___]).');
@@ -90,14 +83,11 @@ const OSSA_LESIONE = P('scheletro.lesione', 'Lesione ossea', 'Lesione ossea [lit
 const VERTEBRA_LESIONE = P('vertebre.lesione', 'Lesione ossea', 'Lesione ossea [litica/addensante/mista] del corpo vertebrale di [___], di [___ mm], [con/senza] interruzione della corticale.');
 const CANALE_NORMA = N('canale.norma', 'Nella norma', 'Canale vertebrale e forami di coniugazione di ampiezza conservata ai livelli esaminati.');
 const FORAMI_STENOSI = P('canale.foraminale', 'Stenosi foraminale', 'Stenosi [lieve/moderata/severa] [del forame di coniugazione destro/del forame di coniugazione sinistro/dei forami di coniugazione bilateralmente] a livello [___].');
-const CONCL_DEGENERATIVE = (tratto) => P('concl.degenerative', 'Alterazioni degenerative', 'Alterazioni degenerative disco-artrosiche del rachide ' + tratto + ', prevalenti a livello [___].');
-const CONCL_STENOSI = P('concl.stenosi', 'Stenosi del canale', 'Stenosi [lieve/moderata/severa] del canale vertebrale a livello [___].');
 
 // -------------------------------------------------------------------------------------------------
 
 export const REFERTI = {
   'TC TORACE': exam('tc-torace', {
-    'Tecnica': [TECNICA_TC, CONFRONTO, ARTEFATTI],
     'Parenchima polmonare': [
       N('polmone.norma', 'Nella norma', 'Parenchima polmonare privo di alterazioni densitometriche focali.'),
       POLMONE_NODULO,
@@ -149,18 +139,9 @@ export const REFERTI = {
       N('addome.norma', 'Nella norma', 'Organi dell\'addome superiore compresi nel volume di studio senza alterazioni di rilievo.'),
       P('addome.reperto', 'Reperto incidentale', 'Nel volume di studio dell\'addome superiore: [___].'),
     ],
-    'Conclusioni': [
-      N('concl.norma', 'Nella norma', 'Esame TC del torace nei limiti della norma.'),
-      P('concl.nodulo', 'Nodulo polmonare', 'Nodulo polmonare [solido/parzialmente solido/a vetro smerigliato] del [lobo] di [___ mm], da correlare con il quadro clinico e con eventuali esami precedenti.'),
-      P('concl.massa', 'Formazione espansiva', 'Formazione espansiva del [lobo] di [___ mm], di [sospetta/verosimile] natura neoplastica.'),
-      P('concl.flogosi', 'Focolaio flogistico', 'Addensamento parenchimale [___] compatibile in prima ipotesi con focolaio flogistico; da correlare con il quadro clinico-laboratoristico.'),
-      P('concl.tep', 'Embolia polmonare', 'Reperti compatibili con embolia polmonare [bilaterale/destra/sinistra], con interessamento [del tronco polmonare/dei rami principali/dei rami lobari/dei rami segmentari/dei rami sottosegmentari].'),
-      CONCL_CONFRONTO,
-    ],
   }),
 
   'TC ADDOME COMPLETO': exam('tc-addome', {
-    'Tecnica': [TECNICA_TC, CONFRONTO],
     'Fegato': [
       N('fegato.norma', 'Nella norma', 'Fegato di dimensioni e densità nei limiti, privo di lesioni focali.'),
       FEGATO_STEATOSI,
@@ -207,23 +188,9 @@ export const REFERTI = {
     ],
     'Aorta addominale': [AORTA_ADD_NORMA, AORTA_ADD_ANEURISMA],
     'Scheletro': [OSSA_NORMA, OSSA_LESIONE],
-    'Conclusioni': [
-      N('concl.norma', 'Nella norma', 'Esame TC dell\'addome nei limiti della norma.'),
-      P('concl.appendicite', 'Appendicite acuta', 'Quadro compatibile con appendicite acuta [non complicata/complicata].'),
-      P('concl.diverticolite', 'Diverticolite acuta', 'Quadro compatibile con diverticolite acuta del [sigma/colon discendente/colon ascendente] [non complicata/complicata].'),
-      P('concl.occlusione', 'Occlusione intestinale', 'Quadro compatibile con occlusione intestinale [del tenue/del colon], con punto di transizione in sede [___].'),
-      P('concl.uropatia', 'Uropatia ostruttiva', 'Uropatia ostruttiva [destra/sinistra] da calcolo ureterale di [___ mm].'),
-      P('concl.lesione', 'Lesione da definire', 'Lesione [___] di natura da definire, da correlare con il quadro clinico-laboratoristico.'),
-      CONCL_CONFRONTO,
-    ],
   }),
 
   'TC ADDOME SENZA E CON MDC': exam('tc-addome-mdc', {
-    'Tecnica': [
-      N('tecnica', 'Tecnica', 'Esame eseguito senza e con mezzo di contrasto iodato e.v. ([___] ml di [prodotto]), con acquisizioni in fase [arteriosa/portale/tardiva].'),
-      CONFRONTO,
-      ARTEFATTI,
-    ],
     'Fegato': [
       N('fegato.norma', 'Nella norma', 'Fegato di dimensioni e densità nei limiti, privo di lesioni focali nelle diverse fasi di studio.'),
       FEGATO_STEATOSI,
@@ -266,19 +233,9 @@ export const REFERTI = {
       VERSAMENTO_LIBERO,
     ],
     'Scheletro': [OSSA_NORMA, OSSA_LESIONE],
-    'Conclusioni': [
-      N('concl.norma', 'Nella norma', 'Esame TC dell\'addome senza e con mdc nei limiti della norma.'),
-      P('concl.angioma', 'Angioma epatico', 'Lesione epatica al segmento [___] con comportamento contrastografico compatibile con angioma.'),
-      P('concl.epatica', 'Lesione epatica', 'Lesione epatica al segmento [___] di [___ mm], a comportamento [ipervascolare/ipovascolare], di natura da definire; da correlare con il quadro clinico-laboratoristico.'),
-      P('concl.cisti-renale', 'Lesione cistica renale', 'Lesione cistica renale [destra/sinistra] di [___ mm], categoria Bosniak 2019 [I/II/IIF/III/IV].'),
-      P('concl.renale-solida', 'Lesione renale solida', 'Lesione solida renale [destra/sinistra] di [___ mm] con enhancement, di [sospetta/verosimile] natura neoplastica.'),
-      P('concl.pancreas', 'Lesione pancreatica', 'Lesione [solida/cistica] del pancreas di [___ mm], di natura da definire.'),
-      CONCL_CONFRONTO,
-    ],
   }),
 
   'TC TORACE ADDOME PELVI (STADIAZIONE)': exam('tc-tap', {
-    'Tecnica': [TECNICA_TC, CONFRONTO],
     'Neoplasia nota': [
       O('neoplasia.esiti', 'Esiti chirurgici', 'Esiti di [___] per neoplasia [___].'),
       O('neoplasia.lesione', 'Lesione di riferimento', 'Lesione di riferimento in sede [___]: [___ mm] (precedente [___ mm] del [data]).', true),
@@ -322,17 +279,9 @@ export const REFERTI = {
       OSSA_LESIONE,
       P('scheletro.multiple', 'Lesioni multiple', 'Multiple lesioni ossee [litiche/addensanti/miste] a carico [___], la maggiore di [___ mm], da riferire in prima ipotesi a localizzazioni secondarie.'),
     ],
-    'Conclusioni': [
-      N('concl.norma', 'Nella norma', 'Non evidenti segni TC di localizzazioni di malattia nei distretti esaminati.'),
-      P('concl.secondarismi', 'Localizzazioni secondarie', 'Reperti compatibili con localizzazioni secondarie a carico di [___].'),
-      P('concl.linfonodi', 'Linfoadenopatie', 'Linfoadenopatie [___] sospette per localizzazioni di malattia.'),
-      P('concl.evoluzione', 'Confronto con precedente', 'Rispetto al precedente esame del [data], [stabilità/riduzione/incremento] dimensionale delle lesioni note, [senza/con] comparsa di nuove lesioni.'),
-      P('concl.indeterminato', 'Reperto da definire', 'Reperto [___] di natura da definire, da correlare con il quadro clinico e con eventuali esami precedenti.'),
-    ],
   }),
 
   'TC RACHIDE LOMBOSACRALE': exam('tc-rachide-ls', {
-    'Tecnica': [TECNICA_OSSO, CONFRONTO, ARTEFATTI],
     'Allineamento': [
       N('allineamento.norma', 'Conservato', 'Allineamento dei metameri lombosacrali conservato.'),
       P('allineamento.listesi', 'Listesi', '[Anterolistesi/Retrolistesi] di [___] su [___] di [I/II/III/IV] grado, [con/senza] lisi istmica.'),
@@ -359,18 +308,9 @@ export const REFERTI = {
       N('faccette.norma', 'Nella norma', 'Articolazioni interapofisarie senza significative alterazioni degenerative.'),
       P('faccette.artrosi', 'Artrosi interapofisaria', 'Artrosi interapofisaria [lieve/moderata/marcata] a livello [___], [bilaterale/a destra/a sinistra].'),
     ],
-    'Conclusioni': [
-      N('concl.norma', 'Nella norma', 'Esame TC del rachide lombosacrale nei limiti della norma.'),
-      P('concl.ernia', 'Ernia discale', 'Ernia discale [mediana/paramediana destra/paramediana sinistra/foraminale destra/foraminale sinistra] a livello [___].'),
-      CONCL_STENOSI,
-      CONCL_DEGENERATIVE('lombosacrale'),
-      P('concl.frattura', 'Frattura vertebrale', 'Frattura [recente/di datazione non determinabile] del corpo vertebrale di [___].'),
-      CONCL_CONFRONTO,
-    ],
   }),
 
   'TC BACINO': exam('tc-bacino', {
-    'Tecnica': [TECNICA_OSSO, CONFRONTO, ARTEFATTI],
     'Anello pelvico': [
       N('anello.norma', 'Nella norma', 'Anello pelvico in continuità, senza rime di frattura; sinfisi pubica e articolazioni sacro-iliache di ampiezza regolare.'),
       P('anello.frattura', 'Frattura', 'Frattura [composta/scomposta] [della branca ileo-pubica/della branca ischio-pubica/dell\'ala iliaca/della massa laterale del sacro] [destra/sinistra].'),
@@ -394,18 +334,9 @@ export const REFERTI = {
       N('molli.norma', 'Nella norma', 'Non ematomi né raccolte nei tessuti molli pelvici e periarticolari.'),
       P('molli.ematoma', 'Ematoma', 'Ematoma [intramuscolare/pelvico extraperitoneale/sottocutaneo] in sede [___], di [___ x ___ mm].'),
     ],
-    'Conclusioni': [
-      N('concl.norma', 'Nella norma', 'Esame TC del bacino nei limiti della norma.'),
-      P('concl.frattura', 'Frattura del bacino', 'Frattura [___] [destra/sinistra], [composta/scomposta].'),
-      P('concl.femore', 'Frattura femorale', 'Frattura [del collo del femore/pertrocanterica del femore/sottotrocanterica del femore] [destro/sinistro], [composta/scomposta].'),
-      P('concl.coxartrosi', 'Coxartrosi', 'Coxartrosi [destra/sinistra/bilaterale] di grado [lieve/moderato/marcato].'),
-      P('concl.osteonecrosi', 'Osteonecrosi', 'Quadro compatibile con osteonecrosi della testa femorale [destra/sinistra].'),
-      CONCL_CONFRONTO,
-    ],
   }),
 
   'TC COLONNA CERVICALE': exam('tc-rachide-c', {
-    'Tecnica': [TECNICA_OSSO, CONFRONTO, ARTEFATTI],
     'Giunzione cranio-cervicale': [
       N('giunzione.norma', 'Nella norma', 'Rapporti atlo-occipitali e atlo-assiali conservati; non rime di frattura di atlante ed epistrofeo.'),
       P('giunzione.dente', 'Frattura del dente', 'Frattura del dente dell\'epistrofeo [all\'apice/alla base/con estensione al corpo di C2], [composta/scomposta].'),
@@ -437,24 +368,9 @@ export const REFERTI = {
       N('prevertebrali.norma', 'Nella norma', 'Tessuti molli prevertebrali di spessore regolare.'),
       P('prevertebrali.ematoma', 'Ematoma', 'Ispessimento dei tessuti molli prevertebrali (fino a [___ mm] a livello [___]), compatibile con ematoma.'),
     ],
-    'Conclusioni': [
-      N('concl.norma', 'Nella norma', 'Esame TC del rachide cervicale nei limiti della norma.'),
-      P('concl.frattura', 'Frattura', 'Frattura [___] di [___], [composta/scomposta], [con/senza] interessamento del canale vertebrale.'),
-      P('concl.lussazione', 'Lussazione', 'Lussazione [monolaterale/bilaterale] delle faccette articolari a livello [___].'),
-      CONCL_DEGENERATIVE('cervicale'),
-      CONCL_STENOSI,
-      CONCL_CONFRONTO,
-    ],
   }),
 
   'TC ANGIOGRAFIA AORTA': exam('angio-tc-aorta', {
-    'Tecnica': [
-      N('tecnica', 'Tecnica', 'Angio-TC eseguita con mezzo di contrasto iodato e.v. in fase arteriosa ([___] ml di [prodotto]).'),
-      O('tecnica.basale', 'Fase basale', 'Acquisizione preliminare senza mezzo di contrasto.'),
-      O('tecnica.ecg', 'Sincronizzazione ECG', 'Acquisizione con sincronizzazione ECG [prospettica/retrospettiva].'),
-      O('tecnica.tardiva', 'Fase tardiva', 'Acquisizione aggiuntiva in fase tardiva.'),
-      CONFRONTO,
-    ],
     'Diametri': [
       N('diametri', 'Diametri aortici', 'Diametri aortici massimi (piani doppio-obliqui): radice [___] mm, aorta ascendente [___] mm, arco [___] mm, aorta discendente [___] mm, sovrarenale [___] mm, infrarenale [___] mm.'),
       O('diametri.iliache', 'Arterie iliache comuni', 'Diametri delle arterie iliache comuni: destra [___] mm, sinistra [___] mm.'),
@@ -490,24 +406,9 @@ export const REFERTI = {
       N('extra.norma', 'Nella norma', 'Nei limiti del volume di studio, non alterazioni extravascolari di rilievo.'),
       P('extra.reperto', 'Reperto extravascolare', 'Reperto extravascolare: [___].'),
     ],
-    'Conclusioni': [
-      N('concl.norma', 'Nella norma', 'Esame angio-TC dell\'aorta nei limiti della norma, senza segni di sindrome aortica acuta.'),
-      P('concl.dissezione', 'Dissezione', 'Dissezione aortica tipo Stanford [A/B], estesa da [___] a [___].'),
-      P('concl.imh', 'Ematoma intramurale', 'Ematoma intramurale dell\'aorta [ascendente/discendente].'),
-      P('concl.aneurisma', 'Aneurisma', 'Aneurisma dell\'aorta [toracica/addominale] con diametro massimo di [___ mm].'),
-      P('concl.rottura', 'Rottura', 'Quadro compatibile con rottura aortica [contenuta/libera].'),
-      P('concl.endoleak', 'Endoleak', 'Endoleak di tipo [Ia/Ib/II/III/IV].'),
-      CONCL_CONFRONTO,
-    ],
   }),
 
   'TC ENCEFALO': exam('tc-encefalo', {
-    'Tecnica': [
-      N('tecnica', 'Tecnica', 'Esame eseguito senza mezzo di contrasto.'),
-      O('tecnica.mdc', 'Con mdc', 'Completamento dopo somministrazione e.v. di mezzo di contrasto iodato ([___] ml di [prodotto]).'),
-      CONFRONTO,
-      O('tecnica.artefatti', 'Artefatti', 'Valutazione parzialmente limitata da artefatti da [movimento/indurimento del fascio in fossa posteriore/materiale metallico].'),
-    ],
     'Parenchima encefalico': [
       N('parenchima.norma', 'Nella norma', 'Non alterazioni densitometriche focali del parenchima encefalico sovra- e sottotentoriale.'),
       P('parenchima.ischemia', 'Ischemia acuta', 'Area ipodensa [cortico-sottocorticale/sottocorticale/dei nuclei della base] in territorio [dell\'arteria cerebrale media/dell\'arteria cerebrale anteriore/dell\'arteria cerebrale posteriore/dell\'arteria cerebellare postero-inferiore] [destra/sinistra], con perdita della differenziazione tra sostanza grigia e bianca, compatibile con lesione ischemica [acuta/subacuta].'),
@@ -545,15 +446,6 @@ export const REFERTI = {
     'Seni paranasali': [
       N('seni.norma', 'Nella norma', 'Regolare pneumatizzazione dei seni paranasali e delle celle mastoidee in esame.'),
       P('seni.ispessimento', 'Ispessimento mucoso', 'Ispessimento mucoso [del seno mascellare/dei seni etmoidali/del seno frontale/del seno sfenoidale] [a destra/a sinistra/bilateralmente], [con/senza] livello idro-aereo.'),
-    ],
-    'Conclusioni': [
-      N('concl.norma', 'Nella norma', 'Non evidenti segni TC di emorragia endocranica né di lesioni ischemiche acute.'),
-      P('concl.emorragia', 'Emorragia endocranica', 'Emorragia endocranica [intraparenchimale/subaracnoidea/subdurale/extradurale/intraventricolare] in sede [___], [con/senza] effetto massa.'),
-      P('concl.ischemia', 'Lesione ischemica', 'Quadro compatibile con lesione ischemica [acuta/subacuta] in territorio [___] [destra/sinistra].'),
-      P('concl.lesione', 'Lesione espansiva', 'Formazione espansiva [___] di natura da definire, [con/senza] effetto massa.'),
-      P('concl.frattura', 'Frattura cranica', 'Frattura [___] [con/senza] lesioni endocraniche associate.'),
-      P('concl.microangiopatia', 'Microangiopatia cronica', 'Alterazioni microangiopatiche croniche della sostanza bianca di grado [lieve/moderato/marcato], in assenza di evidenti lesioni acute.'),
-      O('concl.limite', 'Limite TC precoce', 'Nelle prime ore dall\'esordio dei sintomi l\'esame TC può non evidenziare lesioni ischemiche.'),
     ],
   }),
 };

@@ -1,15 +1,14 @@
 // Libreria predefinita — RMN. BOZZA da validare clinicamente (revisione di 2-3 radiologi prima del lancio).
 //
 // Note per la revisione:
-// - O(..., true) = reperto patologico "in aggiunta": non entra nel referto normale e non sostituisce la
+// - O(..., true) = reperto patologico "in aggiunta": non entra nel referto negativo e non sostituisce la
 //   frase normale del gruppo perché non la contraddice (es. angioma vertebrale accanto a "corpi vertebrali
 //   di altezza e segnale regolari", cisti di Baker accanto a "non versamento articolare");
-// - le affermazioni valide solo con il mezzo di contrasto sono opzionali, così il referto normale resta
+// - le affermazioni valide solo con il mezzo di contrasto sono opzionali, così il referto negativo resta
 //   corretto anche per gli esami senza mdc;
 // - classificazioni (Modic, Fazekas, ARCO, Meyerding, Outerbridge, LI-RADS, PI-RADS v2.1) solo come liste
 //   di scelta compilate dal medico, mai calcolate; nessun punteggio, nessuna raccomandazione di follow-up,
 //   biopsia o ulteriori esami legata ai reperti;
-// - le conclusioni sono sintesi: non ripetono le frasi dei distretti.
 import { N, P, O, exam } from './helpers.js';
 
 export const METODICA = 'RMN';
@@ -37,14 +36,9 @@ export const INDICAZIONI = {
 };
 
 // Frasi comuni a più esami (exam() le copia e antepone all'ID il codice dell'esame).
-const TECNICA_RM = N('tecnica', 'Tecnica', 'Esame eseguito con sequenze multiplanari [senza/senza e con] mezzo di contrasto paramagnetico e.v.');
-const ARTEFATTI = O('tecnica.artefatti', 'Artefatti da movimento', 'Esame parzialmente limitato da artefatti da movimento.');
-const CONFRONTO = O('tecnica.confronto', 'Confronto', 'Confronto con precedente esame RM del [data].');
-const CONCL_CONFRONTO = O('concl.confronto', 'Confronto', 'Quadro [invariato/in miglioramento/in peggioramento] rispetto al precedente esame del [data].');
 
 export const REFERTI = {
   'RMN RACHIDE LOMBOSACRALE': exam('rm-rachide-ls', {
-    'Tecnica': [TECNICA_RM, ARTEFATTI, CONFRONTO],
     'Allineamento': [
       N('allineamento.norma', 'Nella norma', 'Lordosi lombare fisiologica; allineamento dei metameri lombosacrali conservato.'),
       P('allineamento.lordosi', 'Lordosi alterata', '[Riduzione/Inversione/Accentuazione] della fisiologica lordosi lombare.'),
@@ -88,17 +82,9 @@ export const REFERTI = {
       N('molli.norma', 'Nella norma', 'Muscolatura paravertebrale e tessuti molli del campo di vista senza alterazioni di segnale significative.'),
       P('molli.atrofia', 'Atrofia muscolare', 'Atrofia con infiltrazione adiposa della muscolatura paravertebrale [lieve/moderata/marcata] a livello [L3-L4/L4-L5/L5-S1].'),
     ],
-    'Conclusioni': [
-      N('concl.norma', 'Nella norma', 'Esame RM del rachide lombosacrale nei limiti della norma.'),
-      P('concl.ernia', 'Ernia discale', 'Ernia discale [mediana/paramediana destra/paramediana sinistra/foraminale destra/foraminale sinistra] a livello [L3-L4/L4-L5/L5-S1].'),
-      P('concl.stenosi', 'Stenosi del canale', 'Stenosi del canale vertebrale lombare di grado [lieve/moderato/severo] a livello [___].'),
-      P('concl.degenerative', 'Alterazioni degenerative', 'Alterazioni degenerative disco-artrosiche del rachide lombosacrale, prevalenti a livello [___].'),
-      P('concl.listesi', 'Listesi', 'Listesi [degenerativa/istmica] di [L3/L4/L5] su [L4/L5/S1].'),
-    ],
   }),
 
   'RMN GINOCCHIO': exam('rm-ginocchio', {
-    'Tecnica': [TECNICA_RM, ARTEFATTI, CONFRONTO],
     'Menisco mediale': [
       N('mediale.norma', 'Nella norma', 'Menisco mediale di morfologia e segnale regolari, senza lesioni che raggiungono la superficie articolare.'),
       P('mediale.lesione', 'Lesione', 'Lesione del menisco mediale a carico [del corno posteriore/del corpo/del corno anteriore], di tipo [orizzontale/verticale/radiale/a manico di secchio/complesso].'),
@@ -148,18 +134,9 @@ export const REFERTI = {
       P('versamento.articolare', 'Versamento articolare', 'Versamento articolare [lieve/moderato/abbondante], [con/senza] ispessimento sinoviale.'),
       O('versamento.baker', 'Cisti di Baker', 'Cisti di Baker di [___ x ___ mm] nel cavo popliteo.', true),
     ],
-    'Conclusioni': [
-      N('concl.norma', 'Nella norma', 'Esame RM del ginocchio nei limiti della norma.'),
-      P('concl.menisco', 'Lesione meniscale', 'Lesione del menisco [mediale/laterale] a carico del [corno posteriore/corpo/corno anteriore].'),
-      P('concl.crociato', 'Lesione crociato', 'Lesione [parziale/completa] del legamento crociato [anteriore/posteriore].'),
-      P('concl.collaterale', 'Distorsione collaterale', 'Distorsione del legamento collaterale [mediale/laterale] di grado [1/2/3].'),
-      P('concl.gonartrosi', 'Gonartrosi', 'Quadro di gonartrosi [lieve/moderata/marcata] con condropatia prevalente nel compartimento [femoro-tibiale mediale/femoro-tibiale laterale/femoro-rotuleo].'),
-      P('concl.edema', 'Edema osseo', 'Edema del midollo osseo di [___], compatibile con [contusione ossea/sovraccarico funzionale/frattura da stress].'),
-    ],
   }),
 
   'RMN SPALLA': exam('rm-spalla', {
-    'Tecnica': [TECNICA_RM, ARTEFATTI, CONFRONTO],
     'Sovraspinoso': [
       N('sovraspinoso.norma', 'Integro', 'Tendine del sovraspinoso in continuità, di spessore e segnale regolari.'),
       P('sovraspinoso.tendinosi', 'Tendinosi', 'Tendinosi del sovraspinoso, con ispessimento e iperintensità di segnale intratendinea, senza discontinuità delle fibre.'),
@@ -211,22 +188,9 @@ export const REFERTI = {
       P('acromion.morfologia', 'Morfologia acromiale', 'Acromion di morfologia [curva/uncinata], con riduzione dello spazio subacromiale.'),
       O('acromion.os', 'Os acromiale', 'Os acromiale di tipo [pre-acromion/meso-acromion/meta-acromion].', true),
     ],
-    'Conclusioni': [
-      N('concl.norma', 'Nella norma', 'Esame RM della spalla nei limiti della norma.'),
-      P('concl.lesione', 'Lesione di cuffia', 'Lesione [parziale/a tutto spessore] del tendine del [sovraspinoso/sottospinoso/sottoscapolare].'),
-      P('concl.tendinopatia', 'Tendinopatia di cuffia', 'Tendinopatia della cuffia dei rotatori a carico del [sovraspinoso/sottospinoso/sottoscapolare].'),
-      P('concl.bicipite', 'Capo lungo del bicipite', 'Interessamento del capo lungo del bicipite: [tendinopatia/sublussazione/rottura].'),
-      P('concl.labbro', 'Lesione labbro', 'Lesione del labbro glenoideo [antero-inferiore/postero-inferiore/superiore].'),
-      P('concl.conflitto', 'Conflitto subacromiale', 'Quadro di conflitto subacromiale con [borsite/artropatia acromion-claveare/morfologia acromiale sfavorevole].'),
-    ],
   }),
 
   'RMN ADDOME SUPERIORE': exam('rm-addome-sup', {
-    'Tecnica': [
-      TECNICA_RM,
-      O('tecnica.colangio', 'Colangio-RM', 'Studio colangio-RM con sequenze T2 pesate tridimensionali.'),
-      ARTEFATTI,
-    ],
     'Fegato': [
       N('fegato.norma', 'Nella norma', 'Fegato di dimensioni e intensità di segnale nei limiti, privo di lesioni focali.'),
       P('fegato.lesione', 'Lesione focale', 'Lesione focale epatica al segmento [___] di [___ mm], [ipointensa/isointensa/iperintensa] in T1 e [ipointensa/isointensa/iperintensa] in T2, di natura da definire.'),
@@ -273,19 +237,9 @@ export const REFERTI = {
       N('versamento.norma', 'Non versamento', 'Non versamento libero in addome.'),
       P('versamento.libero', 'Versamento libero', 'Versamento fluido libero [periepatico/perisplenico/diffuso] di [minima/modesta/abbondante] entità.'),
     ],
-    'Conclusioni': [
-      N('concl.norma', 'Nella norma', 'Esame RM dell\'addome superiore nei limiti della norma.'),
-      P('concl.epatica', 'Lesione epatica', 'Lesione epatica focale di [___ mm] al segmento [___], con caratteristiche [compatibili con cisti/compatibili con angioma/di natura da definire].'),
-      P('concl.steatosi', 'Steatosi epatica', 'Steatosi epatica [lieve/moderata/marcata].'),
-      P('concl.biliare', 'Dilatazione biliare', 'Dilatazione delle vie biliari [intraepatiche/extraepatiche/intra- ed extraepatiche] da [coledocolitiasi/stenosi/causa non determinata].'),
-      P('concl.pancreas', 'Lesione pancreatica', 'Lesione [cistica/solida] del pancreas di [___ mm], di natura da definire.'),
-      P('concl.litiasi', 'Litiasi biliare', 'Litiasi [colecistica/della via biliare principale/colecistica e della via biliare principale].'),
-      CONCL_CONFRONTO,
-    ],
   }),
 
   'RMN BACINO': exam('rm-bacino', {
-    'Tecnica': [TECNICA_RM, ARTEFATTI, CONFRONTO],
     'Teste femorali': [
       N('teste.norma', 'Nella norma', 'Teste femorali di segnale conservato, senza segni di necrosi avascolare.'),
       P('teste.osteonecrosi', 'Osteonecrosi', 'Area di alterazione di segnale subcondrale della testa femorale [destra/sinistra/bilaterale], delimitata da una banda ipointensa periferica, compatibile con osteonecrosi, stadio ARCO [I/II/III/IV].'),
@@ -317,18 +271,9 @@ export const REFERTI = {
       P('sacroiliache.edema', 'Edema sacro-iliaco', 'Edema subcondrale dell\'articolazione sacro-iliaca [destra/sinistra/bilaterale], [con/senza] erosioni.'),
       P('sacroiliache.sinfisi', 'Edema della sinfisi', 'Edema della sinfisi pubica e dei capi ossei adiacenti, [con/senza] versamento.'),
     ],
-    'Conclusioni': [
-      N('concl.norma', 'Nella norma', 'Esame RM del bacino nei limiti della norma.'),
-      P('concl.osteonecrosi', 'Osteonecrosi', 'Osteonecrosi della testa femorale [destra/sinistra/bilaterale], stadio ARCO [I/II/III/IV].'),
-      P('concl.frattura', 'Frattura occulta', 'Frattura [occulta/da stress] del [collo femorale/ramo ileo-pubico/ramo ischio-pubico/sacro], lato [destro/sinistro].'),
-      P('concl.coxartrosi', 'Coxartrosi', 'Coxartrosi [destra/sinistra/bilaterale] di grado [lieve/moderato/marcato].'),
-      P('concl.trocanterica', 'Sindrome trocanterica', 'Sindrome dolorosa trocanterica [destra/sinistra/bilaterale] da [borsite/tendinopatia dei glutei/borsite e tendinopatia dei glutei].'),
-      CONCL_CONFRONTO,
-    ],
   }),
 
   'RMN RACHIDE CERVICALE': exam('rm-rachide-c', {
-    'Tecnica': [TECNICA_RM, ARTEFATTI, CONFRONTO],
     'Allineamento': [
       N('allineamento.norma', 'Nella norma', 'Lordosi cervicale fisiologica; allineamento dei metameri cervicali conservato.'),
       P('allineamento.rettilineizzazione', 'Rettilineizzazione', 'Rettilineizzazione della fisiologica lordosi cervicale.'),
@@ -367,24 +312,9 @@ export const REFERTI = {
       P('molli.prevertebrali', 'Edema prevertebrale', 'Edema dei tessuti molli prevertebrali, con spessore massimo di [___ mm] a livello [___].'),
       P('molli.legamenti', 'Alterazione legamentosa', 'Alterazione di segnale del legamento [longitudinale anteriore/longitudinale posteriore/interspinoso/nucale], compatibile con distorsione.'),
     ],
-    'Conclusioni': [
-      N('concl.norma', 'Nella norma', 'Esame RM del rachide cervicale nei limiti della norma.'),
-      P('concl.ernia', 'Ernia discale', 'Ernia discale [mediana/paramediana destra/paramediana sinistra/foraminale destra/foraminale sinistra] a livello [C3-C4/C4-C5/C5-C6/C6-C7].'),
-      P('concl.stenosi', 'Stenosi del canale', 'Stenosi del canale vertebrale cervicale di grado [lieve/moderato/severo] a livello [___].'),
-      P('concl.midollo', 'Compressione midollare', 'Compressione del midollo cervicale a livello [___], [con/senza] alterazione di segnale intramidollare.'),
-      P('concl.degenerative', 'Alterazioni degenerative', 'Alterazioni degenerative disco-artrosiche del rachide cervicale, prevalenti a livello [___].'),
-      P('concl.radicolare', 'Conflitto disco-radicolare', 'Conflitto disco-radicolare a livello [___] con interessamento della radice [C5/C6/C7/C8] [destra/sinistra].'),
-      CONCL_CONFRONTO,
-    ],
   }),
 
   'RMN ENCEFALO': exam('rm-encefalo', {
-    'Tecnica': [
-      TECNICA_RM,
-      O('tecnica.sequenze', 'Sequenze', 'Studio comprendente sequenze T2 pesate, FLAIR, diffusione (DWI con mappa ADC) e sequenze sensibili alla suscettività magnetica.'),
-      O('tecnica.angio', 'Angio-RM', 'Completamento con angio-RM dei vasi intracranici con tecnica [time-of-flight/con mezzo di contrasto].'),
-      ARTEFATTI,
-    ],
     'Parenchima encefalico': [
       N('parenchima.norma', 'Nella norma', 'Non alterazioni di segnale focali del parenchima encefalico sovra- e sottotentoriale.'),
       P('parenchima.vascolari', 'Lesioni vascolari', 'Lesioni iperintense nelle sequenze T2/FLAIR della sostanza bianca sottocorticale e periventricolare, di probabile natura vascolare, di grado Fazekas [1/2/3].'),
@@ -421,23 +351,9 @@ export const REFERTI = {
       O('seni.norma', 'Nella norma', 'Seni paranasali e celle mastoidee ben pneumatizzati, senza ispessimenti mucosali.'),
       O('seni.ispessimento', 'Ispessimento mucoso', 'Ispessimento mucoso [del seno mascellare/dei seni etmoidali/del seno frontale/del seno sfenoidale] [a destra/a sinistra/bilateralmente].', true),
     ],
-    'Conclusioni': [
-      N('concl.norma', 'Nella norma', 'Esame RM dell\'encefalo nei limiti della norma.'),
-      P('concl.vascolare', 'Alterazioni vascolari', 'Alterazioni della sostanza bianca di probabile natura vascolare, di grado Fazekas [1/2/3].'),
-      P('concl.ischemia', 'Lesione ischemica acuta', 'Lesione ischemica acuta [destra/sinistra] in territorio [dell\'arteria cerebrale media/dell\'arteria cerebrale anteriore/dell\'arteria cerebrale posteriore/del circolo posteriore].'),
-      P('concl.demielinizzante', 'Aspetto demielinizzante', 'Lesioni della sostanza bianca di aspetto compatibile con malattia demielinizzante, localizzate in sede [periventricolare/iuxtacorticale/infratentoriale].'),
-      P('concl.espansiva', 'Formazione espansiva', 'Formazione espansiva in sede [___] di [___ mm], di natura da definire.'),
-      P('concl.atrofia', 'Atrofia cerebrale', 'Atrofia cerebrale [lieve/moderata/marcata].'),
-      CONCL_CONFRONTO,
-    ],
   }),
 
   'RMN PROSTATA MULTIPARAMETRICA': exam('rm-prostata', {
-    'Tecnica': [
-      N('tecnica', 'Tecnica', 'Esame eseguito con sequenze T2 pesate multiplanari e sequenze di diffusione (DWI con mappa ADC) [senza/con] studio dinamico dopo mezzo di contrasto paramagnetico e.v.'),
-      O('tecnica.bobina', 'Bobina', 'Studio eseguito con bobina [phased-array di superficie/endorettale].'),
-      O('tecnica.artefatti', 'Artefatti', 'Esame parzialmente limitato da artefatti da [movimento/gas intestinale/materiale metallico].'),
-    ],
     'Ghiandola prostatica': [
       N('ghiandola.norma', 'Nella norma', 'Ghiandola prostatica di dimensioni e morfologia regolari.'),
       P('ghiandola.ipertrofia', 'Ipertrofia', 'Ipertrofia della zona di transizione, con aspetto nodulare, [con/senza] protrusione intravescicale del lobo medio.'),
@@ -475,15 +391,6 @@ export const REFERTI = {
     'Ossa': [
       N('ossa.norma', 'Nella norma', 'Strutture ossee del bacino incluse nel campo di vista prive di alterazioni di segnale focali.'),
       P('ossa.lesione', 'Lesione ossea', 'Lesione focale ossea a carico di [___], di [___ mm], ipointensa in T1, [con/senza] restrizione della diffusione.'),
-    ],
-    'Conclusioni': [
-      N('concl.norma', 'Nella norma', 'Esame RM della prostata senza lesioni focali nelle zone periferica e di transizione.'),
-      P('concl.lesione', 'Lesione prostatica', 'Lesione della zona [periferica/di transizione] in sede [___], di [___ mm], categoria PI-RADS v2.1 [1/2/3/4/5].'),
-      P('concl.ipertrofia', 'Ipertrofia prostatica', 'Ipertrofia prostatica con volume ghiandolare di [___ cc].'),
-      P('concl.estensione', 'Estensione extraprostatica', 'Estensione extraprostatica [focale/estesa], [con/senza] interessamento delle vescicole seminali.'),
-      P('concl.linfonodi', 'Linfonodi pelvici', 'Linfonodi pelvici di dimensioni aumentate in sede [___].'),
-      P('concl.ossa', 'Lesione ossea', 'Lesione ossea focale a carico di [___].'),
-      CONCL_CONFRONTO,
     ],
   }),
 };

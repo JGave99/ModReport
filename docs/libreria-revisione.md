@@ -1,15 +1,16 @@
-# Libreria predefinita v3 — punti per la revisione clinica
+# Libreria predefinita v4 — punti per la revisione clinica
 
 La libreria (js/lib/library-base/: rx.js, eco.js, tc.js, rm.js) è una **BOZZA** scritta con l'aiuto di modelli linguistici:
 prima del lancio deve essere rivista da 2-3 radiologi (voce 👤 dello Step 6 in docs/PIANO-LAVORI.md).
 
 **Regole di struttura** (helpers.js):
-- un gruppo per distretto; la prima frase normale entra nel "Referto normale";
-- le frasi patologiche sostituiscono quella normale del gruppo; le frasi "aggiuntive" non entrano nel referto normale e non sostituiscono nulla;
+- un gruppo per distretto; la prima frase normale entra nel "Referto negativo" predefinito (ogni utente può scegliere, per esame, quali frasi inserire);
+- le frasi patologiche sostituiscono quella normale del gruppo; le frasi "aggiuntive" non entrano nel referto negativo predefinito e non sostituiscono nulla;
+- niente gruppi "Tecnica" e "Conclusioni" (v4, issue #1): chi li vuole li aggiunge nella sua libreria. Nell'ecografia mammaria la categoria BI-RADS, che prima stava nelle conclusioni, è un gruppo a sé;
 - le categorie (TI-RADS, BI-RADS, PI-RADS, LI-RADS, Bosniak, Fazekas…) sono solo liste di scelta del medico, mai calcolate;
 - nessuna raccomandazione di follow-up o di altri esami (docs/legale/destinazione-uso.md).
 
-**Contenuto:** 38 esami, circa 1.100 frasi. Le frasi possono essere modificate da ogni utente nella propria libreria; le correzioni della base arrivano agli utenti con un aggiornamento della versione (DEFAULTS_VERSION) senza toccare le frasi che hanno personalizzato.
+**Contenuto:** 38 esami, circa 840 frasi. Le frasi possono essere modificate da ogni utente nella propria libreria; le correzioni della base arrivano agli utenti con un aggiornamento della versione (DEFAULTS_VERSION) senza toccare le frasi che hanno personalizzato.
 
 ## RX (12 esami, 280 frasi)
 - RX TORACE 2PR ha 38 frasi: candidate allo sfoltimento Strie, Spondilosi dorsale, Limiti tecnici.

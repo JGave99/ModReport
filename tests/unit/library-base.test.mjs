@@ -36,8 +36,7 @@ test('frasi: ID unici, etichette brevi, campi ben formati, regole dei gruppi', (
   for (const { mod } of modules) {
     for (const [esame, groups] of Object.entries(mod.REFERTI)) {
       const names = Object.keys(groups);
-      if (names.includes('Tecnica')) assert.equal(names[0], 'Tecnica', esame + ': "Tecnica" deve essere il primo gruppo');
-      assert.equal(names[names.length - 1], 'Conclusioni', esame + ': "Conclusioni" deve essere l\'ultimo gruppo');
+      assert.ok(!names.some((n) => /^(tecnica|conclusion[ie])$/i.test(n)), esame + ': niente gruppi Tecnica o Conclusioni nella libreria predefinita');
       for (const [group, phrases] of Object.entries(groups)) {
         assert.ok(Array.isArray(phrases) && phrases.length, esame + ' / ' + group + ': gruppo vuoto');
         const labels = new Set();

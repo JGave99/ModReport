@@ -556,10 +556,6 @@ $('pref-dictation-local').addEventListener('change', (e) => { setLocalDictationP
 showLocalDictationStatus();
 $('pref-voice-commands').checked = voiceCommandsEnabled();
 $('pref-voice-commands').addEventListener('change', (e) => setVoiceCommandsEnabled(e.target.checked));
-try { $('pref-check-dose').checked = localStorage.getItem('mr-check-dose') !== 'off'; } catch (e) { $('pref-check-dose').checked = true; }
-$('pref-check-dose').addEventListener('change', (e) => {
-  try { if (e.target.checked) localStorage.removeItem('mr-check-dose'); else localStorage.setItem('mr-check-dose', 'off'); } catch (err) { /* ignora */ }
-});
 
 // Abbreviazioni personali (salvate nella libreria, quindi su tutte le postazioni).
 function renderAbbreviations() {

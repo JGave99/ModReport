@@ -50,6 +50,11 @@ export function normalize(raw) {
   data.refertoByEsame = isObj(data.refertoByEsame) ? data.refertoByEsame : {};
   data.removedBase = Array.isArray(data.removedBase) ? data.removedBase : [];
   if (data.abbreviazioni !== undefined && !isObj(data.abbreviazioni)) delete data.abbreviazioni;
+  // Frasi del "Referto negativo" scelte dall'utente, per esame (ID delle frasi).
+  if (data.negativoByEsame !== undefined) {
+    data.negativoByEsame = isObj(data.negativoByEsame) ? Object.fromEntries(Object.entries(data.negativoByEsame)
+      .filter(([, ids]) => Array.isArray(ids)).map(([e, ids]) => [e, ids.filter((id) => typeof id === 'string')])) : {};
+  }
   for (const m of data.metodiche) if (!Array.isArray(data.esamiByMetodica[m])) data.esamiByMetodica[m] = [];
   for (const [esame, groups] of Object.entries(data.refertoByEsame)) {
     if (!isObj(groups)) { data.refertoByEsame[esame] = {}; continue; }

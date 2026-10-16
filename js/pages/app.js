@@ -13,8 +13,8 @@ import { addEntry } from '../lib/local-archive.js';
 import { appendText, replaceRange, insertAtCursor, clearField } from '../lib/text-insert.js';
 import { isLocalMode, setLocalMode } from '../lib/local-backend.js';
 import {
-  HEADER_RE, findPhrase, planToggle, normalReport, isConclusionGroup, isTechniqueGroup, nextField, fieldAt, prepareMeasure,
-  findFields, splitSections, checkReport, isIonizing, readDoseClass, doseEdit,
+  HEADER_RE, findPhrase, planToggle, negativeReport, negativePhrases, isConclusionGroup, isTechniqueGroup, nextField, fieldAt, prepareMeasure,
+  findFields, splitSections, checkReport,
 } from '../lib/report-text.js';
 import { abbreviationEdit } from '../lib/voice-text.js';
 import { createPalette } from '../lib/palette.js';
@@ -33,6 +33,9 @@ if (new URLSearchParams(initialSearch).get('local') === '1') setLocalMode(true);
 const sb = getSupabase();
 
 let DATA = cloneDefaults();
+// Frasi del referto negativo scelte per ogni esame: stanno nella libreria personale (negativoByEsame),
+// valgono anche quando nell'editor si usa la libreria di un team.
+let negativoByEsame = {};
 let currentUser = null;
 let recoveryMode = isRecoveryLink;
 let pendingEmail = '';
@@ -254,7 +257,7 @@ function currentGroups() {
 
 function renderReferto() {
   el.refertoBody.innerHTML = '';
-  $('btn-normal').hidden = true;
+  $('negativo-actions').hidden = true;
   if (!state.esame) {
     el.refertoBody.innerHTML = '<p class="empty-hint">Seleziona prima un esame.</p>';
     return;
@@ -264,7 +267,7 @@ function renderReferto() {
     el.refertoBody.innerHTML = '<p class="empty-hint">Nessuna frase per questo esame. Aggiungine dalla <a href="account.html#libreria">libreria delle frasi</a>.</p>';
     return;
   }
-  $('btn-normal').hidden = !groups.some((g) => g.phrases.some((p) => !p.neg && !p.opz));
+  $('negativo-actions').hidden = !groups.some((g) => g.phrases.some((p) => !p.neg));
   const note = document.createElement('p');
   note.className = 'sample-note';
   note.textContent = 'Frasi di esempio da verificare. Una frase patologica sostituisce quella normale dello stesso distretto; un secondo clic la toglie.';
@@ -308,7 +311,6 @@ function refreshPressed() {
     const p = groups[b.dataset.gi] && groups[b.dataset.gi].phrases[b.dataset.pi];
     b.setAttribute('aria-pressed', p && findPhrase(text, p.text) ? 'true' : 'false');
   });
-  renderDose();
 }
 
 // Applica al testo una serie di modifiche (dall'ultima alla prima), ognuna annullabile con Ctrl+Z.
@@ -363,18 +365,18 @@ function togglePhrase(gi, pi) {
   if (plan.action !== 'remove') selectFirstFieldIn(first, first + phrase.text.length + 2);
 }
 
-function insertNormalReport() {
+function insertNegativeReport() {
   const groups = currentGroups();
   if (!groups.length) { flash('Scegli prima un esame con frasi in libreria.', 2500); return; }
-  const { text, added } = normalReport(el.reportText.value, groups, { blankBefore: pendingEsameOpen });
-  if (!added.length) { flash('Ogni distretto ha già una frase.', 2500); return; }
+  const { text, added } = negativeReport(el.reportText.value, groups, { ids: negativoIds(), blankBefore: pendingEsameOpen });
+  if (!added.length) { flash('Le parti del referto negativo hanno già una frase.', 2500); return; }
   const range = replaceWhole(text);
   pendingEsameOpen = false;
   caret = null;
   renderWorkspaceTabs();
   saveDraft();
   refreshPressed();
-  flash('Referto normale: ' + added.length + (added.length === 1 ? ' frase inserita' : ' frasi inserite') + '. Una variante patologica sostituisce la frase del suo distretto.', 4000);
+  flash('Referto negativo: ' + added.length + (added.length === 1 ? ' frase inserita' : ' frasi inserite') + '. Una variante patologica sostituisce la frase del suo distretto.', 4000);
   selectFirstFieldIn(range.start, range.end);
 }
 
@@ -617,10 +619,7 @@ el.reportText.addEventListener('input', (e) => expandAbbreviation(el.reportText,
 // CONTROLLI PRIMA DI COPIARE, STAMPARE O SALVARE
 // ============================================================
 function reportIssues() {
-  const issues = checkReport(el.reportText.value, { groups: currentGroups(), esame: state.esame || '', metodica: state.metodica || '' });
-  let doseOff = false;
-  try { doseOff = localStorage.getItem('mr-check-dose') === 'off'; } catch (e) { /* ignora */ }
-  return issues.filter((i) => !(i.type === 'dose' && doseOff));
+  return checkReport(el.reportText.value, { groups: currentGroups(), esame: state.esame || '' });
 }
 
 // true = si procede. Con avvisi chiede conferma; se si sceglie di correggere, seleziona il primo campo vuoto.
@@ -638,7 +637,7 @@ async function confirmChecks(verb, okText) {
 // ============================================================
 // COPIA (tutto o per sezione), ARCHIVIO
 // ============================================================
-const SECTION_LABEL = { indicazione: 'indicazione', referto: 'referto senza indicazione e conclusioni', conclusioni: 'conclusioni' };
+const SECTION_LABEL = { indicazione: 'indicazione', referto: 'referto senza indicazione', conclusioni: 'conclusioni' };
 
 async function copyText(which = 'all') {
   const text = el.reportText.value;
@@ -711,7 +710,7 @@ attachDictation($('btn-mic-report'), () => el.reportText, {
 });
 
 // ============================================================
-// CONFRONTO, CLASSE DI DOSE, REFERTO NORMALE
+// CONFRONTO E REFERTO NEGATIVO
 // ============================================================
 function insertComparison(txt) {
   const before = el.reportText.value.length;
@@ -721,22 +720,71 @@ function insertComparison(txt) {
 $('btn-confronto').onclick = () => insertComparison('Confronto con precedente analogo del [data].');
 $('btn-presa-visione').onclick = () => insertComparison('Presa visione di precedente analogo del [data].');
 $('btn-non-precedenti').onclick = () => insertConfronto('Non disponibili precedenti per confronto.');
-$('btn-normal').onclick = insertNormalReport;
+$('btn-negativo').onclick = insertNegativeReport;
 
-function renderDose() {
-  const row = $('dose-row');
-  row.hidden = !isIonizing(state.metodica);
-  if (row.hidden) return;
-  const current = readDoseClass(el.reportText.value);
-  row.querySelectorAll('[data-dose]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.dose === current ? 'true' : 'false'));
-}
-document.querySelectorAll('#dose-row [data-dose]').forEach((b) => {
-  b.addEventListener('click', () => {
-    const text = el.reportText.value;
-    const value = b.dataset.dose;
-    const edit = doseEdit(text, readDoseClass(text) === value ? null : value);
-    if (edit) applyEditsToReport([edit]);
+const negativoIds = () => (state.esame && negativoByEsame[state.esame]) || null;
+const librarySource = () => (el.libSourceEditorBox.hidden ? 'personale' : el.libSourceEditor.value || 'personale');
+
+function openNegativoDialog() {
+  const groups = currentGroups();
+  const chosen = new Set(negativePhrases(groups, negativoIds()).map((x) => x.phrase.id));
+  const list = $('negativo-list');
+  list.innerHTML = '';
+  $('negativo-esame').textContent = state.esame;
+  groups.forEach((g) => {
+    const options = g.phrases.filter((p) => !p.neg && p.id);
+    if (!options.length) return;
+    const box = document.createElement('fieldset');
+    box.className = 'negativo-group';
+    const legend = document.createElement('legend');
+    legend.textContent = g.name;
+    box.appendChild(legend);
+    options.forEach((p) => {
+      const label = document.createElement('label');
+      label.className = 'check';
+      const input = document.createElement('input');
+      input.type = 'checkbox';
+      input.value = p.id;
+      input.checked = chosen.has(p.id);
+      const text = document.createElement('span');
+      text.textContent = p.text + (p.opz ? ' (aggiuntiva)' : '');
+      label.append(input, text);
+      box.appendChild(label);
+    });
+    list.appendChild(box);
   });
+  $('negativo-dialog').showModal();
+}
+
+async function saveNegativo(ids) {
+  const esame = state.esame;
+  let status = null;
+  const store = new LibraryStore({ supabase: sb, userId: currentUser.id, onStatus: (st) => { status = st; } });
+  const res = await store.load();
+  if (res.status === 'error') throw new Error('libreria non raggiungibile');
+  const data = res.data;
+  data.negativoByEsame = { ...(data.negativoByEsame || {}) };
+  if (ids) data.negativoByEsame[esame] = ids; else delete data.negativoByEsame[esame];
+  store.schedule(() => data);
+  await store.flush();
+  if (status !== 'saved') throw new Error(status === 'conflict' ? 'la libreria è stata modificata altrove, riprova' : 'salvataggio non riuscito');
+  negativoByEsame = data.negativoByEsame;
+  if (librarySource() === 'personale') { DATA = data; try { libCacheStore().setItem(libCacheKey(), JSON.stringify(DATA)); } catch (e) { /* ignora */ } }
+}
+
+$('btn-negativo-config').onclick = openNegativoDialog;
+$('negativo-cancel').onclick = () => $('negativo-dialog').close();
+$('negativo-default').onclick = () => withBusy($('negativo-default'), async () => {
+  try { await saveNegativo(null); } catch (e) { toast('Non salvato: ' + e.message, { type: 'error' }); return; }
+  $('negativo-dialog').close();
+  toast('Referto negativo: tornano le frasi predefinite per ' + state.esame);
+});
+$('negativo-save').onclick = () => withBusy($('negativo-save'), async () => {
+  const ids = [...$('negativo-list').querySelectorAll('input:checked')].map((i) => i.value);
+  if (!ids.length) { toast('Scegli almeno una frase.', { type: 'error' }); return; }
+  try { await saveNegativo(ids); } catch (e) { toast('Non salvato: ' + e.message, { type: 'error' }); return; }
+  $('negativo-dialog').close();
+  toast('Referto negativo salvato per ' + state.esame);
 });
 
 // ============================================================
@@ -750,7 +798,7 @@ document.addEventListener('keydown', (e) => {
   if (mod && !e.shiftKey && (e.key === 's' || e.key === 'S')) { e.preventDefault(); $('btn-archive').click(); return; }
   if (mod && !e.shiftKey && (e.key === 'p' || e.key === 'P')) { e.preventDefault(); $('btn-open-print').click(); return; }
   if (mod && e.key === '/') { e.preventDefault(); $('shortcuts-dialog').showModal(); return; }
-  if (e.altKey && !mod && e.code === 'KeyN') { e.preventDefault(); insertNormalReport(); return; }
+  if (e.altKey && !mod && e.code === 'KeyN') { e.preventDefault(); insertNegativeReport(); return; }
   if (e.altKey && !mod && /^Digit[1-5]$/.test(e.code)) { e.preventDefault(); switchWorkspace(Number(e.code.slice(5)) - 1); }
 });
 // ============================================================
@@ -759,10 +807,10 @@ document.addEventListener('keydown', (e) => {
 function paletteItems() {
   const items = [
     { group: 'Comandi', icon: 'copy', label: 'Copia il referto', hint: 'Ctrl+Invio', run: () => copyText('all') },
-    { group: 'Comandi', icon: 'copy', label: 'Copia solo le conclusioni', run: () => copyText('conclusioni') },
-    { group: 'Comandi', icon: 'copy', label: 'Copia solo il referto', hint: 'senza indicazione e conclusioni', run: () => copyText('referto') },
+    { group: 'Comandi', icon: 'copy', label: 'Copia solo il referto', hint: 'senza indicazione', run: () => copyText('referto') },
     { group: 'Comandi', icon: 'copy', label: 'Copia solo l\'indicazione', run: () => copyText('indicazione') },
-    { group: 'Comandi', icon: 'circle-check', label: 'Referto normale', hint: 'Alt+N', run: insertNormalReport },
+    { group: 'Comandi', icon: 'circle-check', label: 'Referto negativo', hint: 'Alt+N', run: insertNegativeReport },
+    { group: 'Comandi', icon: 'circle-check', label: 'Scegli le frasi del referto negativo', run: () => { if (state.esame) openNegativoDialog(); } },
     { group: 'Comandi', icon: 'printer', label: 'Stampa', hint: 'Ctrl+P', run: () => $('btn-open-print').click() },
     { group: 'Comandi', icon: 'save', label: 'Salva nell\'archivio', hint: 'Ctrl+S', run: () => $('btn-archive').click() },
     { group: 'Comandi', icon: 'mic', label: 'Detta nel referto', run: () => $('btn-mic-report').click() },
@@ -1293,6 +1341,7 @@ async function loadLibrary() {
     let cached = null;
     try { cached = JSON.parse(libCacheStore().getItem(libCacheKey())); } catch (e) { cached = null; }
     DATA = cached || cloneDefaults();
+    negativoByEsame = DATA.negativoByEsame || {};
     bannerText.textContent = cached
       ? 'Sei offline o il server non risponde: stai usando la copia della tua libreria salvata su questo computer.'
       : 'La tua libreria personale non è stata caricata (problema di connessione): stai vedendo le frasi predefinite.';
@@ -1300,6 +1349,7 @@ async function loadLibrary() {
     return;
   }
   DATA = res.data;
+  negativoByEsame = DATA.negativoByEsame || {};
   banner.hidden = true;
   try { libCacheStore().setItem(libCacheKey(), JSON.stringify(DATA)); } catch (e) { /* spazio esaurito: si continua senza copia */ }
 }

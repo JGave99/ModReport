@@ -85,3 +85,26 @@ test('idempotente: una libreria già migrata resta invariata', () => {
   assert.equal(twice.changed, false);
   assert.deepEqual(twice.data, once);
 });
+
+test('libreria v3 → v4: tolti Tecnica e Conclusioni non modificati, restano quelli dell\'utente e la scelta del referto negativo', () => {
+  const lib = clone(cloneDefaults());
+  lib.defaultsVersion = 3;
+  const base = (id, text) => { const p = { id, label: 'x', text, neg: false }; return { ...p, bh: phraseHash(p) }; };
+  const groups = lib.refertoByEsame['RX TORACE 2PR'];
+  lib.refertoByEsame['RX TORACE 2PR'] = {
+    Tecnica: [base('rx-torace-2p:tecnica.limiti', 'Esame eseguito in condizioni subottimali.')],
+    ...groups,
+    Conclusioni: [
+      base('rx-torace-2p:concl.norma', 'Quadro radiografico del torace nei limiti della norma.'),
+      { ...base('rx-torace-2p:concl.edema', 'Quadro di edema.'), text: 'Quadro di edema polmonare, modificato da me.' },
+    ],
+  };
+  lib.negativoByEsame = { 'RX TORACE 2PR': ['rx-torace-2p:versamento.norma'], rotto: 'x' };
+  const { data, changed } = migrateLibrary(lib);
+  assert.equal(changed, true);
+  assert.equal(data.defaultsVersion, DEFAULTS_VERSION);
+  const after = data.refertoByEsame['RX TORACE 2PR'];
+  assert.ok(!after.Tecnica, 'Tecnica non modificata: tolta');
+  assert.deepEqual(after.Conclusioni.map((p) => p.text), ['Quadro di edema polmonare, modificato da me.']);
+  assert.deepEqual(data.negativoByEsame, { 'RX TORACE 2PR': ['rx-torace-2p:versamento.norma'] });
+});

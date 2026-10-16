@@ -209,22 +209,16 @@
             <button class="chip" id="btn-presa-visione">Presa visione</button>
             <button class="chip" id="btn-non-precedenti">Non precedenti</button>
           </div>
-          <div class="dose-row" id="dose-row" hidden>
-            <div class="group__label" id="dose-label">Classe di dose <span class="subtle">(D.Lgs. 101/2020)</span></div>
-            <div class="chip-row" role="group" aria-labelledby="dose-label">
-              <button class="chip" data-dose="I" aria-pressed="false" title="Meno di 1 mSv">I <span class="subtle">&lt; 1 mSv</span></button>
-              <button class="chip" data-dose="II" aria-pressed="false" title="Da 1 a 5 mSv">II <span class="subtle">1-5 mSv</span></button>
-              <button class="chip" data-dose="III" aria-pressed="false" title="Da 5 a 10 mSv">III <span class="subtle">5-10 mSv</span></button>
-              <button class="chip" data-dose="IV" aria-pressed="false" title="Più di 10 mSv">IV <span class="subtle">&gt; 10 mSv</span></button>
-            </div>
-          </div>
         </div>
       </section>
 
       <section class="block" aria-labelledby="b5">
         <div class="block__head">
           <span class="block__num">05</span><h2 class="block__title" id="b5">Referto</h2><span class="block__hint">filtrato per esame</span>
-          <button class="btn btn--sm" id="btn-normal" hidden title="Inserisce la frase normale di ogni distretto (Alt+N)"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#circle-check"></use></svg>Referto normale</button>
+          <div class="btn-pair" id="negativo-actions" hidden>
+            <button class="btn btn--sm" id="btn-negativo" title="Inserisce le frasi del referto negativo (Alt+N)"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#circle-check"></use></svg>Referto negativo</button>
+            <button class="btn btn--sm btn--icon" id="btn-negativo-config" title="Scegli le frasi del referto negativo per questo esame" aria-label="Scegli le frasi del referto negativo"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#settings"></use></svg></button>
+          </div>
         </div>
         <div class="block__body" id="referto-body"></div>
       </section>
@@ -246,8 +240,7 @@
           <div class="menu__list" id="copy-menu" role="menu" hidden>
             <button role="menuitem" data-copy="all">Tutto il referto</button>
             <button role="menuitem" data-copy="indicazione">Solo l'indicazione</button>
-            <button role="menuitem" data-copy="referto">Solo il referto (senza indicazione e conclusioni)</button>
-            <button role="menuitem" data-copy="conclusioni">Solo le conclusioni</button>
+            <button role="menuitem" data-copy="referto">Solo il referto (senza indicazione)</button>
           </div>
         </div>
       </div>
@@ -309,7 +302,7 @@
         <input type="radio" name="onb-dettatura" value="off">
         Non uso la dettatura
       </label>
-      <p class="subtle">Scorciatoie: Ctrl+K ricerca, Alt+N referto normale, Tab per i campi da compilare. <a href="tutorial.html">Guarda il tutorial</a></p>
+      <p class="subtle">Scorciatoie: Ctrl+K ricerca, Alt+N referto negativo, Tab per i campi da compilare. <a href="tutorial.html">Guarda il tutorial</a></p>
     </section>
   </div>
   <div class="dialog__actions">
@@ -327,13 +320,26 @@
   </div>
 </dialog>
 
+<dialog class="dialog dialog--wide" id="negativo-dialog" aria-labelledby="negativo-title">
+  <div class="dialog__head"><h2 id="negativo-title">Referto negativo · <span id="negativo-esame"></span></h2></div>
+  <div class="dialog__body">
+    <p>Scegli le frasi che «Referto negativo» inserisce per questo esame. La scelta si salva nella tua libreria personale.</p>
+    <div class="negativo-list" id="negativo-list"></div>
+  </div>
+  <div class="dialog__actions">
+    <button class="btn btn--ghost" id="negativo-default">Usa le frasi predefinite</button>
+    <button class="btn" id="negativo-cancel">Annulla</button>
+    <button class="btn btn--primary" id="negativo-save">Salva</button>
+  </div>
+</dialog>
+
 <dialog class="dialog" id="shortcuts-dialog" aria-labelledby="shortcuts-title">
   <div class="dialog__head"><h2 id="shortcuts-title">Scorciatoie da tastiera</h2><button class="btn btn--ghost btn--icon" id="shortcuts-close" aria-label="Chiudi"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#x"></use></svg></button></div>
   <div class="dialog__body">
     <dl class="shortcuts">
       <dt><kbd>Ctrl</kbd> <kbd>K</kbd></dt><dd>Ricerca rapida di esami, frasi e comandi</dd>
       <dt><kbd>Ctrl</kbd> <kbd>Invio</kbd></dt><dd>Copia il referto</dd>
-      <dt><kbd>Alt</kbd> <kbd>N</kbd></dt><dd>Referto normale</dd>
+      <dt><kbd>Alt</kbd> <kbd>N</kbd></dt><dd>Referto negativo</dd>
       <dt><kbd>Tab</kbd> / <kbd>Maiusc</kbd> <kbd>Tab</kbd></dt><dd>Campo da compilare successivo / precedente</dd>
       <dt><kbd>1</kbd>…<kbd>9</kbd></dt><dd>Scelta nel campo selezionato</dd>
       <dt><kbd>Alt</kbd> <kbd>1</kbd>…<kbd>5</kbd></dt><dd>Passa al referto 1-5</dd>

@@ -2,6 +2,11 @@
 
 ## [Non pubblicato] — branch `migliorie-audit`
 
+### Issue #1 — Referto negativo
+- "Referto normale" diventa "Referto negativo": per ogni esame si scelgono le frasi da inserire (pulsante ⚙ accanto), salvate nella libreria personale.
+- Libreria predefinita v4: tolti i gruppi Tecnica e Conclusioni da tutti gli esami (le librerie esistenti si aggiornano senza toccare le frasi modificate); nell'ecografia mammaria la categoria BI-RADS è un gruppo a sé.
+- Tolta la classe di dose dal punto 04, dai controlli prima di copiare e dalle preferenze.
+
 ### Versione di prova online
 - Pubblicazione su Cloudflare Workers (`wrangler.jsonc`, `.assetsignore`): anteprime per branch su `*.workers.dev`.
 - Ambiente "prova" con un progetto Supabase separato: la produzione si usa solo su `jgave99.github.io`.

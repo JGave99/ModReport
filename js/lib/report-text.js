@@ -1,7 +1,7 @@
 // Funzioni pure sul testo del referto (nessun accesso al DOM):
 // - riconoscere nel testo le frasi della libreria, anche dopo che l'utente ha compilato i campi;
 // - pianificare inserimenti nell'ordine dei distretti, sostituzioni normale ↔ patologico, rimozioni;
-// - campi da compilare ([___], [a/b], ___), sezioni (indicazione, referto, conclusioni), classe di dose;
+// - campi da compilare ([___], [a/b], ___), sezioni (indicazione, referto, conclusioni);
 // - controlli di scrittura (campi vuoti, lato, frasi in contraddizione). Sono avvisi testuali: non
 //   interpretano il contenuto clinico (vedi docs/legale/destinazione-uso.md).
 //
@@ -112,6 +112,7 @@ export function removalEdit(text, range) {
 // Intestazione: prima riga che inizia con "Indicazione" o con la formula d'urgenza (anche se modificata a mano).
 export const HEADER_RE = /^(Indicazion[ei]\b|Esame eseguito in regime d'urgenza)[^\n]*(\n\n?|$)/i;
 const CONCL_RE = /^[ \t]*conclusion[ie]\b[ \t]*:?/im;
+// Una riga "Classe di dose" scritta a mano o incollata dal RIS resta in fondo, dopo le conclusioni.
 const DOSE_RE = /^[ \t]*classe di dose\b[^\n]*$/im;
 export const isConclusionGroup = (name) => /^conclusion[ie]$/i.test(String(name).trim());
 export const isTechniqueGroup = (name) => /^tecnica$/i.test(String(name).trim());
@@ -233,53 +234,35 @@ export function applyEdits(text, edits) {
   return [...edits].sort((a, b) => b.start - a.start).reduce((t, e) => t.slice(0, e.start) + e.insert + t.slice(e.end), String(text));
 }
 
-// "Referto normale": per ogni gruppo senza frasi già presenti aggiunge la prima frase normale
-// (le frasi opzionali non entrano). Restituisce il nuovo testo e le etichette aggiunte.
-export function normalReport(text, groups, { blankBefore = false } = {}) {
+// Frasi del "Referto negativo" di un esame: quelle scelte dall'utente (ids, nell'ordine dei gruppi)
+// oppure, se non ha scelto o nessuna delle sue frasi esiste più, la prima frase normale di ogni gruppo
+// (le frasi opzionali non entrano). Restituisce [{ gi, phrase }].
+export function negativePhrases(groups, ids) {
+  const chosen = new Set(Array.isArray(ids) ? ids : []);
+  const picked = [];
+  groups.forEach((g, gi) => g.phrases.forEach((p) => { if (p.id && chosen.has(p.id)) picked.push({ gi, phrase: p }); }));
+  if (picked.length) return picked;
+  const out = [];
+  groups.forEach((g, gi) => {
+    const normal = g.phrases.find((p) => !p.opz && !p.neg);
+    if (normal) out.push({ gi, phrase: normal });
+  });
+  return out;
+}
+
+// "Referto negativo": inserisce le frasi di negativePhrases nei gruppi che non hanno ancora nessuna frase
+// nel testo. Restituisce il nuovo testo e le frasi aggiunte.
+export function negativeReport(text, groups, { ids = null, blankBefore = false } = {}) {
   let t = String(text);
   const added = [];
-  let first = true;
-  groups.forEach((g, gi) => {
-    if (g.phrases.some((p) => findPhrase(t, p.text))) return;
-    const normal = g.phrases.find((p) => !p.opz && !p.neg);
-    if (!normal) return;
-    const edit = planInsert(t, groups, gi, normal.text, { blankBefore: blankBefore && first });
+  const skip = new Set(groups.map((g, gi) => (g.phrases.some((p) => findPhrase(t, p.text)) ? gi : -1)));
+  for (const { gi, phrase } of negativePhrases(groups, ids)) {
+    if (skip.has(gi)) continue;
+    const edit = planInsert(t, groups, gi, phrase.text, { blankBefore: blankBefore && !added.length });
     t = applyEdits(t, [edit]);
-    added.push(normal);
-    first = false;
-  });
-  return { text: t, added };
-}
-
-// ---------------- Classe di dose (D.Lgs. 101/2020) ----------------
-export const DOSE_CLASSES = [
-  { value: 'I', range: '< 1 mSv' },
-  { value: 'II', range: '1-5 mSv' },
-  { value: 'III', range: '5-10 mSv' },
-  { value: 'IV', range: '> 10 mSv' },
-];
-export const isIonizing = (metodica) => /^(rx|tc)\b|radiograf|tomograf|mammograf|angiograf|\bmoc\b|ortopantomo|dentalscan|fluoroscop|scintigraf|pet\b/i.test(String(metodica || ''));
-
-export function readDoseClass(text) {
-  const d = doseLine(String(text));
-  if (!d) return null;
-  const m = String(text).slice(d.start, d.end).match(/\b(IV|III|II|I)\b/);
-  return m ? m[1] : null;
-}
-
-// Edit che imposta (o toglie, con value null) la riga "Classe di dose" in fondo al referto.
-export function doseEdit(text, value) {
-  const t = String(text);
-  const d = doseLine(t);
-  const cls = DOSE_CLASSES.find((c) => c.value === value);
-  const line = cls ? 'Classe di dose: ' + cls.value + ' (' + cls.range + ').' : '';
-  if (d) {
-    if (!line) return removalEdit(t, d);
-    return { start: d.start, end: d.end, insert: line };
+    added.push(phrase);
   }
-  if (!line) return null;
-  const head = t.replace(/\s+$/, '');
-  return { start: head.length, end: t.length, insert: (head ? '\n\n' : '') + line + '\n' };
+  return { text: t, added };
 }
 
 // ---------------- Controlli di scrittura ----------------
@@ -289,8 +272,8 @@ const SIDE = {
 };
 const BILATERAL = /bilateral|entramb|ambo i lati|a destra e a sinistra/i;
 
-// Avvisi: [{ type: 'campi' | 'lato' | 'contraddizione' | 'dose', message }]
-export function checkReport(text, { groups = [], esame = '', metodica = '' } = {}) {
+// Avvisi: [{ type: 'campi' | 'lato' | 'contraddizione', message }]
+export function checkReport(text, { groups = [], esame = '' } = {}) {
   const t = String(text);
   const issues = [];
   const fields = findFields(t);
@@ -319,8 +302,5 @@ export function checkReport(text, { groups = [], esame = '', metodica = '' } = {
     }
   }
 
-  if (isIonizing(metodica) && t.trim() && !readDoseClass(t)) {
-    issues.push({ type: 'dose', message: 'Manca la classe di dose (esame con radiazioni ionizzanti, D.Lgs. 101/2020).' });
-  }
   return issues;
 }

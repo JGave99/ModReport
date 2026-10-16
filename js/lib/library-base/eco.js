@@ -1,14 +1,13 @@
 // Libreria predefinita — Ecografia. BOZZA da validare clinicamente (revisione di 2-3 radiologi prima del lancio).
 //
 // Note per la revisione:
-// - O(..., true) = reperto patologico "in aggiunta": non entra nel referto normale e non sostituisce la
+// - O(..., true) = reperto patologico "in aggiunta": non entra nel referto negativo e non sostituisce la
 //   frase normale del gruppo perché non la contraddice (es. cisti renale accanto a "reni di dimensioni e
 //   morfologia conservate", microlitiasi testicolare accanto a "testicoli di dimensioni ed ecostruttura nella norma");
 // - le frasi che dipendono da come è stato condotto l'esame (pancreas non esplorabile, residuo post-minzionale,
-//   reflusso venoso, velocità di flusso) sono opzionali, così il referto normale resta corretto in ogni caso;
+//   reflusso venoso, velocità di flusso) sono opzionali, così il referto negativo resta corretto in ogni caso;
 // - classificazioni solo come liste di scelta compilate dal medico (ACR TI-RADS, BI-RADS, grado di stenosi
 //   carotidea, grado di varicocele), mai calcolate; nessuna raccomandazione di follow-up, biopsia o ulteriori esami;
-// - le conclusioni sono sintesi: non riprendono le frasi dei distretti.
 import { N, P, O, exam } from './helpers.js';
 
 export const METODICA = 'Ecografia';
@@ -42,16 +41,11 @@ export const INDICAZIONI = {
 
 const SEGMENTO = '[I/II/III/IV/V/VI/VII/VIII]';
 const SEDE_RENALE = '[al polo superiore/al terzo medio/al polo inferiore]';
-const BIRADS = 'Categoria BI-RADS: [0/1/2/3/4A/4B/4C/5/6].';
 const TIRADS = 'Categoria ACR TI-RADS: [TR1/TR2/TR3/TR4/TR5].';
 const STENOSI = 'Stenosi carotidea: [< 50%/50-69%/≥ 70%/subocclusiva/occlusione].';
 const ASPETTO_PLACCA = '[ipoecogena/isoecogena/iperecogena/calcifica/a ecostruttura mista]';
 
 // Addome
-const TECNICA_ADDOME = [
-  O('tecnica.meteorismo', 'Meteorismo', 'Esame limitato dal meteorismo intestinale.'),
-  O('tecnica.habitus', 'Habitus corporeo', 'Esame limitato dall\'habitus corporeo.'),
-];
 
 const FEGATO = [
   N('fegato.norma', 'Nella norma', 'Fegato di dimensioni ed ecostruttura nei limiti della norma.'),
@@ -113,11 +107,6 @@ const VERSAMENTO = [
   P('versamento.libero', 'Versamento libero', 'Versamento libero in addome di entità [minima/modesta/abbondante], con falda fluida in sede [periepatica/perisplenica/pelvica/diffusa].'),
 ];
 
-// Conclusioni dell'addome (sintesi)
-const CONCL_STEATOSI = P('concl.steatosi', 'Steatosi epatica', 'Steatosi epatica [lieve/moderata/marcata].');
-const CONCL_COLELITIASI = P('concl.colelitiasi', 'Colelitiasi', 'Colelitiasi [non complicata/con segni di colecistite acuta].');
-const CONCL_FORMAZIONE = P('concl.formazione', 'Formazione da definire', 'Formazione focale [epatica/pancreatica/splenica/renale] di natura da definire, di [___ mm].');
-
 // Reni e vie urinarie (esame dedicato): parenchima, vie escretrici e lesioni focali sono aspetti separati
 const RENI_PARENCHIMA = [
   N('reni.norma', 'Nella norma', 'Reni in sede, di dimensioni e morfologia conservate, con regolare spessore parenchimale.'),
@@ -154,7 +143,6 @@ const VESCICA_DEDICATA = [
 
 export const REFERTI = {
   'ECOGRAFIA ADDOME COMPLETO': exam('eco-addome', {
-    'Tecnica': TECNICA_ADDOME,
     'Fegato': FEGATO,
     'Lesioni epatiche': LESIONI_EPATICHE,
     'Colecisti': COLECISTI,
@@ -165,12 +153,6 @@ export const REFERTI = {
     'Vescica': VESCICA_ADDOME,
     'Aorta addominale': AORTA,
     'Versamento': VERSAMENTO,
-    'Conclusioni': [
-      N('concl.norma', 'Nella norma', 'Esame ecografico dell\'addome completo nei limiti della norma, per quanto esplorabile.'),
-      CONCL_STEATOSI,
-      CONCL_COLELITIASI,
-      CONCL_FORMAZIONE,
-    ],
   }),
 
   'ECOGRAFIA TIROIDE': exam('eco-tiroide', {
@@ -193,17 +175,9 @@ export const REFERTI = {
       P('linfonodi.singolo', 'Linfonodo', 'Linfonodo [laterocervicale destro/laterocervicale sinistro/del compartimento centrale] di [___ mm] in asse corto, [con/senza] ilo ecogeno conservato.'),
       P('linfonodi.multipli', 'Linfonodi multipli', 'Linfonodi [laterocervicali destri/laterocervicali sinistri/laterocervicali bilaterali/del compartimento centrale], il maggiore di [___ mm] in asse corto, di aspetto [reattivo/sospetto].'),
     ],
-    'Conclusioni': [
-      N('concl.norma', 'Nella norma', 'Quadro ecografico della tiroide nei limiti della norma.'),
-      P('concl.nodulo', 'Nodulo tiroideo', 'Nodulo tiroideo [del lobo destro/del lobo sinistro/dell\'istmo] di [___ mm], categoria ACR TI-RADS [TR1/TR2/TR3/TR4/TR5].'),
-      P('concl.gozzo', 'Gozzo', 'Gozzo tiroideo [diffuso/multinodulare].'),
-      P('concl.tiroidite', 'Tiroidite', 'Aspetti ecografici di tiroidite [cronica/subacuta].'),
-      P('concl.linfonodi', 'Linfoadenopatia', 'Linfoadenopatia laterocervicale [destra/sinistra/bilaterale] di aspetto [reattivo/sospetto].'),
-    ],
   }),
 
   'ECOGRAFIA ADDOME SUPERIORE': exam('eco-addome-sup', {
-    'Tecnica': TECNICA_ADDOME,
     'Fegato': FEGATO,
     'Lesioni epatiche': LESIONI_EPATICHE,
     'Colecisti': COLECISTI,
@@ -211,36 +185,16 @@ export const REFERTI = {
     'Pancreas': PANCREAS,
     'Milza': MILZA,
     'Reni': RENI,
-    'Conclusioni': [
-      N('concl.norma', 'Nella norma', 'Esame ecografico dell\'addome superiore nei limiti della norma, per quanto esplorabile.'),
-      CONCL_STEATOSI,
-      CONCL_COLELITIASI,
-      CONCL_FORMAZIONE,
-    ],
   }),
 
   'ECOGRAFIA RENALE E VESCICALE': exam('eco-reni-vescica', {
-    'Tecnica': [
-      O('tecnica.scarso-riempimento', 'Scarso riempimento', 'Esame limitato dallo scarso riempimento vescicale.'),
-      O('tecnica.habitus', 'Habitus corporeo', 'Esame limitato dall\'habitus corporeo.'),
-    ],
     'Reni': RENI_PARENCHIMA,
     'Vie escretrici': VIE_ESCRETRICI,
     'Lesioni renali': LESIONI_RENALI,
     'Vescica': VESCICA_DEDICATA,
-    'Conclusioni': [
-      N('concl.norma', 'Nella norma', 'Esame ecografico dei reni e della vescica nei limiti della norma.'),
-      P('concl.uropatia', 'Uropatia ostruttiva', 'Uropatia ostruttiva [destra/sinistra/bilaterale] in presenza di calcolo [pielico/pielo-ureterale/ureterale prossimale] di [___ mm].'),
-      P('concl.calcolosi', 'Calcolosi renale', 'Calcolosi renale [destra/sinistra/bilaterale] non associata a dilatazione delle vie escretrici.'),
-      P('concl.formazione', 'Formazione renale', 'Formazione renale [cistica semplice/cistica complessa/solida] [destra/sinistra] di [___ mm].'),
-      P('concl.vescica', 'Reperto vescicale', 'Reperto vescicale: [ispessimento parietale/calcolosi/formazione endoluminale].'),
-    ],
   }),
 
   'ECOGRAFIA PARTI MOLLI': exam('eco-parti-molli', {
-    'Tecnica': [
-      O('tecnica.regione', 'Regione esaminata', 'Esame mirato in corrispondenza di [___].'),
-    ],
     'Tessuti molli': [
       N('molli.norma', 'Nella norma', 'Non evidenti raccolte né lesioni focali nei tessuti molli in esame.'),
       P('molli.lipoma', 'Lipoma', 'Formazione ovalare ipo-isoecogena con fini strie ecogene, di [___ x ___ mm], in sede [sottocutanea/intermuscolare/intramuscolare], priva di significativo segnale vascolare al color-Doppler, compatibile con lipoma.'),
@@ -263,21 +217,9 @@ export const REFERTI = {
       P('linfonodi.reattivo', 'Linfonodo reattivo', 'Linfonodo di aspetto reattivo in sede [___], ovalare, di [___ mm] in asse corto, con ilo ecogeno conservato.'),
       P('linfonodi.sospetti', 'Linfonodi sospetti', 'Linfonodi in sede [___], il maggiore di [___ mm] in asse corto, [di morfologia rotondeggiante/con corticale ispessita/privo di ilo ecogeno].'),
     ],
-    'Conclusioni': [
-      N('concl.norma', 'Nella norma', 'Esame ecografico dei tessuti molli nei limiti della norma.'),
-      P('concl.lipoma', 'Lipoma', 'Lipoma [sottocutaneo/intramuscolare] di [___ mm] in sede [___].'),
-      P('concl.raccolta', 'Raccolta', 'Raccolta [liquida/ascessuale] in sede [___], di [___ mm].'),
-      P('concl.ernia', 'Ernia', 'Ernia [inguinale/femorale/ombelicale/epigastrica/incisionale] [riducibile/non riducibile].'),
-      P('concl.linfonodo', 'Linfonodo', 'Linfonodo di aspetto [reattivo/sospetto] in sede [___].'),
-      P('concl.formazione', 'Formazione solida', 'Formazione solida di natura da definire in sede [___], di [___ mm].'),
-    ],
   }),
 
   'ECOCOLORDOPPLER ARTI INFERIORI VENOSO': exam('ecd-venoso-ai', {
-    'Tecnica': [
-      O('tecnica.lato', 'Lato esaminato', 'Esame eseguito [sull\'arto inferiore destro/sull\'arto inferiore sinistro/su entrambi gli arti inferiori], con compressione, color-Doppler e analisi spettrale.'),
-      O('tecnica.posizione', 'Posizione', 'Esame eseguito [in clinostatismo/in ortostatismo/in posizione seduta] con manovre di compressione distale.'),
-    ],
     'Vena femorale comune': [
       N('femorale-comune.norma', 'Nella norma', 'Vena femorale comune pervia e comprimibile, con flusso spontaneo, fasico e modulato dagli atti respiratori.'),
       P('femorale-comune.occlusiva', 'Trombosi occlusiva', 'Vena femorale comune [destra/sinistra] non comprimibile, con lume occupato da materiale [ipoecogeno/iperecogeno/disomogeneo] e assenza di flusso al color-Doppler, per un tratto di [___ cm], compatibile con trombosi venosa profonda occlusiva.'),
@@ -313,13 +255,6 @@ export const REFERTI = {
       O('insufficienza.varici', 'Ectasie varicose', 'Ectasia varicosa [della vena grande safena/della vena piccola safena/di vene tributarie] dell\'arto [destro/sinistro], con diametro massimo di [___ mm].', true),
       O('insufficienza.perforanti', 'Perforanti incontinenti', 'Vena perforante incontinente in sede [___], di diametro [___ mm].', true),
     ],
-    'Conclusioni': [
-      N('concl.norma', 'Nella norma', 'Non segni ecografici di trombosi venosa profonda né superficiale nei segmenti esaminati.'),
-      P('concl.tvp', 'Trombosi venosa profonda', 'Trombosi venosa profonda [occlusiva/non occlusiva] dell\'arto [destro/sinistro], con interessamento [della vena femorale comune/della vena femorale/della vena poplitea/delle vene di gamba/di più segmenti venosi].'),
-      P('concl.tvs', 'Tromboflebite superficiale', 'Tromboflebite superficiale dell\'arto [destro/sinistro] a carico [della grande safena/della piccola safena/di un ramo varicoso].'),
-      P('concl.insufficienza', 'Insufficienza superficiale', 'Insufficienza venosa superficiale dell\'arto [destro/sinistro] a carico [della vena grande safena/della vena piccola safena/di vene tributarie].'),
-      P('concl.esiti', 'Esiti post-trombotici', 'Esiti post-trombotici del sistema venoso profondo dell\'arto [destro/sinistro].'),
-    ],
   }),
 
   'ECOGRAFIA SCROTALE': exam('eco-scroto', {
@@ -351,19 +286,9 @@ export const REFERTI = {
       N('varicocele.norma', 'Non varicocele', 'Plesso pampiniforme di calibro regolare, senza reflusso alla manovra di Valsalva.'),
       P('varicocele.varicocele', 'Varicocele', 'Varicocele [destro/sinistro/bilaterale] di grado [I/II/III], con vene del plesso pampiniforme dilatate (diametro massimo [___ mm]) e reflusso [solo alla manovra di Valsalva/continuo con accentuazione al Valsalva].'),
     ],
-    'Conclusioni': [
-      N('concl.norma', 'Nella norma', 'Esame ecografico dello scroto nei limiti della norma.'),
-      P('concl.varicocele', 'Varicocele', 'Quadro ecografico di varicocele [destro/sinistro/bilaterale], di grado [I/II/III].'),
-      P('concl.orchiepididimite', 'Orchiepididimite', 'Quadro ecografico di orchiepididimite [destra/sinistra/bilaterale].'),
-      P('concl.formazione', 'Formazione testicolare', 'Formazione focale testicolare [destra/sinistra] di [___ mm], di natura da definire.'),
-      P('concl.vascolarizzazione', 'Alterata vascolarizzazione', 'Alterata vascolarizzazione testicolare [destra/sinistra/bilaterale], da correlare con il quadro clinico.'),
-    ],
   }),
 
   'ECOGRAFIA MAMMARIA': exam('eco-mammella', {
-    'Tecnica': [
-      O('tecnica.lato', 'Lato esaminato', 'Esame eseguito [bilateralmente/sulla mammella destra/sulla mammella sinistra] con sonda lineare ad alta frequenza.'),
-    ],
     'Parenchima ghiandolare': [
       N('parenchima.norma', 'Nella norma', 'Parenchima ghiandolare di ecostruttura regolare, con normale distribuzione del tessuto adiposo e fibroso.'),
       P('parenchima.ectasia', 'Ectasia duttale', 'Ectasia dei dotti galattofori [retroareolari/diffusa] [a destra/a sinistra/bilateralmente], con calibro massimo di [___ mm].'),
@@ -382,13 +307,8 @@ export const REFERTI = {
       P('ascelle.singolo', 'Linfonodo', 'Linfonodo ascellare [destro/sinistro] di [___ mm] in asse corto, [con/senza] ilo ecogeno conservato e [con/senza] ispessimento corticale.'),
       P('ascelle.multipli', 'Linfonodi multipli', 'Linfonodi ascellari [destri/sinistri/bilaterali], il maggiore di [___ mm] in asse corto, di aspetto [reattivo/sospetto].'),
     ],
-    'Conclusioni': [
-      N('concl.norma', 'Nella norma', 'Esame ecografico delle mammelle nei limiti della norma. ' + BIRADS),
-      P('concl.cisti', 'Cisti mammaria', 'Cisti mammaria semplice [destra/sinistra] di [___ mm]. ' + BIRADS),
-      P('concl.fibroadenoma', 'Fibroadenoma', 'Fibroadenoma [destro/sinistro] di [___ mm] in sede [___]. ' + BIRADS),
-      P('concl.lesione', 'Lesione solida', 'Lesione solida [destra/sinistra] di [___ mm] in sede [___], con caratteri [sospetti/non sospetti] all\'esame ecografico. ' + BIRADS),
-      P('concl.mastopatia', 'Mastopatia fibrocistica', 'Quadro di mastopatia fibrocistica [bilaterale/destra/sinistra]. ' + BIRADS),
-      P('concl.linfonodi', 'Linfoadenopatia ascellare', 'Linfoadenopatia ascellare [destra/sinistra/bilaterale] di aspetto [reattivo/sospetto].'),
+    'Categoria BI-RADS': [
+      N('birads.categoria', 'Categoria BI-RADS', 'Categoria BI-RADS: [0/1/2/3/4A/4B/4C/5/6].'),
     ],
   }),
 
@@ -411,13 +331,6 @@ export const REFERTI = {
       P('vertebrali.ipoplasia', 'Ipoplasia', 'Arteria vertebrale [destra/sinistra] di calibro ridotto, con diametro di [___ mm].'),
       P('vertebrali.stenosi', 'Stenosi dell\'origine', 'Stenosi all\'origine dell\'arteria vertebrale [destra/sinistra], con velocità di picco sistolico di [___ cm/s].'),
       O('vertebrali.calibro', 'Calibro', 'Diametro delle arterie vertebrali: destra [___ mm], sinistra [___ mm].'),
-    ],
-    'Conclusioni': [
-      N('concl.norma', 'Nella norma', 'Esame ecocolordoppler dei tronchi sovra-aortici nei limiti della norma.'),
-      P('concl.ateromasia', 'Ateromasia carotidea', 'Ateromasia carotidea [bilaterale/destra/sinistra] con placche [non emodinamicamente significative/emodinamicamente significative].'),
-      P('concl.stenosi', 'Stenosi carotide interna', 'Stenosi della carotide interna [destra/sinistra]: [< 50%/50-69%/≥ 70%/subocclusiva/occlusione].'),
-      P('concl.imt', 'Alterazioni intimo-mediali', 'Alterazioni intimo-mediali carotidee [lievi/moderate/marcate].'),
-      P('concl.vertebrali', 'Alterazione vertebrale', 'Quadro emodinamico vertebrale alterato: [inversione del flusso/ipoplasia/stenosi dell\'origine] dell\'arteria vertebrale [destra/sinistra].'),
     ],
   }),
 };

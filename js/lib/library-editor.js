@@ -291,7 +291,7 @@ export function createLibraryEditor(root, { getData, onChange }) {
         kind.setAttribute('aria-label', 'Tipo di frase');
         kind.innerHTML = '<option value="normale">Normale</option>'
           + '<option value="patologico">Patologica (sostituisce la normale)</option>'
-          + '<option value="aggiuntiva">Aggiuntiva (fuori dal referto normale)</option>'
+          + '<option value="aggiuntiva">Aggiuntiva (fuori dal referto negativo predefinito)</option>'
           + '<option value="aggiuntiva-patologica">Aggiuntiva patologica</option>';
         kind.value = (p.opz ? 'aggiuntiva' : '') + (p.opz && p.neg ? '-patologica' : '') || (p.neg ? 'patologico' : 'normale');
         kind.onchange = () => {

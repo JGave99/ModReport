@@ -61,13 +61,15 @@ body.page-app{ height: 100vh; height: 100dvh; display: flex; flex-direction: col
 .mini-toggle{ height: 26px; padding: 0 10px; border-radius: var(--r-pill); border: 1px solid var(--border-strong); background: transparent; color: var(--text-muted); font-size: var(--fs-xs); font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
 .mini-toggle[aria-pressed="true"]{ background: var(--danger-solid); border-color: var(--danger-solid); color: #fff; }
 
-/* ---------- Frasi: gruppi di sezione, opzionali, classe di dose ---------- */
+/* ---------- Frasi: gruppi di sezione, opzionali, referto negativo ---------- */
 .group--section .group__label{ color: var(--primary); }
 .phrase--optional{ border-left-color: var(--border-strong); }
 .phrase--optional .icon{ color: var(--text-muted); }
-.dose-row{ display: flex; flex-direction: column; gap: 6px; padding-top: var(--s-2); border-top: 1px dashed var(--border); }
-.dose-row .chip .subtle{ font-size: var(--fs-xs); }
-.block__head #btn-normal{ margin-left: var(--s-2); }
+.btn-pair{ display: inline-flex; gap: 4px; margin-left: var(--s-2); }
+.btn-pair[hidden]{ display: none; }
+.negativo-list{ display: flex; flex-direction: column; gap: var(--s-3); }
+.negativo-group{ border: 1px solid var(--border); border-radius: var(--r-md); padding: var(--s-2) var(--s-3) var(--s-3); margin: 0; display: flex; flex-direction: column; gap: var(--s-2); }
+.negativo-group legend{ font-size: var(--fs-sm); font-weight: 600; color: var(--text); padding: 0 4px; }
 
 /* ---------- Copia (pulsante diviso) ---------- */
 .split{ display: inline-flex; }

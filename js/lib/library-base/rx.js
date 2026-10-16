@@ -35,10 +35,6 @@ export const INDICAZIONI = {
 
 export const REFERTI = {
   'RX TORACE 2PR': exam('rx-torace-2p', {
-    'Tecnica': [
-      O('tecnica.confronto', 'Confronto', 'Confronto con il precedente esame del [___].'),
-      O('tecnica.limiti', 'Limiti tecnici', 'Esame eseguito in condizioni subottimali per [scarsa inspirazione/rotazione/scarsa collaborazione], con conseguenti limiti interpretativi.'),
-    ],
     'Parenchima': [
       N('parenchima.norma', 'Nella norma', 'Non addensamenti parenchimali a focolaio.'),
       P('parenchima.addensamento', 'Addensamento', 'Addensamento parenchimale [sede], da correlare con il quadro clinico-laboratoristico.'),
@@ -87,21 +83,9 @@ export const REFERTI = {
       O('presidi.port', 'Port', 'Catetere venoso centrale tipo port con reservoir in regione pettorale [destra/sinistra] ed estremità in proiezione [della vena cava superiore/della giunzione cavo-atriale].'),
       O('presidi.sternotomia', 'Esiti di sternotomia', 'Esiti di sternotomia mediana con fili metallici di cerchiaggio sternale.'),
     ],
-    'Conclusioni': [
-      N('concl.norma', 'Nella norma', 'Quadro radiografico del torace nei limiti della norma.'),
-      P('concl.focolaio', 'Focolaio', 'Quadro compatibile con focolaio broncopneumonico [sede], da correlare con il quadro clinico-laboratoristico.'),
-      P('concl.versamento', 'Versamento pleurico', 'Versamento pleurico [destro/sinistro/bilaterale].'),
-      P('concl.congestione', 'Congestione/edema', 'Quadro compatibile con [congestione del piccolo circolo/edema polmonare interstiziale/edema polmonare alveolare], da correlare con il quadro clinico.'),
-      P('concl.pnx', 'Pneumotorace', 'Pneumotorace [destro/sinistro].'),
-      P('concl.nodulo', 'Nodulo', 'Opacità nodulare [sede] di natura da definire, da correlare con il quadro clinico.'),
-    ],
   }),
 
   'RX TORACE AP supino': exam('rx-torace-ap', {
-    'Tecnica': [
-      N('tecnica.norma', 'AP al letto', 'Esame eseguito al letto in proiezione antero-posteriore, in [clinostatismo/semiortostatismo].'),
-      O('tecnica.confronto', 'Confronto', 'Confronto con il precedente esame del [___].'),
-    ],
     'Parenchima': [
       N('parenchima.norma', 'Nella norma', 'Non evidenti addensamenti parenchimali focali, con i limiti intrinseci della proiezione singola in AP.'),
       P('parenchima.addensamento', 'Addensamento', 'Addensamento parenchimale [sede], da correlare con il quadro clinico-laboratoristico.'),
@@ -139,19 +123,9 @@ export const REFERTI = {
       O('presidi.tubo', 'Tubo endotracheale', 'Tubo endotracheale con estremità a [___] cm dalla carena.'),
       O('presidi.drenaggio', 'Drenaggio toracico', 'Drenaggio toracico [destro/sinistro] con estremità in proiezione [apicale/medio-basale].'),
     ],
-    'Conclusioni': [
-      N('concl.norma', 'Nella norma', "Non evidenti alterazioni pleuro-parenchimali in atto, nei limiti dell'esame al letto."),
-      P('concl.focolaio', 'Focolaio', 'Quadro compatibile con focolaio broncopneumonico [sede], da correlare con il quadro clinico-laboratoristico.'),
-      P('concl.versamento', 'Versamento pleurico', 'Versamento pleurico [destro/sinistro/bilaterale].'),
-      P('concl.congestione', 'Congestione/edema', 'Quadro compatibile con [congestione del piccolo circolo/edema polmonare], da correlare con il quadro clinico.'),
-      P('concl.pnx', 'Pneumotorace', 'Pneumotorace [destro/sinistro].'),
-    ],
   }),
 
   'RX ADDOME': exam('rx-addome', {
-    'Tecnica': [
-      N('tecnica.norma', 'Posizione', 'Esame eseguito in [ortostatismo/clinostatismo/ortostatismo e clinostatismo].'),
-    ],
     'Anse intestinali': [
       N('anse.norma', 'Nella norma', 'Regolare distribuzione del gas intestinale, senza distensione delle anse.'),
       P('anse.tenue', 'Distensione del tenue', 'Distensione gassosa di anse del tenue, con calibro massimo di circa [___ mm].'),
@@ -186,14 +160,6 @@ export const REFERTI = {
       N('ossa.norma', 'Nella norma', 'Profili ossei del bacino e del rachide in esame nella norma.'),
       P('ossa.degenerative', 'Alterazioni degenerative', 'Alterazioni degenerative spondiloartrosiche del rachide lombare in esame.'),
     ],
-    'Conclusioni': [
-      N('concl.norma', 'Nella norma', "Quadro radiografico dell'addome nei limiti della norma."),
-      P('concl.occlusione', 'Occlusione', 'Quadro radiografico compatibile con [occlusione/subocclusione] [del tenue/del colon], da correlare con il quadro clinico.'),
-      P('concl.pneumoperitoneo', 'Pneumoperitoneo', 'Segni radiografici di pneumoperitoneo, da correlare con il quadro clinico.'),
-      P('concl.coprostasi', 'Coprostasi', 'Quadro di coprostasi [diffusa/a prevalenza del colon destro/rettale].'),
-      P('concl.calcolo', 'Calcolo', 'Immagine compatibile con calcolo radiopaco [sede].'),
-      P('concl.corpo-estraneo', 'Corpo estraneo', 'Corpo estraneo radiopaco in proiezione [sede].'),
-    ],
   }),
 
   'RX RACHIDE LOMBOSACRALE': exam('rx-rachide-ls', {
@@ -225,13 +191,6 @@ export const REFERTI = {
       P('interapofisarie.artrosi', 'Artrosi interapofisaria', 'Artrosi interapofisaria [___].'),
       P('interapofisarie.lisi', 'Spondilolisi', "Soluzione di continuo dell'istmo di [___] [a destra/a sinistra/bilateralmente], compatibile con spondilolisi."),
     ],
-    'Conclusioni': [
-      N('concl.norma', 'Nella norma', 'Quadro radiografico del rachide lombosacrale nei limiti della norma.'),
-      P('concl.degenerative', 'Alterazioni degenerative', 'Alterazioni degenerative [lievi/moderate/marcate] del rachide lombosacrale.'),
-      P('concl.cedimento', 'Cedimento', 'Cedimento somatico di [___], da correlare con il quadro clinico.'),
-      P('concl.frattura', 'Frattura', 'Frattura di [___], da correlare con il quadro clinico.'),
-      P('concl.listesi', 'Listesi', 'Spondilolistesi di [___] su [___], grado [I/II/III/IV] sec. Meyerding.'),
-    ],
   }),
 
   'RX BACINO': exam('rx-bacino', {
@@ -253,12 +212,6 @@ export const REFERTI = {
       N('sacroiliache.norma', 'Nella norma', 'Articolazioni sacroiliache nei limiti della norma.'),
       P('sacroiliache.artrosi', 'Artrosi', 'Alterazioni artrosiche delle articolazioni sacroiliache [a destra/a sinistra/bilateralmente].'),
       P('sacroiliache.sacroileite', 'Sacroileite', 'Erosioni e sclerosi subcondrale delle articolazioni sacroiliache [a destra/a sinistra/bilateralmente], compatibili con sacroileite, da correlare con il quadro clinico.'),
-    ],
-    'Conclusioni': [
-      N('concl.norma', 'Nella norma', 'Quadro radiografico del bacino nei limiti della norma.'),
-      P('concl.frattura', 'Frattura', 'Frattura [sede].'),
-      P('concl.coxartrosi', 'Coxartrosi', 'Coxartrosi [destra/sinistra/bilaterale] di grado [lieve/moderato/marcato].'),
-      P('concl.lussazione', 'Lussazione', "Lussazione dell'anca [destra/sinistra]."),
     ],
   }),
 
@@ -292,13 +245,6 @@ export const REFERTI = {
       O('molli.tumefazione', 'Tumefazione', 'Tumefazione dei tessuti molli [prerotulei/periarticolari].', true),
       O('molli.corpo-estraneo', 'Corpo estraneo', 'Immagine radiopaca di circa [___ mm] nei tessuti molli [sede], compatibile con corpo estraneo.', true),
     ],
-    'Conclusioni': [
-      N('concl.norma', 'Nella norma', 'Quadro radiografico del ginocchio nei limiti della norma.'),
-      P('concl.frattura', 'Frattura', 'Frattura [sede].'),
-      P('concl.gonartrosi', 'Gonartrosi', 'Gonartrosi [lieve/moderata/marcata].'),
-      P('concl.versamento', 'Versamento', 'Versamento articolare.'),
-      P('concl.lipoemartro', 'Lipoemartro', 'Lipoemartro, compatibile con frattura intra-articolare anche in assenza di rime di frattura evidenti.'),
-    ],
   }),
 
   'RX SPALLA': exam('rx-spalla', {
@@ -324,19 +270,9 @@ export const REFERTI = {
       N('molli.norma', 'Nella norma', 'Non calcificazioni nei tessuti molli periarticolari.'),
       P('molli.calcifica', 'Tendinopatia calcifica', 'Calcificazione di circa [___ mm] in proiezione del tendine [sovraspinato/sottospinato/sottoscapolare], compatibile con tendinopatia calcifica.'),
     ],
-    'Conclusioni': [
-      N('concl.norma', 'Nella norma', 'Quadro radiografico della spalla nei limiti della norma.'),
-      P('concl.frattura', 'Frattura', 'Frattura [sede].'),
-      P('concl.lussazione', 'Lussazione', 'Lussazione [gleno-omerale/acromion-claveare].'),
-      P('concl.calcifica', 'Tendinopatia calcifica', 'Quadro compatibile con tendinopatia calcifica della cuffia dei rotatori.'),
-      P('concl.artrosi', 'Artrosi', 'Alterazioni degenerative [gleno-omerali/acromion-claveari/gleno-omerali e acromion-claveari].'),
-    ],
   }),
 
   'RX POLSO': exam('rx-polso', {
-    'Tecnica': [
-      O('tecnica.gesso', 'In apparecchio gessato', 'Esame eseguito in apparecchio gessato, che limita la valutazione dei dettagli ossei.'),
-    ],
     'Radio e ulna': [
       N('radio-ulna.norma', 'Nella norma', "Non evidenti rime di frattura del radio e dell'ulna distali."),
       P('radio-ulna.radio', 'Frattura radio distale', "Frattura metaepifisaria distale del radio, [extra-articolare/articolare], [composta/con dislocazione dorsale del frammento distale/con dislocazione volare del frammento distale]."),
@@ -363,18 +299,9 @@ export const REFERTI = {
     'Parti molli': [
       O('molli.tumefazione', 'Tumefazione', 'Tumefazione dei tessuti molli [dorsali/volari/periarticolari].', true),
     ],
-    'Conclusioni': [
-      N('concl.norma', 'Nella norma', 'Quadro radiografico del polso nei limiti della norma.'),
-      P('concl.frattura', 'Frattura', 'Frattura [sede].'),
-      P('concl.consolidazione', 'In consolidazione', 'Frattura [sede] in via di consolidazione.'),
-      P('concl.artrosi', 'Alterazioni degenerative', 'Alterazioni degenerative [radio-carpiche/trapezio-metacarpali/radio-carpiche e trapezio-metacarpali].'),
-    ],
   }),
 
   'RX CAVIGLIA': exam('rx-caviglia', {
-    'Tecnica': [
-      O('tecnica.gesso', 'In apparecchio gessato', 'Esame eseguito in apparecchio gessato, che limita la valutazione dei dettagli ossei.'),
-    ],
     'Segmenti ossei': [
       N('ossa.norma', 'Nella norma', 'Non evidenti rime di frattura.'),
       P('ossa.peroneale', 'Frattura malleolo peroneale', 'Frattura [composta/scomposta] del malleolo peroneale, tipo [A/B/C] secondo Weber.'),
@@ -396,18 +323,9 @@ export const REFERTI = {
       O('molli.tumefazione', 'Tumefazione', 'Tumefazione dei tessuti molli perimalleolari [laterali/mediali].', true),
       O('molli.entesofita', 'Entesofita calcaneare', 'Entesofita [plantare/posteriore] del calcagno.', true),
     ],
-    'Conclusioni': [
-      N('concl.norma', 'Nella norma', 'Quadro radiografico della caviglia nei limiti della norma.'),
-      P('concl.frattura', 'Frattura', 'Frattura [sede].'),
-      P('concl.consolidazione', 'In consolidazione', 'Frattura [sede] in via di consolidazione.'),
-      P('concl.artrosi', 'Alterazioni degenerative', 'Alterazioni degenerative tibio-astragaliche.'),
-    ],
   }),
 
   'RX RACHIDE CERVICALE': exam('rx-rachide-c', {
-    'Tecnica': [
-      O('tecnica.limiti', 'Metameri inferiori', 'Metameri cervicali inferiori ([___]) non adeguatamente valutabili per sovrapposizione dei cingoli scapolari.'),
-    ],
     'Curve': [
       N('curve.norma', 'Nella norma', 'Lordosi cervicale fisiologica.'),
       P('curve.lordosi', 'Lordosi alterata', 'Lordosi cervicale [ridotta/rettilineizzata/invertita].'),
@@ -429,12 +347,6 @@ export const REFERTI = {
     'Parti molli prevertebrali': [
       N('molli.norma', 'Nella norma', 'Parti molli prevertebrali di spessore regolare.'),
       P('molli.ispessite', 'Ispessimento', 'Ispessimento delle parti molli prevertebrali (circa [___ mm] a livello di [___]), da correlare con il quadro clinico.'),
-    ],
-    'Conclusioni': [
-      N('concl.norma', 'Nella norma', 'Quadro radiografico del rachide cervicale nei limiti della norma.'),
-      P('concl.rettilineizzazione', 'Rettilineizzazione', 'Rettilineizzazione della lordosi cervicale, in assenza di evidenti lesioni ossee traumatiche.'),
-      P('concl.degenerative', 'Alterazioni degenerative', 'Alterazioni degenerative [lievi/moderate/marcate] del rachide cervicale.'),
-      P('concl.frattura', 'Frattura', 'Frattura [sede].'),
     ],
   }),
 
@@ -464,13 +376,6 @@ export const REFERTI = {
       O('molli.assenza-ce', 'Non corpi estranei', 'Non evidenti corpi estranei radiopachi nei tessuti molli.'),
       O('molli.corpo-estraneo', 'Corpo estraneo', 'Immagine radiopaca di circa [___ mm] nei tessuti molli [sede], compatibile con corpo estraneo.', true),
       O('molli.tumefazione', 'Tumefazione', 'Tumefazione dei tessuti molli [sede].', true),
-    ],
-    'Conclusioni': [
-      N('concl.norma', 'Nella norma', 'Quadro radiografico della mano nei limiti della norma.'),
-      P('concl.frattura', 'Frattura', 'Frattura [sede].'),
-      P('concl.artrosi', 'Alterazioni degenerative', 'Alterazioni degenerative [interfalangee/trapezio-metacarpali/interfalangee e trapezio-metacarpali].'),
-      P('concl.erosiva', 'Artropatia erosiva', 'Quadro compatibile con artropatia erosiva, da correlare con il quadro clinico-laboratoristico.'),
-      P('concl.corpo-estraneo', 'Corpo estraneo', 'Corpo estraneo radiopaco [sede].'),
     ],
   }),
 
@@ -504,13 +409,6 @@ export const REFERTI = {
       O('molli.assenza-ce', 'Non corpi estranei', 'Non evidenti corpi estranei radiopachi nei tessuti molli.'),
       O('molli.corpo-estraneo', 'Corpo estraneo', 'Immagine radiopaca di circa [___ mm] nei tessuti molli [sede], compatibile con corpo estraneo.', true),
       O('molli.tumefazione', 'Tumefazione', 'Tumefazione dei tessuti molli [sede].', true),
-    ],
-    'Conclusioni': [
-      N('concl.norma', 'Nella norma', 'Quadro radiografico del piede nei limiti della norma.'),
-      P('concl.frattura', 'Frattura', 'Frattura [sede].'),
-      P('concl.alluce-valgo', 'Alluce valgo', 'Alluce valgo [lieve/moderato/marcato].'),
-      P('concl.artrosi', 'Alterazioni degenerative', 'Alterazioni degenerative [sede].'),
-      P('concl.corpo-estraneo', 'Corpo estraneo', 'Corpo estraneo radiopaco [sede].'),
     ],
   }),
 };

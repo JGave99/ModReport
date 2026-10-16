@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   findFields, nextField, fieldAt, prepareMeasure, phrasePattern, findPhrase, removalEdit,
-  splitSections, planInsert, planToggle, applyEdits, normalReport, doseEdit, readDoseClass, checkReport, isIonizing,
+  splitSections, planInsert, planToggle, applyEdits, negativeReport, negativePhrases, checkReport,
 } from '../../js/lib/report-text.js';
 
 const GROUPS = [
@@ -86,39 +86,44 @@ test('variante patologica: sostituisce la normale del distretto e viceversa; sec
   assert.equal(applyEdits(t, plan.edits), 'RX\n\nNon versamento pleurico bilateralmente.\n');
 });
 
-test('conclusioni: sezione con intestazione in fondo, prima della classe di dose', () => {
-  let t = 'RX\n\nNon versamento pleurico bilateralmente.\n';
-  t = applyEdits(t, [doseEdit(t, 'II')]);
-  assert.equal(readDoseClass(t), 'II');
+test('conclusioni (libreria dell\'utente): sezione con intestazione in fondo, prima di una riga di dose incollata', () => {
+  let t = 'RX\n\nNon versamento pleurico bilateralmente.\n\nClasse di dose: II (1-5 mSv).\n';
   t = applyEdits(t, [planInsert(t, GROUPS, 4, 'Quadro nei limiti della norma.')]);
   assert.equal(t, 'RX\n\nNon versamento pleurico bilateralmente.\n\nConclusioni:\nQuadro nei limiti della norma.\n\nClasse di dose: II (1-5 mSv).\n');
   t = applyEdits(t, [planInsert(t, GROUPS, 2, 'Ombra cardiaca nei limiti della norma.')]);
   assert.ok(t.includes('bilateralmente.\nOmbra cardiaca nei limiti della norma.\n\nConclusioni:'));
-  t = applyEdits(t, [doseEdit(t, 'III')]);
-  assert.equal(readDoseClass(t), 'III');
-  t = applyEdits(t, [doseEdit(t, null)]);
-  assert.equal(readDoseClass(t), null);
   const s = splitSections('Indicazione: Dispnea\n\n' + t);
   assert.equal(s.indicazione, 'Dispnea');
   assert.ok(s.referto.startsWith('RX') && !s.referto.includes('Conclusioni'));
   assert.equal(s.conclusioni, 'Quadro nei limiti della norma.');
 });
 
-test('referto normale: Tecnica, prima frase normale di ogni distretto, conclusione; niente opzionali', () => {
-  const { text, added } = normalReport('TC TORACE\n', GROUPS, { blankBefore: true });
+test('referto negativo predefinito: prima frase normale di ogni gruppo, niente opzionali, idempotente', () => {
+  const { text, added } = negativeReport('TC TORACE\n', GROUPS, { blankBefore: true });
   assert.equal(text, 'TC TORACE\n\nEsame eseguito [senza/con] mdc.\nNon versamento pleurico bilateralmente.\nOmbra cardiaca nei limiti della norma.\n\nConclusioni:\nQuadro nei limiti della norma.\n');
   assert.equal(added.length, 4);
-  const again = normalReport(text, GROUPS);
-  assert.equal(again.text, text, 'idempotente');
+  assert.equal(negativeReport(text, GROUPS).text, text, 'idempotente');
 });
 
-test('controlli: campi vuoti, lato, contraddizioni, classe di dose', () => {
+test('referto negativo scelto dall\'utente: solo le frasi indicate, anche opzionali; ID spariti = predefinito', () => {
+  const groups = GROUPS.map((g, gi) => ({ ...g, phrases: g.phrases.map((p, pi) => ({ ...p, id: 'x:' + gi + '.' + pi })) }));
+  const ids = ['x:3.0', 'x:1.0'];
+  assert.deepEqual(negativePhrases(groups, ids).map((x) => x.phrase.id), ['x:1.0', 'x:3.0'], 'nell\'ordine dei gruppi');
+  const { text, added } = negativeReport('RX TORACE\n', groups, { ids, blankBefore: true });
+  assert.equal(text, 'RX TORACE\n\nNon versamento pleurico bilateralmente.\nSNG con estremità in sede gastrica.\n');
+  assert.equal(added.length, 2);
+  // Un gruppo che ha già una frase nel testo non riceve nulla.
+  const partial = negativeReport('RX TORACE\n\nVersamento pleurico destro di lieve entità.\n', groups, { ids });
+  assert.deepEqual(partial.added.map((p) => p.id), ['x:3.0']);
+  assert.equal(negativePhrases(groups, ['non-esiste']).length, 4, 'scelta non più valida: frasi predefinite');
+});
+
+test('controlli: campi vuoti, lato, contraddizioni', () => {
   const knee = 'Indicazione: Trauma ginocchio destro\n\nRX GINOCCHIO\n\nFrattura del piatto tibiale sinistro. Versamento [lieve/moderato].\n';
-  assert.deepEqual(checkReport(knee, { esame: 'RX GINOCCHIO', metodica: 'RX' }).map((i) => i.type), ['campi', 'lato', 'dose']);
-  const ok = 'Indicazione: Trauma ginocchio destro\n\nRX GINOCCHIO\n\nFrattura del piatto tibiale destro.\nClasse di dose: I (< 1 mSv).\n';
-  assert.deepEqual(checkReport(ok, { esame: 'RX GINOCCHIO', metodica: 'RX' }), []);
+  assert.deepEqual(checkReport(knee, { esame: 'RX GINOCCHIO' }).map((i) => i.type), ['campi', 'lato']);
+  const ok = 'Indicazione: Trauma ginocchio destro\n\nRX GINOCCHIO\n\nFrattura del piatto tibiale destro.\n';
+  assert.deepEqual(checkReport(ok, { esame: 'RX GINOCCHIO' }), []);
   const chest = 'RX TORACE\n\nNon versamento pleurico bilateralmente.\nVersamento pleurico destro di lieve entità.\n';
-  assert.deepEqual(checkReport(chest, { groups: GROUPS, metodica: 'Ecografia' }).map((i) => i.type), ['contraddizione']);
-  assert.deepEqual(checkReport('Ecografia nella norma.', { metodica: 'Ecografia' }), []);
-  assert.ok(isIonizing('TC') && isIonizing('Mammografia') && !isIonizing('RMN') && !isIonizing('Ecografia'));
+  assert.deepEqual(checkReport(chest, { groups: GROUPS }).map((i) => i.type), ['contraddizione']);
+  assert.deepEqual(checkReport('Ecografia nella norma.', {}), []);
 });
