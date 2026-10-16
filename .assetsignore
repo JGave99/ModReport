@@ -1,0 +1,26 @@
+# File del repository da non pubblicare su Cloudflare (sintassi .gitignore).
+.git
+.github
+.DS_Store
+.env
+.env.*
+.wrangler
+node_modules
+tests
+test-results
+playwright-report
+scripts
+supabase
+docs
+labs
+package.json
+package-lock.json
+playwright.config.mjs
+wrangler.jsonc
+CONTRIBUTING.md
+CHANGELOG.md
+README.md
+.claude
+.gitignore
+.nojekyll
+.assetsignore

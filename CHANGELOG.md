@@ -2,6 +2,10 @@
 
 ## [Non pubblicato] — branch `migliorie-audit`
 
+### Versione di prova online
+- Pubblicazione su Cloudflare Workers (`wrangler.jsonc`, `.assetsignore`): anteprime per branch su `*.workers.dev`.
+- Ambiente "prova" con un progetto Supabase separato: la produzione si usa solo su `jgave99.github.io`.
+
 ### Step 1 — Urgenze
 - Libreria predefinita ripristinata (33 esami, frasi corrette dopo revisione clinica) con migrazione automatica per chi aveva la libreria ridotta.
 - Stampa PDF: a capo corretto, più pagine con carta intestata su ognuna, caratteri speciali (≥ ≤ → …), anteprima in pagina.

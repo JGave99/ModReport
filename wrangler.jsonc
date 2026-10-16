@@ -1,0 +1,9 @@
+// Cloudflare Workers: il sito è solo statico (nessuno script lato server). Escluso dal caricamento ciò che è in .assetsignore.
+// Gli header di sicurezza stanno in _headers.
+{
+  "name": "modreport",
+  "compatibility_date": "2026-09-01",
+  "assets": { "directory": "." },
+  "workers_dev": true,
+  "preview_urls": true
+}
