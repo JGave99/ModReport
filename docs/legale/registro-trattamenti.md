@@ -9,8 +9,8 @@
 - **Base giuridica:** art. 6.1.b (contratto).
 - **Interessati:** utenti registrati (medici radiologi, specializzandi).
 - **Dati:** email, hash della password, fattore TOTP, nome e cognome (facoltativi), libreria di frasi, carte intestate (PDF), appartenenza ai team, messaggi.
-- **Destinatari:** Supabase Pte. Ltd. (responsabile, art. 28); hosting del sito [fornitore]; fornitore email [fornitore].
-- **Trasferimenti extra UE:** Supabase (Singapore) e GitHub (USA): clausole contrattuali standard; DPF per i fornitori USA aderenti.
+- **Destinatari:** Supabase Pte. Ltd. (responsabile, art. 28); hosting del sito GitHub Pages (GitHub, Inc., USA) e, per le versioni di prova, Cloudflare Workers (Cloudflare, Inc., USA); email di servizio Brevo (Sendinblue SAS, Francia).
+- **Trasferimenti extra UE:** Supabase (Singapore), GitHub e Cloudflare (USA): clausole contrattuali standard; DPF per i fornitori USA aderenti.
 - **Conservazione:** fino alla cancellazione dell'account; backup del fornitore entro i cicli ordinari (≈30 giorni).
 - **Misure di sicurezza:** TLS; RLS per utente su tutte le tabelle; funzioni server con controllo dei permessi; MFA facoltativa (obbligatoria lato database per chi la attiva); sessione solo nella scheda e uscita per inattività sulle postazioni condivise; CSP e header di sicurezza; nessun dato dei pazienti nel cloud per progetto (archivio referti solo locale, filtro dei dati identificativi nell'importazione).
 

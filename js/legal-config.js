@@ -9,9 +9,9 @@ window.MR_LEGAL = Object.freeze({
   PEC: '',               // PEC (facoltativa ma consigliata)
   FORO: '',              // città del foro competente per le controversie con i professionisti
   DPO: '',               // Responsabile della protezione dei dati, se nominato (altrimenti lasciare vuoto)
-  HOSTING: 'GitHub Pages — GitHub, Inc. (USA)', // da aggiornare quando si cambia hosting
+  HOSTING: 'GitHub Pages — GitHub, Inc. (USA); versioni di prova su Cloudflare Workers — Cloudflare, Inc. (USA)', // da aggiornare quando si cambia hosting
   SUPABASE_REGIONE: '',  // regione del progetto Supabase, es. "Unione Europea (Francoforte)"
-  EMAIL_PROVIDER: '',    // fornitore SMTP delle email di servizio, es. "Brevo (Sendinblue SAS, Francia)"
+  EMAIL_PROVIDER: 'Brevo — Sendinblue SAS (Francia), per le email di conferma e di recupero della password', // fornitore SMTP delle email di servizio
   TERMS_VERSION: '2026-10-04',
-  PRIVACY_VERSION: '2026-10-04',
+  PRIVACY_VERSION: '2026-10-16',
 });
