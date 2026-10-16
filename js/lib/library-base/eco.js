@@ -307,9 +307,6 @@ export const REFERTI = {
       P('ascelle.singolo', 'Linfonodo', 'Linfonodo ascellare [destro/sinistro] di [___ mm] in asse corto, [con/senza] ilo ecogeno conservato e [con/senza] ispessimento corticale.'),
       P('ascelle.multipli', 'Linfonodi multipli', 'Linfonodi ascellari [destri/sinistri/bilaterali], il maggiore di [___ mm] in asse corto, di aspetto [reattivo/sospetto].'),
     ],
-    'Categoria BI-RADS': [
-      N('birads.categoria', 'Categoria BI-RADS', 'Categoria BI-RADS: [0/1/2/3/4A/4B/4C/5/6].'),
-    ],
   }),
 
   'ECOCOLORDOPPLER TSA': exam('ecd-tsa', {

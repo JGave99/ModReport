@@ -6,7 +6,7 @@ prima del lancio deve essere rivista da 2-3 radiologi (voce 👤 dello Step 6 in
 **Regole di struttura** (helpers.js):
 - un gruppo per distretto; la prima frase normale entra nel "Referto negativo" predefinito (ogni utente può scegliere, per esame, quali frasi inserire);
 - le frasi patologiche sostituiscono quella normale del gruppo; le frasi "aggiuntive" non entrano nel referto negativo predefinito e non sostituiscono nulla;
-- niente gruppi "Tecnica" e "Conclusioni" (v4, issue #1): chi li vuole li aggiunge nella sua libreria. Nell'ecografia mammaria la categoria BI-RADS, che prima stava nelle conclusioni, è un gruppo a sé;
+- niente gruppi "Tecnica" e "Conclusioni" (v4, issue #1): chi li vuole li aggiunge nella sua libreria. La classe di dose e la tecnica le indica già il RIS;
 - le categorie (TI-RADS, BI-RADS, PI-RADS, LI-RADS, Bosniak, Fazekas…) sono solo liste di scelta del medico, mai calcolate;
 - nessuna raccomandazione di follow-up o di altri esami (docs/legale/destinazione-uso.md).
 
