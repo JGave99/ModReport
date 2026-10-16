@@ -1,6 +1,6 @@
 // Service worker di ModReport: uso offline. Rete prima di tutto (così si vede sempre la versione pubblicata),
 // cache solo come ripiego; mai richieste verso altri domini (Supabase) né con credenziali.
-const VERSION = 'mr-2026-10-07';
+const VERSION = 'mr-2026-10-16';
 const CACHE_NAME = 'modreport-' + VERSION;
 
 // File da precaricare all'installazione
@@ -32,9 +32,11 @@ self.addEventListener('install', (event) => {
         const promises = PRECACHE_FILES.map(file => {
           return fetch(file)
             .then(response => {
-              if (response.ok) {
-                return cache.put(file, response);
-              }
+              if (!response.ok) return;
+              // Cloudflare risponde a /pagina.html con un redirect a /pagina: in cache va una risposta "pulita",
+              // altrimenti offline il browser rifiuta una risposta redirect per una navigazione.
+              if (!response.redirected) return cache.put(file, response);
+              return response.blob().then((body) => cache.put(file, new Response(body, { status: 200, headers: response.headers })));
             })
             .catch(error => {
               // Se un file non è disponibile, continua senza fallire
