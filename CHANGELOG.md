@@ -5,6 +5,7 @@
 ### Versione di prova online
 - Pubblicazione su Cloudflare Workers (`wrangler.jsonc`, `.assetsignore`): anteprime per branch su `*.workers.dev`.
 - Ambiente "prova" con un progetto Supabase separato: la produzione si usa solo su `jgave99.github.io`.
+- Video di presentazione in homepage (sezione "Come funziona"), compresso per il web; guida `docs/AGGIORNARE-IL-SITO.md`.
 
 ### Step 1 — Urgenze
 - Libreria predefinita ripristinata (33 esami, frasi corrette dopo revisione clinica) con migrazione automatica per chi aveva la libreria ridotta.

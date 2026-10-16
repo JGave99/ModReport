@@ -49,4 +49,4 @@ Le librerie del browser sono copiate in `assets/vendor/` con `npm run vendor` (v
 
 ## Pubblicazione
 
-Il sito è statico: si pubblica il contenuto della cartella così com'è. `_headers` contiene gli header di sicurezza per Cloudflare Pages/Netlify. Prima del lancio: `docs/SUPABASE.md` (configurazione delle dashboard) e `npm run check:lancio`.
+Il sito è statico: si pubblica il contenuto della cartella così com'è (produzione su GitHub Pages, anteprime dei branch su Cloudflare Workers). `_headers` contiene gli header di sicurezza per Cloudflare. **Come aggiornare codice e sito, URL di produzione e prova, video della homepage: [`docs/AGGIORNARE-IL-SITO.md`](docs/AGGIORNARE-IL-SITO.md).** Prima del lancio: `docs/SUPABASE.md` (configurazione delle dashboard) e `npm run check:lancio`.

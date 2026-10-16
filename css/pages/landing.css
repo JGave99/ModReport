@@ -18,6 +18,9 @@ html{ scroll-behavior: smooth; }
 .hero__note{ font-size: var(--fs-sm); color: var(--text-subtle); margin-top: var(--s-3); }
 .shot{ border-radius: var(--r-lg); border: 1px solid var(--border); overflow: hidden; box-shadow: var(--shadow); background: var(--surface-1); }
 .shot img{ display: block; width: 100%; height: auto; }
+.video{ margin-top: var(--s-10); scroll-margin-top: 72px; }
+.video video{ display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; background: #0b0f14; }
+.video figcaption{ padding: var(--s-3) var(--s-4); font-size: var(--fs-sm); color: var(--text-subtle); text-align: center; border-top: 1px solid var(--border); }
 .shot .shot--light{ display: none; }
 :root[data-theme="light"] .shot .shot--dark{ display: none; }
 :root[data-theme="light"] .shot .shot--light{ display: block; }
