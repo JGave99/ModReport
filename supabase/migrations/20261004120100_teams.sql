@@ -18,6 +18,10 @@ alter table public.team_invites add column if not exists max_uses integer not nu
 alter table public.team_invites add column if not exists uses integer not null default 0;
 alter table public.team_invites add column if not exists revoked_at timestamptz;
 
+-- Ruoli: in produzione c'era un vincolo con i soli 'admin' e 'member'; i team hanno anche il proprietario.
+alter table public.team_members drop constraint if exists team_members_role_check;
+alter table public.team_members add constraint team_members_role_check check (role in ('owner', 'admin', 'member'));
+
 do $$
 declare
   legacy_team uuid;

@@ -33,8 +33,9 @@ before(async () => {
   await db.exec(read('supabase/tests/supabase-shim.sql'));
   const [baseline, ...rest] = migrations;
   await db.exec(read('supabase/migrations/' + baseline));
-  // Utenti e dati "legacy" come in produzione prima della migrazione dei team.
+  // Utenti e dati "legacy" come in produzione prima della migrazione dei team (compreso il vecchio vincolo sui ruoli).
   await db.exec(`
+    alter table public.team_members add constraint team_members_role_check check (role in ('admin', 'member'));
     insert into auth.users (id, email, raw_user_meta_data) values
       ('${A}', 'anna@ospedale.it', '{"nome":"Anna","cognome":"Bianchi"}'),
       ('${B}', 'bruno@ospedale.it', '{"nome":"Bruno","cognome":"Verdi"}'),
