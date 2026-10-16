@@ -123,7 +123,7 @@ create function public.copy_base_preset_to_new_user() returns trigger language p
       on conflict (user_id) do nothing;
     return new;
   end $f$;
-create trigger on_auth_user_created_copy_preset after insert on auth.users
+create trigger trg_copy_base_preset after insert on auth.users
   for each row execute function public.copy_base_preset_to_new_user();
 
 -- Policy della versione precedente (si appoggiano alle vecchie funzioni).

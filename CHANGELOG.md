@@ -1,6 +1,6 @@
 # Novità
 
-## [Non pubblicato] — branch `migliorie-audit`
+## v0.2.0 — 16/10/2026
 
 ### Issue #1 — Referto negativo
 - "Referto normale" diventa "Referto negativo": per ogni esame si scelgono le frasi da inserire (pulsante ⚙ accanto), salvate nella libreria personale.

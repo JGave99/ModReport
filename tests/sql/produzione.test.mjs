@@ -74,6 +74,10 @@ test('produzione: dati esistenti intatti, vecchie funzioni sostituite', async ()
 test('produzione: chi si registra dopo l\'aggiornamento ha profilo e libreria', async () => {
   await q(`insert into auth.users (id, email, raw_user_meta_data) values ('${N}', 'nuova@studio.it', '{"nome":"Nora"}')`);
   assert.equal((await q(`select nome from public.profiles where id = '${N}'`))[0].nome, 'Nora');
+  // Niente più copia della vecchia libreria base: il primo accesso parte dai predefiniti e dalla configurazione guidata.
+  assert.equal((await q(`select * from public.user_data where user_id = '${N}'`)).length, 0);
+  const leftovers = await q("select proname from pg_proc where pronamespace = 'public'::regnamespace and proname in ('copy_base_preset_to_new_user', 'has_chat_access', 'has_reporting_access', 'team_exists')");
+  assert.deepEqual(leftovers, []);
 });
 
 test('produzione: l\'eliminazione dell\'account funziona anche con letture, canali e inviti creati', async () => {
