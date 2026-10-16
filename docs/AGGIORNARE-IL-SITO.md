@@ -12,7 +12,7 @@ Le impostazioni delle dashboard (email, chiavi, pagamenti) sono in [`SUPABASE.md
 | Chi lo usa | utenti reali | colleghi che provano le novità; nessun dato reale |
 
 - **Ogni branch** pubblicato su GitHub ha la sua anteprima: `https://<nome-branch>-modreport.iaco-gavesi.workers.dev`.
-- Anche il branch `main` è pubblicato su Cloudflare, all'indirizzo <https://modreport.iaco-gavesi.workers.dev>, ma usa il database **di prova**.
+- Anche il branch `main` è pubblicato su Cloudflare, all'indirizzo <https://modreport.iaco-gavesi.workers.dev>. Non è per gli utenti: serve come ultima verifica di `main` e usa il database **di prova**. Attenzione: finché `main` contiene il codice di prima delle migliorie (tag `v0.1.0`), questo indirizzo usa ancora il database di **produzione**.
 - Dashboard:
   - Cloudflare → *Workers & Pages* → `modreport`;
   - Supabase → progetto di produzione o `modreport-prova`;
