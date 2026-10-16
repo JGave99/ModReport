@@ -36,6 +36,12 @@ before(async () => {
   // Utenti e dati "legacy" come in produzione prima della migrazione dei team (compreso il vecchio vincolo sui ruoli).
   await db.exec(`
     alter table public.team_members add constraint team_members_role_check check (role in ('admin', 'member'));
+    create function public.is_team_member(check_user_id uuid) returns boolean language sql stable as
+      $f$ select exists (select 1 from public.team_members where user_id = check_user_id) $f$;
+    create function public.is_team_admin(check_user_id uuid) returns boolean language sql stable as
+      $f$ select exists (select 1 from public.team_members where user_id = check_user_id and role = 'admin') $f$;
+    alter table public.channels enable row level security;
+    create policy vecchia_lettura_canali on public.channels for select to authenticated using (public.is_team_member(auth.uid()));
     insert into auth.users (id, email, raw_user_meta_data) values
       ('${A}', 'anna@ospedale.it', '{"nome":"Anna","cognome":"Bianchi"}'),
       ('${B}', 'bruno@ospedale.it', '{"nome":"Bruno","cognome":"Verdi"}'),

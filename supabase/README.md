@@ -11,7 +11,9 @@ Le regole di sicurezza vere stanno qui (RLS, funzioni, trigger, policy dello Sto
 | `migrations/20261004120200_security.sql` | RLS, funzioni RPC, trigger, limiti di dimensione, Storage, MFA obbligatoria per chi l'ha attivata |
 | `migrations/20261004130000_privacy.sql` | Consensi (versioni di termini e informativa), registro dei consensi |
 | `migrations/20261005120000_libreria.sql` | Versioni salvate della libreria (ultime 30) e libreria condivisa del team |
+| `migrations/20261016120000_utenti-collegamenti.sql` | Cosa succede ai dati quando un utente viene eliminato (in produzione mancava: l'eliminazione dell'account falliva) |
 | `tests/supabase-shim.sql` | Ambiente Supabase minimo per i test (non va applicato in produzione) |
+| `tests/produzione-2026-10-16.sql` | Schema reale della produzione prima delle migrazioni: `tests/sql/produzione.test.mjs` verifica che si applichino senza errori |
 
 Test: `npm run test:sql` esegue le migrazioni su un Postgres in memoria (PGlite) e verifica le regole con utenti di prova.
 

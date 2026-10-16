@@ -111,6 +111,7 @@ Altre due modalità che **non usano nessun database**:
 | Team | `teams`, `team_members`, `team_invites`, `team_libraries`, `channels`, `messages`, `channel_reads` |
 | Amministrazione | `app_admins`, `verification_requests` |
 | Legale | `consent_log` (accettazione di termini e informativa) |
+| Versione precedente | `app_presets` (libreria base copiata ai nuovi utenti da `copy_base_preset_to_new_user`), `subscriptions` (abbonamenti Stripe del 18-24/09, Step 7): restano, non più usate dal codice |
 | Storico | `report_archive`: referti salvati nel cloud dalle versioni vecchie; l'app li sposta nel browser e li cancella |
 
 ### Storage (file)

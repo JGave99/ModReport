@@ -38,6 +38,11 @@ begin
   end loop;
 end $$;
 
+-- Nella versione precedente queste funzioni ricevevano l'utente (check_user_id) invece del team:
+-- con un nome di parametro diverso "create or replace" non basta. Le policy che le usavano sono già state tolte qui sopra.
+drop function if exists public.is_team_member(uuid);
+drop function if exists public.is_team_admin(uuid);
+
 -- ============================================================
 -- FUNZIONI DI SUPPORTO (usate nelle policy)
 -- ============================================================
