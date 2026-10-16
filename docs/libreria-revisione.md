@@ -29,7 +29,6 @@ prima del lancio deve essere rivista da 2-3 radiologi (voce 👤 dello Step 6 in
 - "Rene non visualizzabile" aggiunge "rene controlaterale in sede, di morfologia conservata": confermare.
 - Gruppo "Muscoli e tendini" nelle parti molli aggiunto (tenere o togliere).
 - TSA: gruppi separati destra/sinistra; il grado di stenosi compare nella placca e nella conclusione; manca una frase dedicata all'occlusione.
-- Le conclusioni mammarie includono sempre il campo BI-RADS (anche quella normale).
 - Addome: cisti e calcolosi renale sono frasi aggiuntive (non sostituiscono la normale dei reni); "Insufficienza venosa" è un gruppo opzionale.
 
 ## TC (9 esami, 324 frasi)
