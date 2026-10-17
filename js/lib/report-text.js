@@ -1,6 +1,6 @@
 // Funzioni pure sul testo del referto (nessun accesso al DOM):
 // - riconoscere nel testo le frasi della libreria, anche dopo che l'utente ha compilato i campi;
-// - pianificare inserimenti nell'ordine dei distretti, sostituzioni normale ↔ patologico, rimozioni;
+// - pianificare inserimenti (in fondo al referto, nell'ordine dei clic), sostituzioni normale ↔ patologico, rimozioni;
 // - campi da compilare ([___], [a/b], ___), sezioni (indicazione, referto, conclusioni);
 // - controlli di scrittura (campi vuoti, lato, frasi in contraddizione). Sono avvisi testuali: non
 //   interpretano il contenuto clinico (vedi docs/legale/destinazione-uso.md).
@@ -150,12 +150,10 @@ export function splitSections(text) {
 
 // ---------------- Inserimenti, sostituzioni, rimozioni ----------------
 // groups: [{ name, phrases: [{ text, neg, opz }] }] nell'ordine della libreria.
-function groupMatches(text, groups) {
-  return groups.map((g) => g.phrases.map((p) => ({ phrase: p, range: findPhrase(text, p.text) })).filter((x) => x.range));
-}
-
-// Inserimento di una nuova riga nel punto giusto. blankBefore: se il testo finisce con la riga
-// dell'esame, lascia una riga vuota prima della prima frase.
+// Inserimento di una nuova riga. Le frasi entrano in fondo al referto, nell'ordine in cui si premono i
+// pulsanti (issue #2), prima della sezione "Conclusioni:" e della riga della dose se ci sono; le frasi di un
+// gruppo "Conclusioni" vanno nella loro sezione. blankBefore: se il testo finisce con la riga dell'esame,
+// lascia una riga vuota prima della prima frase.
 export function planInsert(text, groups, gi, phraseText, { blankBefore = false } = {}) {
   const t = String(text);
   const dose = doseLine(t);
@@ -174,29 +172,10 @@ export function planInsert(text, groups, gi, phraseText, { blankBefore = false }
     return { start: at, end: at, insert: sep + 'Conclusioni:\n' + phraseText + '\n' + (dose ? '\n' : '') };
   }
 
-  const matches = groupMatches(t, groups);
-  let after = -1;
-  let before = Infinity;
-  matches.forEach((list, h) => {
-    if (isConclusionGroup(groups[h].name)) return;
-    for (const { range } of list) {
-      if (concl && range.start >= concl.start) continue;
-      if (h <= gi) after = Math.max(after, range.end);
-      else before = Math.min(before, range.start);
-    }
-  });
-  if (after >= 0) {
-    const at = lineEndOf(t, after);
-    return { start: at, end: at, insert: '\n' + phraseText };
-  }
-  if (before !== Infinity) {
-    const at = lineStartOf(t, before);
-    return { start: at, end: at, insert: phraseText + '\n' };
-  }
   const limit = concl ? concl.start : dose ? lineStartOf(t, dose.start) : -1;
   if (limit >= 0) {
     const head = t.slice(0, limit).replace(/\s+$/, '');
-    const sep = head ? '\n\n' : '';
+    const sep = !head ? '' : blankBefore ? '\n\n' : '\n';
     return { start: head.length, end: limit, insert: sep + phraseText + '\n\n' };
   }
   const sep = !t ? '' : blankBefore ? (t.endsWith('\n\n') ? '' : t.endsWith('\n') ? '\n' : '\n\n') : (t.endsWith('\n') ? '' : '\n');

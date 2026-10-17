@@ -15,7 +15,7 @@ import { alertDialog, confirmDialog, promptDialog } from '../lib/dialog.js';
 import { toast } from '../lib/toast.js';
 import { createLibraryEditor } from '../lib/library-editor.js';
 import { migrateLibrary } from '../lib/library.js';
-import { newPhraseId } from '../lib/library-merge.js';
+import { newPhraseId, forStorage } from '../lib/library-merge.js';
 import { isLocalMode, setLocalMode, clearLocalData } from '../lib/local-backend.js';
 import { saveVersion, listVersions, loadVersion, deleteVersion, VERSION_REASONS } from '../lib/library-versions.js';
 
@@ -161,7 +161,7 @@ function refreshLibraryViews() {
 }
 
 $('lib-export').onclick = () => {
-  const blob = new Blob([JSON.stringify({ app: 'ModReport', kind: 'libreria', exportedAt: new Date().toISOString(), data: DATA }, null, 2)], { type: 'application/json' });
+  const blob = new Blob([JSON.stringify({ app: 'ModReport', kind: 'libreria', exportedAt: new Date().toISOString(), data: forStorage(DATA) }, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;

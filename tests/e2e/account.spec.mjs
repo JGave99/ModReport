@@ -61,3 +61,55 @@ test('versioni: salva, modifica, ripristina', async ({ page }) => {
   const versions = await page.evaluate(() => window.__fakeSupabase.db.tables.library_versions.map((v) => v.reason));
   expect(versions).toEqual(expect.arrayContaining(['manuale', 'ripristino']));
 });
+
+test('ordine delle sezioni: si trascina in un elenco a parte, resta salvato e vale nell\'editor (issue #2)', async ({ page }) => {
+  await login(page);
+  await page.goto('account.html#libreria');
+  await page.locator('.lib-tree__item', { hasText: 'RX TORACE 2PR' }).first().click();
+  const items = page.locator('.order-list .order-item');
+  await expect(items).toHaveCount(9);
+  await expect(page.locator('.lib-section__head [aria-label="Sposta il gruppo su"]')).toHaveCount(0);
+  // Da tastiera: Pneumotorace in cima
+  await items.filter({ hasText: 'Pneumotorace' }).focus();
+  for (let i = 0; i < 3; i++) await page.keyboard.press('Alt+ArrowUp');
+  await expect(items.first()).toContainText('Pneumotorace');
+  await expect(page.locator('.order-item:focus')).toContainText('Pneumotorace');
+  // Col mouse: Cuore sopra Parenchima (seconda posizione)
+  const from = await items.filter({ hasText: 'Cuore' }).boundingBox();
+  const to = await items.nth(1).boundingBox();
+  await page.mouse.move(from.x + 40, from.y + from.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(from.x + 40, to.y + 4, { steps: 8 });
+  await page.mouse.up();
+  const order = ['Pneumotorace', 'Cuore', 'Parenchima', 'Interstizio e circolo', 'Versamento pleurico', 'Mediastino', 'Diaframma', 'Scheletro', 'Presidi'];
+  await expect(items).toHaveText(order.map((n) => new RegExp('^' + n)));
+  await expect(page.locator('#lib-status')).toHaveText('Libreria salvata ✓');
+  // Il database (jsonb) riordina le chiavi: l'ordine voluto è salvato a parte.
+  const saved = await page.evaluate(() => window.__fakeSupabase.db.tables.user_data[0].data);
+  expect(Object.keys(saved.refertoByEsame['RX TORACE 2PR'])[0]).toBe('Cuore');
+  expect(saved.ordineGruppi['RX TORACE 2PR']).toEqual(order);
+  // Dopo il ricaricamento l'ordine resta
+  await page.reload();
+  await page.locator('.lib-tree__item', { hasText: 'RX TORACE 2PR' }).first().click();
+  await expect(items).toHaveText(order.map((n) => new RegExp('^' + n)));
+  // Nell'editor: pulsanti nello stesso ordine; frasi in fondo nell'ordine dei clic; referto negativo nell'ordine delle sezioni
+  await page.goto('app.html');
+  await page.waitForSelector('body[data-ready="1"]');
+  await page.locator('#metodica-row button', { hasText: 'RX' }).first().click();
+  await page.locator('#esame-body button', { hasText: 'RX TORACE 2PR' }).first().click();
+  await expect(page.locator('#referto-body .group__label')).toHaveText(order);
+  const group = (name) => page.locator('#referto-body .group', { has: page.locator('.group__label', { hasText: name }) });
+  await group('Diaframma').locator('.phrase').first().click();
+  await group('Pneumotorace').locator('.phrase').first().click();
+  const ta = page.locator('#report-text');
+  let text = await ta.inputValue();
+  const lines = text.trim().split('\n').slice(-2);
+  expect(lines[1]).toMatch(/pneumotorace/i);
+  await page.click('#btn-negativo');
+  text = await ta.inputValue();
+  const body = text.trim().split('\n');
+  const idx = (re) => body.findIndex((l) => re.test(l));
+  expect(idx(/pneumotorace/i)).toBeGreaterThan(idx(/diaframm/i));
+  expect(idx(/ombra cardiaca|cuore/i)).toBeGreaterThan(idx(/pneumotorace/i));
+  expect(idx(/addensament/i)).toBeGreaterThan(idx(/ombra cardiaca|cuore/i));
+});

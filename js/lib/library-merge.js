@@ -41,6 +41,40 @@ export function baseForUser(base) {
   return data;
 }
 
+// Ordine dei gruppi (sezioni) di ogni esame. I gruppi sono le chiavi di un oggetto, ma il database li salva in
+// jsonb, che riordina le chiavi (per lunghezza e poi alfabeticamente): l'ordine si salva quindi anche come
+// elenco, in ordineGruppi { esame: [nomi dei gruppi] }, scritto da forStorage e applicato da normalize.
+// In memoria l'ordine è quello delle chiavi e ordineGruppi non c'è.
+export const GROUP_ORDER_KEY = 'ordineGruppi';
+
+function reorderKeys(obj, order) {
+  const out = {};
+  for (const k of order) if (Object.prototype.hasOwnProperty.call(obj, k)) out[k] = obj[k];
+  for (const k of Object.keys(obj)) if (!Object.prototype.hasOwnProperty.call(out, k)) out[k] = obj[k];
+  return out;
+}
+
+// Copia della libreria pronta per il database (user_data, team_libraries, library_versions).
+// Se ha già ordineGruppi (dati appena letti dal database) resta com'è.
+export function forStorage(data) {
+  if (!isObj(data) || isObj(data[GROUP_ORDER_KEY])) return data;
+  const order = {};
+  for (const [esame, groups] of Object.entries(data.refertoByEsame || {})) {
+    if (isObj(groups)) order[esame] = Object.keys(groups);
+  }
+  return { ...data, [GROUP_ORDER_KEY]: order };
+}
+
+// Librerie salvate prima di ordineGruppi: l'ordine delle chiavi è quello di jsonb. Per gli esami della base
+// si torna all'ordine dei predefiniti; i gruppi creati dall'utente vanno in fondo, nell'ordine in cui sono.
+export function orderGroupsLikeBase(data, base) {
+  for (const [esame, groups] of Object.entries(data.refertoByEsame || {})) {
+    const baseGroups = base.refertoByEsame && base.refertoByEsame[esame];
+    if (isObj(groups) && baseGroups) data.refertoByEsame[esame] = reorderKeys(groups, Object.keys(baseGroups));
+  }
+  return data;
+}
+
 // Struttura minima valida (librerie salvate vecchie o incomplete).
 export function normalize(raw) {
   const data = isObj(raw) ? clone(raw) : {};
@@ -56,8 +90,12 @@ export function normalize(raw) {
       .filter(([, ids]) => Array.isArray(ids)).map(([e, ids]) => [e, ids.filter((id) => typeof id === 'string')])) : {};
   }
   for (const m of data.metodiche) if (!Array.isArray(data.esamiByMetodica[m])) data.esamiByMetodica[m] = [];
-  for (const [esame, groups] of Object.entries(data.refertoByEsame)) {
-    if (!isObj(groups)) { data.refertoByEsame[esame] = {}; continue; }
+  const order = isObj(data[GROUP_ORDER_KEY]) ? data[GROUP_ORDER_KEY] : {};
+  delete data[GROUP_ORDER_KEY];
+  for (const [esame, saved] of Object.entries(data.refertoByEsame)) {
+    if (!isObj(saved)) { data.refertoByEsame[esame] = {}; continue; }
+    const groups = Array.isArray(order[esame]) ? reorderKeys(saved, order[esame].filter((g) => typeof g === 'string')) : saved;
+    data.refertoByEsame[esame] = groups;
     for (const [g, phrases] of Object.entries(groups)) {
       groups[g] = (Array.isArray(phrases) ? phrases : []).filter((p) => isObj(p) && typeof p.text === 'string')
         .map((p) => ({ ...p, label: String(p.label || p.text.slice(0, 28)), neg: !!p.neg }));

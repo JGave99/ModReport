@@ -68,7 +68,7 @@
         out = rows.filter((r) => this.match(r));
         if (this.opts.head) return { data: null, error: null, count: out.length };
       } else if (this.op === 'insert' || this.op === 'upsert') {
-        const list = (Array.isArray(this.payload) ? this.payload : [this.payload]).map((p) => ({ id: uuid(), created_at: now(), ...JSON.parse(JSON.stringify(p)) }));
+        const list = (Array.isArray(this.payload) ? this.payload : [this.payload]).map((p) => storeJsonb(this.table, { id: uuid(), created_at: now(), ...JSON.parse(JSON.stringify(p)) }));
         for (const item of list) {
           const hookError = BEFORE_INSERT[this.table] && BEFORE_INSERT[this.table](item);
           if (hookError) return { data: null, error: hookError };
@@ -83,7 +83,7 @@
         save();
       } else if (this.op === 'update') {
         out = rows.filter((r) => this.match(r));
-        out.forEach((r) => Object.assign(r, JSON.parse(JSON.stringify(this.payload))));
+        out.forEach((r) => Object.assign(r, storeJsonb(this.table, JSON.parse(JSON.stringify(this.payload)))));
         save();
       } else if (this.op === 'delete') {
         out = rows.filter((r) => this.match(r));
@@ -101,6 +101,29 @@
       if (this.single === 'maybe') return { data: out[0] || null, error: null };
       return { data: out, error: null, count: out.length };
     }
+  }
+
+  // Le colonne jsonb di Postgres non conservano l'ordine delle chiavi: le ordinano per lunghezza in byte e poi
+  // byte per byte. Il finto backend fa lo stesso, così i test vedono ciò che succede con Supabase vero.
+  const JSONB_TABLES = ['user_data', 'team_libraries', 'library_versions'];
+  const utf8 = new TextEncoder();
+  function jsonbKeyCompare(a, b) {
+    const x = utf8.encode(a);
+    const y = utf8.encode(b);
+    if (x.length !== y.length) return x.length - y.length;
+    for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) return x[i] - y[i];
+    return 0;
+  }
+  function asJsonb(v) {
+    if (Array.isArray(v)) return v.map(asJsonb);
+    if (!v || typeof v !== 'object') return v;
+    const out = {};
+    Object.keys(v).sort(jsonbKeyCompare).forEach((k) => { out[k] = asJsonb(v[k]); });
+    return out;
+  }
+  function storeJsonb(table, row) {
+    if (JSONB_TABLES.includes(table) && row && row.data && typeof row.data === 'object') row.data = asJsonb(row.data);
+    return row;
   }
 
   const storageApi = (bucket) => ({

@@ -7,7 +7,7 @@ const chip = (text, delay, extra = '') => '<span class="m-chip ' + extra + (dela
 const SCENES = [
   {
     t: 'Referto a blocchi',
-    p: 'Scegli metodica ed esame: indicazioni e frasi si filtrano a cascata. Ogni frase va al suo posto nel referto e un secondo clic la toglie. Il bordo verde indica un reperto normale, quello ambra un reperto patologico.',
+    p: 'Scegli metodica ed esame: indicazioni e frasi si filtrano a cascata. Ogni frase si aggiunge in fondo al referto, nell\'ordine dei clic, e un secondo clic la toglie. Il bordo verde indica un reperto normale, quello ambra un reperto patologico.',
     h: '<div class="m-two"><div>' +
       '<div class="m-lbl s">Metodica</div>' + chip('Ecografia') + chip('RX', 0.6) + chip('TC') + chip('RMN') +
       '<div class="m-lbl s"' + d(1.6) + '>Esame</div>' + chip('RX TORACE 2PR', 1.8) + chip('RX ADDOME') +

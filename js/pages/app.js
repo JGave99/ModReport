@@ -270,7 +270,7 @@ function renderReferto() {
   $('negativo-actions').hidden = !groups.some((g) => g.phrases.some((p) => !p.neg));
   const note = document.createElement('p');
   note.className = 'sample-note';
-  note.textContent = 'Frasi di esempio da verificare. Una frase patologica sostituisce quella normale dello stesso distretto; un secondo clic la toglie.';
+  note.textContent = 'Frasi di esempio da verificare. Ogni frase si aggiunge in fondo al referto; una patologica sostituisce la normale dello stesso distretto; un secondo clic la toglie.';
   el.refertoBody.appendChild(note);
 
   groups.forEach((group, gi) => {
@@ -350,14 +350,8 @@ function togglePhrase(gi, pi) {
   const phrase = group && group.phrases[pi];
   if (!phrase) return;
   const ta = el.reportText;
+  // Le frasi nuove entrano sempre in fondo al referto, nell'ordine dei clic (issue #2), anche se il cursore è nel testo.
   const plan = planToggle(ta.value, groups, gi, pi, { blankBefore: pendingEsameOpen });
-  if (plan.action === 'insert' && caret && !isConclusionGroup(group.name)) {
-    // Il cursore è stato messo nel testo: la frase entra lì.
-    const at = caret.start;
-    insertReferto(phrase.text);
-    selectFirstFieldIn(at, at + phrase.text.length + 2);
-    return;
-  }
   const first = plan.edits.reduce((m, e) => Math.min(m, e.start), Infinity);
   applyEditsToReport(plan.edits);
   if (plan.action === 'insert') pendingEsameOpen = false;
@@ -405,8 +399,8 @@ function renderAll() {
 
 el.reportText.addEventListener('input', () => { renderWorkspaceTabs(); saveDraft(); clearTimeout(refreshPressed.t); refreshPressed.t = setTimeout(refreshPressed, 250); });
 
-// Inserimento alla posizione del cursore: se l'utente ha messo il cursore nel testo (non in fondo),
-// le frasi scelte dai pulsanti entrano lì; altrimenti in coda.
+// Posizione del cursore: se l'utente l'ha messo nel testo (non in fondo), l'esame e il confronto entrano lì;
+// altrimenti in coda. Le frasi della libreria invece vanno sempre in fondo (togglePhrase).
 let caret = null;
 function rememberCaret() {
   const ta = el.reportText;
@@ -486,15 +480,6 @@ function insertEsameLine(esameName, previous = null) {
 function insertConfronto(txt) {
   appendToReport(txt, '\n\n');
   pendingEsameOpen = false;
-}
-
-function insertReferto(txt) {
-  if (pendingEsameOpen) {
-    appendToReport('', '\n');
-    pendingEsameOpen = false;
-  }
-  appendToReport(txt, '\n');
-  refreshPressed();
 }
 
 function setUrgenzaButton() {

@@ -58,13 +58,20 @@ test('rimozione: riga intera o frase dentro una riga', () => {
   assert.equal(applyEdits(t2, [removalEdit(t2, r2)]), 'Prima. Terza.');
 });
 
-test('inserimento nell\'ordine dei distretti, a prescindere dall\'ordine dei clic', () => {
+test('inserimento in fondo al referto, nell\'ordine dei clic (issue #2)', () => {
   let t = 'RX TORACE\n';
   t = applyEdits(t, [planInsert(t, GROUPS, 2, GROUPS[2].phrases[0].text, { blankBefore: true })]);
   assert.equal(t, 'RX TORACE\n\nOmbra cardiaca nei limiti della norma.\n');
   t = applyEdits(t, [planInsert(t, GROUPS, 1, GROUPS[1].phrases[0].text)]);
   t = applyEdits(t, [planInsert(t, GROUPS, 0, 'Esame eseguito senza mdc.')]);
-  assert.equal(t, 'RX TORACE\n\nEsame eseguito senza mdc.\nNon versamento pleurico bilateralmente.\nOmbra cardiaca nei limiti della norma.\n');
+  assert.equal(t, 'RX TORACE\n\nOmbra cardiaca nei limiti della norma.\nNon versamento pleurico bilateralmente.\nEsame eseguito senza mdc.\n');
+  // Testo scritto a mano in fondo: la frase va dopo.
+  t = applyEdits(t + 'Nota scritta a mano.', [planInsert(t + 'Nota scritta a mano.', GROUPS, 1, 'Ispessimento pleurico destro.')]);
+  assert.ok(t.endsWith('Nota scritta a mano.\nIspessimento pleurico destro.\n'));
+  // Con una sezione Conclusioni (libreria dell'utente) le frasi restano sopra.
+  let c = 'RX\n\nOmbra cardiaca nei limiti della norma.\n\nConclusioni:\nQuadro nei limiti della norma.\n';
+  c = applyEdits(c, [planInsert(c, GROUPS, 1, 'Non versamento pleurico bilateralmente.')]);
+  assert.equal(c, 'RX\n\nOmbra cardiaca nei limiti della norma.\nNon versamento pleurico bilateralmente.\n\nConclusioni:\nQuadro nei limiti della norma.\n');
 });
 
 test('variante patologica: sostituisce la normale del distretto e viceversa; secondo clic la toglie', () => {
@@ -74,10 +81,10 @@ test('variante patologica: sostituisce la normale del distretto e viceversa; sec
   t = applyEdits(t, plan.edits);
   assert.equal(t, 'RX\n\nVersamento pleurico [destro/sinistro] di [lieve/moderata] entità.\nOmbra cardiaca nei limiti della norma.\n');
   t = t.replace('[destro/sinistro]', 'destro').replace('[lieve/moderata]', 'lieve');
-  plan = planToggle(t, GROUPS, 1, 2); // seconda variante patologica: coesiste
+  plan = planToggle(t, GROUPS, 1, 2); // seconda variante patologica: coesiste, in fondo
   assert.equal(plan.action, 'insert');
   t = applyEdits(t, plan.edits);
-  assert.ok(t.includes('Versamento pleurico destro di lieve entità.\nIspessimento pleurico'));
+  assert.ok(t.endsWith('Ombra cardiaca nei limiti della norma.\nIspessimento pleurico [destro/sinistro].\n'));
   plan = planToggle(t, GROUPS, 1, 0); // torna normale: sostituisce entrambe le patologiche
   t = applyEdits(t, plan.edits);
   assert.equal(t, 'RX\n\nNon versamento pleurico bilateralmente.\nOmbra cardiaca nei limiti della norma.\n');

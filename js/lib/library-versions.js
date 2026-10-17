@@ -1,5 +1,6 @@
 // Versioni salvate della libreria personale (tabella library_versions; in modalità locale nel browser).
 // Il server tiene le ultime 30: le più vecchie si cancellano da sole.
+import { forStorage } from './library-merge.js';
 
 export const VERSION_REASONS = {
   manuale: 'Salvata a mano',
@@ -9,7 +10,7 @@ export const VERSION_REASONS = {
 };
 
 export async function saveVersion(sb, userId, data, { label = '', reason = 'manuale' } = {}) {
-  const { error } = await sb.from('library_versions').insert({ user_id: userId, label: String(label).slice(0, 80), reason, data });
+  const { error } = await sb.from('library_versions').insert({ user_id: userId, label: String(label).slice(0, 80), reason, data: forStorage(data) });
   if (error) throw new Error(error.message);
 }
 

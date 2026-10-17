@@ -143,14 +143,98 @@ export function createLibraryEditor(root, { getData, onChange }) {
     changed();
   }
 
-  function moveGroup(name, delta) {
+  // Nuovo ordine dei gruppi (sezioni) dell'esame: decide l'ordine dei pulsanti nell'editor e del referto negativo.
+  function setGroupOrder(names) {
     const groups = D().refertoByEsame[selected.esame];
-    const keys = Object.keys(groups);
-    move(keys, keys.indexOf(name), delta);
     const rebuilt = {};
-    keys.forEach((k) => { rebuilt[k] = groups[k]; });
+    names.forEach((k) => { if (groups[k]) rebuilt[k] = groups[k]; });
+    Object.keys(groups).forEach((k) => { if (!rebuilt[k]) rebuilt[k] = groups[k]; });
+    if (Object.keys(rebuilt).join('\u0001') === Object.keys(groups).join('\u0001')) return false;
     D().refertoByEsame[selected.esame] = rebuilt;
-    changed();
+    return true;
+  }
+
+  // Elenco compatto delle sezioni, separato dalle frasi (issue #2): si trascina con mouse o dito,
+  // oppure da tastiera con Alt + freccia su/giù sulla sezione selezionata. Un clic porta alla sezione.
+  let focusGroup = null;
+  function renderGroupOrder(container, esame, keys) {
+    const sec = document.createElement('section');
+    sec.className = 'lib-section lib-order';
+    const h = document.createElement('h4');
+    h.id = 'lib-order-title';
+    h.textContent = 'Ordine delle sezioni del referto';
+    const hint = document.createElement('p');
+    hint.className = 'subtle';
+    hint.textContent = keys.length > 1
+      ? 'Trascina le sezioni per ordinare i pulsanti nell\'editor e le frasi del referto negativo. Da tastiera: Alt + ↑ / ↓.'
+      : 'Con più sezioni potrai ordinarle qui.';
+    const list = document.createElement('ol');
+    list.className = 'order-list';
+    list.setAttribute('aria-labelledby', 'lib-order-title');
+    keys.forEach((g, i) => {
+      const li = document.createElement('li');
+      li.className = 'order-item';
+      li.tabIndex = 0;
+      li.dataset.name = g;
+      li.setAttribute('aria-label', (i + 1) + '. ' + g + ', ' + D().refertoByEsame[esame][g].length + ' frasi');
+      li.setAttribute('aria-keyshortcuts', 'Alt+ArrowUp Alt+ArrowDown');
+      const grip = icon('grip-vertical');
+      grip.classList.add('order-item__grip');
+      const name = document.createElement('span');
+      name.className = 'order-item__name';
+      name.textContent = g;
+      const count = document.createElement('span');
+      count.className = 'subtle';
+      count.textContent = D().refertoByEsame[esame][g].length + ' frasi';
+      li.append(grip, name, count);
+      li.addEventListener('keydown', (e) => {
+        if (!e.altKey || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
+        e.preventDefault();
+        const names = [...keys];
+        move(names, i, e.key === 'ArrowUp' ? -1 : 1);
+        focusGroup = g;
+        if (setGroupOrder(names)) changed();
+      });
+      li.addEventListener('pointerdown', (e) => startDrag(e, li, list));
+      list.appendChild(li);
+    });
+    sec.append(h, hint, list);
+    container.appendChild(sec);
+  }
+
+  function startDrag(e, li, list) {
+    if (e.button !== 0) return;
+    // Col dito si trascina solo dalla maniglia, così sul resto dell'elenco la pagina scorre.
+    if (e.pointerType !== 'mouse' && !e.target.closest('.order-item__grip')) return;
+    const startY = e.clientY;
+    let moved = false;
+    const onMove = (ev) => {
+      if (ev.pointerId !== e.pointerId) return;
+      if (!moved && Math.abs(ev.clientY - startY) < 4) return;
+      if (!moved) { moved = true; li.classList.add('is-dragging'); list.classList.add('is-sorting'); }
+      ev.preventDefault();
+      const others = [...list.children].filter((x) => x !== li);
+      const before = others.find((x) => { const r = x.getBoundingClientRect(); return ev.clientY < r.top + r.height / 2; });
+      if (before) { if (li.nextSibling !== before) list.insertBefore(li, before); } else if (list.lastChild !== li) list.appendChild(li);
+    };
+    const onUp = (ev) => {
+      if (ev.pointerId !== e.pointerId) return;
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      document.removeEventListener('pointercancel', onUp);
+      li.classList.remove('is-dragging');
+      list.classList.remove('is-sorting');
+      if (!moved) {
+        const target = root.querySelector('[data-group-section="' + CSS.escape(li.dataset.name) + '"]');
+        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+      focusGroup = li.dataset.name;
+      if (setGroupOrder([...list.children].map((x) => x.dataset.name))) changed(); else render();
+    };
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+    document.addEventListener('pointercancel', onUp);
   }
 
   async function addGroup() {
@@ -260,19 +344,19 @@ export function createLibraryEditor(root, { getData, onChange }) {
     indSec.appendChild(btn('Aggiungi indicazione', 'plus', () => { ind.push(''); changed(); setTimeout(() => { const inputs = indSec.querySelectorAll('input'); if (inputs.length) inputs[inputs.length - 1].focus(); }, 0); }, { cls: 'btn btn--sm' }));
     container.appendChild(indSec);
 
-    // Gruppi di frasi
+    // Gruppi di frasi: prima l'ordine delle sezioni, poi le frasi di ciascuna
     const groups = (d.refertoByEsame[esame] = d.refertoByEsame[esame] || {});
     const keys = Object.keys(groups);
+    renderGroupOrder(container, esame, keys);
     keys.forEach((g) => {
       const sec = document.createElement('section');
       sec.className = 'lib-section';
+      sec.dataset.groupSection = g;
       const gh = document.createElement('div');
       gh.className = 'lib-section__head';
       const title = document.createElement('h4');
       title.textContent = g;
       gh.append(title,
-        btn('Sposta il gruppo su', 'arrow-up', () => moveGroup(g, -1)),
-        btn('Sposta il gruppo giù', 'arrow-down', () => moveGroup(g, 1)),
         btn('Rinomina il gruppo', 'pencil', () => renameGroup(g)),
         btn('Elimina il gruppo', 'trash-2', () => deleteGroup(g)));
       sec.appendChild(gh);
@@ -333,6 +417,11 @@ export function createLibraryEditor(root, { getData, onChange }) {
     root.append(tree, detail);
     renderTree(tree);
     renderDetail(detail);
+    if (focusGroup) {
+      const item = root.querySelector('.order-item[data-name="' + CSS.escape(focusGroup) + '"]');
+      focusGroup = null;
+      if (item) item.focus();
+    }
   }
 
   return { render, select(metodica, esame) { selected = { metodica, esame }; render(); } };

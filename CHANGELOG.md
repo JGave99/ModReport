@@ -1,5 +1,13 @@
 # Novità
 
+## [Non pubblicato] — branch `migliorie-audit`
+
+### Issue #2 — Ordine delle sezioni e delle frasi
+- L'ordine delle sezioni scelto in Account ora resta: il database (jsonb) riordinava i gruppi; l'ordine si salva anche in `ordineGruppi`. Le librerie salvate prima tornano all'ordine dei predefiniti.
+- Le frasi si aggiungono sempre in fondo al referto, nell'ordine in cui si premono i pulsanti (prima delle eventuali Conclusioni); una variante patologica sostituisce ancora la normale al suo posto.
+- In Account → Libreria, "Ordine delle sezioni del referto" è un elenco a parte: si trascina (mouse o dito sulla maniglia) o si usa Alt + ↑/↓; tolte le frecce dai gruppi.
+- Il backend finto dei test riproduce il riordino delle chiavi di jsonb.
+
 ## v0.2.0 — 16/10/2026
 
 ### Issue #1 — Referto negativo

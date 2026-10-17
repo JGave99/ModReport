@@ -2,7 +2,7 @@
 // La logica di aggiornamento (ID stabili, base versionata, modifiche dell'utente) è in library-merge.js.
 import { DEFAULT_LIBRARY, DEFAULTS_VERSION } from './default-library.js';
 import { V1_TEXTS, V2_TEXTS, DEPRECATED_TEXTS, V2_METODICHE } from './library-base/legacy.js';
-import { baseForUser, mergeBase, migrateFromV2, normalize } from './library-merge.js';
+import { baseForUser, mergeBase, migrateFromV2, normalize, forStorage, orderGroupsLikeBase, GROUP_ORDER_KEY } from './library-merge.js';
 import { DEFAULT_ABBREVIATIONS } from './voice-text.js';
 
 const isObj = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
@@ -30,6 +30,8 @@ export function migrateLibrary(raw) {
     data = normalize(raw);
   }
   if (data.abbreviazioni === undefined) { data.abbreviazioni = { ...DEFAULT_ABBREVIATIONS }; changed = true; }
+  // Salvata prima che l'ordine dei gruppi venisse conservato (issue #2): si riparte dall'ordine dei predefiniti.
+  if (!isObj(raw[GROUP_ORDER_KEY])) orderGroupsLikeBase(data, DEFAULT_LIBRARY);
   return { data, changed, report, fromVersion: version };
 }
 
@@ -105,7 +107,7 @@ export class LibraryStore {
 
   async _write(force) {
     this.onStatus('saving');
-    const payload = { data: this.getData(), updated_at: new Date().toISOString() };
+    const payload = { data: forStorage(this.getData()), updated_at: new Date().toISOString() };
     let result;
     if (this.updatedAt === null) {
       result = await this.sb.from(this.table)

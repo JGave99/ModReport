@@ -107,3 +107,38 @@ test('aggiornamento della base: frasi non modificate aggiornate, modificate ed e
   assert.equal(report.frasiAggiunte, 3);
   assert.equal(data.defaultsVersion, 4);
 });
+
+// Come jsonb: chiavi ordinate per lunghezza in byte e poi byte per byte.
+const asJsonb = (v) => {
+  if (Array.isArray(v)) return v.map(asJsonb);
+  if (!v || typeof v !== 'object') return v;
+  const enc = new TextEncoder();
+  const cmp = (a, b) => { const x = enc.encode(a), y = enc.encode(b); if (x.length !== y.length) return x.length - y.length; for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) return x[i] - y[i]; return 0; };
+  return Object.fromEntries(Object.keys(v).sort(cmp).map((k) => [k, asJsonb(v[k])]));
+};
+
+test('ordine dei gruppi: sopravvive al database (jsonb) grazie a ordineGruppi (issue #2)', async () => {
+  const { forStorage, normalize } = await import('../../js/lib/library-merge.js');
+  const lib = { metodiche: ['RX'], esamiByMetodica: { RX: ['RX X'] }, indicazioniByEsame: {}, refertoByEsame: {
+    'RX X': { Pneumotorace: [{ id: 'u:1', label: 'a', text: 'A.', neg: false }], Cuore: [{ id: 'u:2', label: 'b', text: 'B.', neg: false }], Parenchima: [] },
+  } };
+  const stored = asJsonb(forStorage(lib));
+  assert.deepEqual(Object.keys(stored.refertoByEsame['RX X']), ['Cuore', 'Parenchima', 'Pneumotorace'], 'jsonb riordina');
+  const back = normalize(stored);
+  assert.deepEqual(Object.keys(back.refertoByEsame['RX X']), ['Pneumotorace', 'Cuore', 'Parenchima']);
+  assert.equal(back.ordineGruppi, undefined, 'in memoria l\'ordine è quello delle chiavi');
+  assert.equal(back.refertoByEsame['RX X'].Pneumotorace[0].text, 'A.');
+  // Dati già letti dal database: ordineGruppi resta quello salvato
+  assert.equal(forStorage(stored), stored);
+});
+
+test('ordine dei gruppi: librerie salvate prima della correzione tornano all\'ordine dei predefiniti', async () => {
+  const { migrateLibrary, cloneDefaults } = await import('../../js/lib/library.js');
+  const lib = cloneDefaults();
+  lib.refertoByEsame['RX TORACE 2PR'].Mio = [{ id: 'u:x', label: 'Mio', text: 'Frase mia.', neg: false }];
+  const scrambled = asJsonb(lib);
+  const { data } = migrateLibrary(scrambled);
+  const keys = Object.keys(data.refertoByEsame['RX TORACE 2PR']);
+  assert.deepEqual(keys.slice(0, 3), ['Parenchima', 'Interstizio e circolo', 'Versamento pleurico']);
+  assert.equal(keys[keys.length - 1], 'Mio', 'i gruppi dell\'utente vanno in fondo');
+});
