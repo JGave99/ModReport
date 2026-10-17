@@ -1,6 +1,6 @@
 # Novità
 
-## [Non pubblicato] — branch `migliorie-audit`
+## v0.2.1 — 17/10/2026
 
 ### Issue #2 — Ordine delle sezioni e delle frasi
 - L'ordine delle sezioni scelto in Account ora resta: il database (jsonb) riordinava i gruppi; l'ordine si salva anche in `ordineGruppi`. Le librerie salvate prima tornano all'ordine dei predefiniti.
