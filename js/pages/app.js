@@ -5,6 +5,7 @@ import { toast } from '../lib/toast.js';
 import { confirmDialog } from '../lib/dialog.js';
 import { authErrorMessage, isExistingUserSignup, readAuthErrorFromHash } from '../lib/auth-messages.js';
 import { LibraryStore, cloneDefaults } from '../lib/library.js';
+import { DEFAULT_NEGATIVO } from '../lib/default-library.js';
 import { attachDictation, stopAllDictation, setDictationDisabled, setLocalDictationPreferred } from '../lib/dictation.js';
 import { buildReportPdf } from '../lib/pdf.js';
 import { passwordProblem } from '../lib/auth-policy.js';
@@ -707,7 +708,8 @@ $('btn-presa-visione').onclick = () => insertComparison('Presa visione di preced
 $('btn-non-precedenti').onclick = () => insertConfronto('Non disponibili precedenti per confronto.');
 $('btn-negativo').onclick = insertNegativeReport;
 
-const negativoIds = () => (state.esame && negativoByEsame[state.esame]) || null;
+// Scelta dell'utente; altrimenti la proposta della libreria predefinita; altrimenti la prima frase normale di ogni gruppo.
+const negativoIds = () => (state.esame && (negativoByEsame[state.esame] || DEFAULT_NEGATIVO[state.esame])) || null;
 const librarySource = () => (el.libSourceEditorBox.hidden ? 'personale' : el.libSourceEditor.value || 'personale');
 
 function openNegativoDialog() {

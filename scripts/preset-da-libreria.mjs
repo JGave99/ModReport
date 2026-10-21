@@ -6,13 +6,14 @@
 // il risultato del SQL Editor di Supabase scaricato in CSV o copiato come JSON (colonna "data").
 //
 // - Prende metodiche, esami, indicazioni e frasi nell'ordine dell'account (anche l'ordine dei gruppi).
-// - Lascia fuori ciò che è personale: abbreviazioni, scelta del referto negativo, elementi eliminati, impronte.
+// - Lascia fuori ciò che è personale: abbreviazioni, elementi eliminati, impronte. Le frasi scelte per il
+//   referto negativo diventano la proposta predefinita (negativoByEsame), che ogni utente può cambiare.
 // - ID stabili: le frasi della base mantengono il loro; quelle create dall'utente (u:X) diventano esame:ig.X,
 //   così nell'account di origine vengono riconosciute e non si duplicano (library-merge.js, findTwin).
 import { readFileSync, writeFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
-import { isBaseId, phraseHash } from '../js/lib/library-merge.js';
-import { migrateLibrary } from '../js/lib/library.js';
+import { isBaseId, phraseHash, normalize, orderGroupsLikeBase } from '../js/lib/library-merge.js';
+import { DEFAULT_LIBRARY } from '../js/lib/default-library.js';
 
 const slug = (s) => String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
   .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'esame';
@@ -52,14 +53,18 @@ export function readLibrary(text) {
 export function buildPreset(input) {
   const raw = input && input.data && input.data.refertoByEsame ? input.data : input;
   if (!raw || typeof raw !== 'object' || !raw.refertoByEsame) throw new Error('Il file non contiene una libreria ModReport.');
-  // La libreria come la vede l'utente nell'app oggi: aggiornata ai predefiniti correnti, con l'ordine dei gruppi
-  // (ordineGruppi; se manca, perché salvata prima della v0.2.1, quello dei predefiniti).
-  const lib = migrateLibrary(raw).data;
+  // Serve una libreria con gli ID delle frasi (v4 o successive): le più vecchie si aggiornano aprendo Account.
+  const version = Number(raw.defaultsVersion) || 1;
+  if (version < 4) throw new Error('Libreria della versione ' + version + ': l\'account deve prima aprire la pagina Account, che la aggiorna.');
+  // Ordine dei gruppi: ordineGruppi; se manca (salvata prima della v0.2.1), quello dei predefiniti.
+  const lib = normalize(raw);
+  if (!raw.ordineGruppi) orderGroupsLikeBase(lib, DEFAULT_LIBRARY);
   const warnings = [];
   if (!raw.ordineGruppi) warnings.push('La libreria non ha l\'ordine dei gruppi salvato (ultimo salvataggio prima della v0.2.1): uso l\'ordine dei predefiniti per gli esami della base.');
   const preset = { metodiche: [], esamiByMetodica: {}, indicazioniByEsame: {}, refertoByEsame: {} };
   const usedCodes = new Set();
   const usedIds = new Set();
+  const newId = new Map(); // id nell'account → id nella base
   let phrases = 0;
 
   for (const m of lib.metodiche) {
@@ -84,9 +89,10 @@ export function buildPreset(input) {
           let id = isBaseId(p.id) ? p.id : code + ':ig.' + (String(p.id || '').replace(/^u:/, '').toLowerCase().replace(/[^a-z0-9]/g, '') || phraseHash(p));
           if (usedIds.has(id)) id = code + ':ig.' + phraseHash({ ...p, label: id });
           usedIds.add(id);
-          const item = { id, label: p.label.trim() || p.text.slice(0, 28), text: p.text, neg: !!p.neg };
+          if (p.id) newId.set(p.id, id);
+          const item = { id, label: p.label.trim() ? p.label : p.text.slice(0, 28), text: p.text, neg: !!p.neg };
           if (p.opz) item.opz = true;
-          if (item.label.length > 28) warnings.push(esame + ' / ' + g + ': etichetta lunga "' + item.label + '"');
+          if (item.label.trim().length > 28) warnings.push(esame + ' / ' + g + ': etichetta lunga "' + item.label + '"');
           if (texts.has(p.text.trim())) warnings.push(esame + ' / ' + g + ': testo ripetuto "' + p.text + '"');
           if (/\b(paziente|nato|nata)\b/i.test(p.text)) warnings.push(esame + ' / ' + g + ': possibile dato del paziente "' + p.text + '"');
           texts.add(p.text.trim());
@@ -100,6 +106,12 @@ export function buildPreset(input) {
       phrases += Object.values(out).flat().length;
     }
   }
+  // Frasi del referto negativo scelte nell'account: diventano la proposta predefinita per quegli esami.
+  preset.negativoByEsame = {};
+  for (const [esame, ids] of Object.entries(lib.negativoByEsame || {})) {
+    const mapped = (Array.isArray(ids) ? ids : []).map((id) => newId.get(id)).filter(Boolean);
+    if (preset.refertoByEsame[esame] && mapped.length) preset.negativoByEsame[esame] = mapped;
+  }
   const orphans = Object.keys(lib.refertoByEsame).filter((e) => !preset.refertoByEsame[e]);
   if (orphans.length) warnings.push('Esami senza metodica, esclusi: ' + orphans.join(', '));
   const esami = Object.keys(preset.refertoByEsame).length;
@@ -109,7 +121,7 @@ export function buildPreset(input) {
 export function presetModule(preset, { date = new Date().toISOString().slice(0, 10) } = {}) {
   return '// Libreria predefinita: copia della libreria dell\'account di riferimento del ' + date + ' (issue #3).\n'
     + '// Generata con scripts/preset-da-libreria.mjs: per cambiarla si rigenera, non si modifica a mano.\n'
-    + '// Gli ID delle frasi non vanno mai cambiati né riutilizzati (vedi library-base/helpers.js).\n'
+    + '// Gli ID delle frasi non vanno mai cambiati né riutilizzati: servono ad aggiornare le librerie degli utenti.\n'
     + 'export const PRESET = ' + JSON.stringify(preset, null, 2) + ';\n';
 }
 

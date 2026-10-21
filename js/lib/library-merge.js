@@ -164,7 +164,8 @@ function findTwin(userGroups, basePhrase, baseById) {
   return byOrigin || own.find((p) => p.text.trim() === basePhrase.text.trim()) || null;
 }
 
-function mergeExam(userGroups, baseGroups, removed) {
+// renamed: raccoglie gli ID cambiati dall'adozione (vecchio → nuovo), per aggiornare chi li usa (referto negativo).
+function mergeExam(userGroups, baseGroups, removed, renamed = new Map()) {
   const present = new Map(phrasesIn(userGroups).map((x) => [x.phrase.id, x]));
   const baseById = new Map();
   for (const [g, list] of Object.entries(baseGroups)) list.forEach((p) => baseById.set(p.id, { group: g, phrase: p }));
@@ -196,7 +197,7 @@ function mergeExam(userGroups, baseGroups, removed) {
     for (const p of list) {
       if (present.has(p.id) || removed.has(p.id)) continue;
       const twin = findTwin(userGroups, p, baseById);
-      if (twin) { twin.id = p.id; twin.bh = phraseHash(p); continue; }
+      if (twin) { renamed.set(twin.id, p.id); twin.id = p.id; twin.bh = phraseHash(p); continue; }
       placeBasePhrase(userGroups, baseGroups, g, p);
       added += 1;
     }
@@ -218,6 +219,7 @@ export function mergeBase(rawData, base, { previous = null } = {}) {
   const data = normalize(rawData);
   const removed = new Set(data.removedBase);
   const report = { esamiAggiunti: [], frasiAggiunte: 0 };
+  const renamed = new Map();
   for (const m of base.metodiche) {
     if (!data.metodiche.includes(m)) {
       if (removed.has(tomb.metodica(m))) continue;
@@ -242,10 +244,13 @@ export function mergeBase(rawData, base, { previous = null } = {}) {
       data.indicazioniByEsame[esame] = Array.isArray(data.indicazioniByEsame[esame]) ? data.indicazioniByEsame[esame] : [];
       appendMissing(data.indicazioniByEsame[esame], base.indicazioniByEsame[esame] || [], (t) => removed.has(tomb.ind(esame, t)));
       data.refertoByEsame[esame] = isObj(data.refertoByEsame[esame]) ? data.refertoByEsame[esame] : {};
-      report.frasiAggiunte += mergeExam(data.refertoByEsame[esame], base.refertoByEsame[esame] || {}, removed);
+      report.frasiAggiunte += mergeExam(data.refertoByEsame[esame], base.refertoByEsame[esame] || {}, removed, renamed);
     }
   }
   if (previous) retirePrevious(data, base, previous, removed, report);
+  if (renamed.size && isObj(data.negativoByEsame)) {
+    for (const [esame, ids] of Object.entries(data.negativoByEsame)) data.negativoByEsame[esame] = ids.map((id) => renamed.get(id) || id);
+  }
   data.defaultsVersion = base.defaultsVersion;
   return { data, report };
 }
@@ -284,6 +289,27 @@ function retirePrevious(data, base, previous, removed, report) {
     return false;
   });
   data.metodiche = [...base.metodiche.filter((m) => data.metodiche.includes(m)), ...data.metodiche.filter((m) => !base.metodiche.includes(m))];
+  // Struttura dei gruppi della nuova base: le frasi della base non modificate vanno nel loro gruppo (che può
+  // essere stato rinominato o unito a un altro) e nell'ordine della base; quelle dell'utente restano in coda.
+  for (const [esame, baseGroups] of Object.entries(base.refertoByEsame || {})) {
+    const groups = data.refertoByEsame[esame];
+    if (!isObj(groups)) continue;
+    const where = new Map();
+    for (const [g, list] of Object.entries(baseGroups)) list.forEach((p, i) => where.set(p.id, { g, i }));
+    for (const [g, list] of Object.entries(groups)) {
+      for (const p of [...list]) {
+        const w = where.get(p.id);
+        if (!w || w.g === g || !(p.bh && phraseHash(p) === p.bh)) continue;
+        list.splice(list.indexOf(p), 1);
+        (groups[w.g] = groups[w.g] || []).push(p);
+      }
+    }
+    for (const [g, list] of Object.entries(groups)) {
+      if (!list.length) { delete groups[g]; continue; }
+      const pos = (p) => { const w = where.get(p.id); return w && w.g === g ? w.i : Infinity; };
+      groups[g] = list.map((p, k) => [p, k]).sort((a, b) => (pos(a[0]) - pos(b[0])) || (a[1] - b[1])).map(([p]) => p);
+    }
+  }
   orderGroupsLikeBase(data, base);
 }
 
@@ -297,7 +323,8 @@ export function migrateFromV2(rawData, base, legacy, { previous = null } = {}) {
     const baseGroups = base.refertoByEsame[esame];
     if (!baseGroups) {
       // Esame che la base corrente non ha più: i vecchi predefiniti non modificati spariscono, il resto è dell'utente.
-      const old = new Set([...(legacy.V1_TEXTS[esame] || []), ...(legacy.V2_TEXTS[esame] || [])]);
+      const old = new Set([...(legacy.V1_TEXTS[esame] || []), ...(legacy.V2_TEXTS[esame] || []),
+        ...legacy.DEPRECATED_TEXTS.filter((d) => d.esame === esame).map((d) => d.text)]);
       const groups = isObj(data.refertoByEsame[esame]) ? data.refertoByEsame[esame] : {};
       for (const [g, list] of Object.entries(groups)) {
         groups[g] = list.filter((p) => p.id || !old.has(p.text));

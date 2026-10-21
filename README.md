@@ -13,7 +13,7 @@ Strumento di scrittura per la refertazione radiologica: si compone il referto da
 | `js/lib/` | Moduli condivisi: client Supabase, libreria, PDF, dettatura, sessione, archivio locale, modalità locale… |
 | `js/config.js` | Configurazione Supabase (unico punto con URL e chiave) |
 | `js/legal-config.js` | Dati legali del titolare (informativa, termini, piè di pagina) |
-| `js/lib/library-base/` | Libreria predefinita (una metodica per file, regole in `helpers.js`); revisione clinica in `docs/libreria-revisione.md` |
+| `js/lib/library-base/` | Libreria predefinita (`preset.js`, generata da `scripts/preset-da-libreria.mjs`) e versioni precedenti per gli aggiornamenti; vedi `docs/libreria-revisione.md` |
 | `js/site-config.js`, `js/pricing-config.js` | Contenuti della landing: fondatori, testimonianze, listino (nascosto finché non è pubblicato) |
 | `css/` | Design system: `tokens.css` (colori, tipografia, spaziature, tema chiaro), `base.css`, `components.css`, `pages/` |
 | `assets/` | Logo, icone Lucide (`icons.svg`), immagini della landing, font e librerie di terze parti in locale |

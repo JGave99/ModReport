@@ -32,7 +32,7 @@ flowchart LR
 | **GitHub — repository** | `github.com/JGave99/ModReport` (proprietario JGave99) | codice, issue, pull request, tag di versione | gratis |
 | **GitHub Pages** | <https://jgave99.github.io/ModReport/> | **sito di produzione**, pubblica `main` | gratis |
 | **GitHub Actions** | `.github/workflows/ci.yml` | test automatici (lint, unit, SQL, e2e) su push a `main` e sulle pull request | gratis |
-| **Cloudflare Workers** | worker `modreport`, account `iaco.gavesi@gmail.com` (ID `ebf3daea43b40041991a1f4c26d5b0ef`) | **anteprime** di ogni branch: `https://<branch>-modreport.iaco-gavesi.workers.dev`; `main` su <https://modreport.iaco-gavesi.workers.dev> | gratis |
+| **Cloudflare Workers** | worker `modreport`, account Cloudflare di JGave (ID `ebf3daea43b40041991a1f4c26d5b0ef`) | **anteprime** di ogni branch: `https://<branch>-modreport.iaco-gavesi.workers.dev`; `main` su <https://modreport.iaco-gavesi.workers.dev> | gratis |
 | **Supabase — produzione** | progetto `umejthggxihtyqvcszgm` | login, database, file degli utenti reali | piano del progetto |
 | **Supabase — prova** | progetto `modreport-prova` (`blwcqwajcjklgzgbfdfc`, UE) | come la produzione, ma per le prove: nessun dato reale | gratis |
 | **Integrazione GitHub ↔ Supabase** | sul progetto di produzione | collegata, con *Deploy to production* **spento**: nessuna migrazione parte da sola | — |
@@ -75,7 +75,7 @@ Altre due modalità che **non usano nessun database**:
 | Gruppo | Moduli |
 |---|---|
 | Collegamento | `supabase.js` (client unico), `session.js` (postazione condivisa, MFA, uscita per inattività), `auth-*.js` |
-| Libreria | `library.js` (caricamento e salvataggio con controllo dei conflitti), `library-merge.js` (ID stabili, aggiornamento dei predefiniti), `library-versions.js`, `library-editor.js`, `default-library.js` + `library-base/` (frasi predefinite, v4) |
+| Libreria | `library.js` (caricamento e salvataggio con controllo dei conflitti), `library-merge.js` (ID stabili, aggiornamento dei predefiniti), `library-versions.js`, `library-editor.js`, `default-library.js` + `library-base/preset.js` (libreria predefinita v5, copia dell'account di riferimento) |
 | Referto | `report-text.js` (inserimento ordinato, varianti, campi, referto negativo, controlli), `text-insert.js`, `voice-text.js`, `dictation.js`, `pdf.js` |
 | Locale | `local-archive.js` (archivio IndexedDB), `local-backend.js` (modalità senza account), `archive-stats.js` |
 | Interfaccia | `dom.js`, `toast.js`, `dialog.js`, `palette.js`, `import-analysis.js` |

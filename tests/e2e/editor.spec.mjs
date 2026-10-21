@@ -26,12 +26,12 @@ test('composizione: schede indipendenti, intestazione senza doppioni, cambio esa
   await chip(page, '#esame-body', 'RX ADDOME');
   await expect(page.locator('#report-text')).toHaveValue('RX ADDOME\n');
   await chip(page, '#esame-body', 'RX TORACE 2PR');
-  await chip(page, '#indicazione-body', 'Tosse persistente');
+  await chip(page, '#indicazione-body', 'Tosse');
   await chip(page, '#indicazione-body', 'Dispnea');
   await page.click('#btn-urgenza-toggle');
   const text = await page.inputValue('#report-text');
   expect(text.match(/indicazione clinica/g)).toHaveLength(1);
-  expect(text).toContain("Esame eseguito in regime d'urgenza con indicazione clinica: Tosse persistente; Dispnea");
+  expect(text).toContain("Esame eseguito in regime d'urgenza con indicazione clinica: Tosse; Dispnea");
   await page.locator('#workspace-tabs button', { hasText: '2' }).click();
   await expect(page.locator('#report-text')).toHaveValue('');
   await page.locator('#workspace-tabs button', { hasText: '1' }).click();
@@ -112,11 +112,12 @@ test('referto strutturato: negativo, variante, campi con Tab, controlli, copia p
   await expect(page.locator('#dose-row')).toHaveCount(0);
   await page.click('#btn-negativo');
   const ta = page.locator('#report-text');
-  await expect(ta).toHaveValue(/Non versamento pleurico bilateralmente\./);
+  // Referto negativo proposto dalla libreria predefinita per questo esame
+  await expect(ta).toHaveValue(/Non addensamenti parenchimali a focolaio né versamento pleurico\.\nProfilo cardiomediastinico nei limiti\./);
   const normal = await ta.inputValue();
   expect(normal).not.toContain('Conclusioni');
   // La variante patologica sostituisce la frase normale dello stesso distretto
-  await page.locator('#referto-body .phrase--abnormal', { hasText: 'Versamento' }).first().click();
+  await page.locator('#referto-body .phrase--abnormal', { hasText: 'Cardiomegalia' }).first().click();
   const withVariant = await ta.inputValue();
   expect(withVariant.split('\n').length).toBe(normal.split('\n').length);
   expect(withVariant).toMatch(/\[[^\]]+\]/);
@@ -128,7 +129,7 @@ test('referto strutturato: negativo, variante, campi con Tab, controlli, copia p
   expect(selected).toMatch(/^(\[.+\]|_{3,})$/);
   // Con campi ancora da compilare, copiare chiede conferma
   await page.click('#btn-copy');
-  await expect(page.locator('dialog[open]')).toContainText('campi da compilare');
+  await expect(page.locator('dialog[open]')).toContainText(/camp[oi] da compilare/);
   await page.locator('dialog[open] button[type=submit]').click();
   await expect(page.locator('.toast').last()).toContainText('Copiato');
   // Copia solo il referto, senza indicazione
@@ -137,7 +138,7 @@ test('referto strutturato: negativo, variante, campi con Tab, controlli, copia p
   await page.click('#copy-menu [data-copy="referto"]');
   await page.locator('dialog[open] button[type=submit]').click();
   const clip = await page.evaluate(() => navigator.clipboard.readText());
-  expect(clip).toContain('Versamento pleurico');
+  expect(clip).toContain('Ingrandimento');
   // Ricerca rapida
   await page.keyboard.press('Control+k');
   await expect(page.locator('#palette')).toBeVisible();
@@ -158,13 +159,13 @@ test('referto negativo personalizzato: si scelgono le frasi, si salvano nella li
   const boxes = dialog.locator('input[type=checkbox]');
   const count = await boxes.count();
   for (let i = 0; i < count; i++) await boxes.nth(i).uncheck();
-  await dialog.locator('label', { hasText: 'Non versamento pleurico bilateralmente.' }).locator('input').check();
+  await dialog.locator('label', { hasText: 'Non versamento pleurico.' }).locator('input').check();
   await page.click('#negativo-save');
   await expect(dialog).not.toBeVisible();
   await page.click('#btn-negativo');
   const ta = page.locator('#report-text');
-  await expect(ta).toHaveValue(/Non versamento pleurico bilateralmente\./);
-  expect((await ta.inputValue()).match(/\.\n/g).length).toBe(1);
+  await expect(ta).toHaveValue(/Non versamento pleurico\./);
+  expect((await ta.inputValue()).split('\n').filter((l) => l.trim()).length).toBe(2); // esame + una frase
   // La scelta resta dopo il ricaricamento (salvata nella libreria)
   await page.reload();
   await page.waitForSelector('body[data-ready="1"]');
@@ -175,5 +176,5 @@ test('referto negativo personalizzato: si scelgono le frasi, si salvano nella li
   await page.click('#negativo-default');
   await expect(dialog).not.toBeVisible();
   await page.click('#btn-negativo-config');
-  expect(await dialog.locator('input:checked').count()).toBeGreaterThan(3);
+  await expect(dialog.locator('input:checked')).toHaveCount(2); // la proposta della libreria predefinita
 });

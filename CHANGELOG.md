@@ -5,7 +5,8 @@
 ### Issue #3 — Nuovi profili
 - Admin → Utenti registrati: "Elimina account" per gli altri utenti (non per sé né per altri amministratori), con conferma scrivendo l'email. Cancella anche i file caricati; registro delle eliminazioni (`admin_actions`). Migrazione `20261021120000_admin-elimina-utenti.sql`.
 - Registrazione: messaggio chiaro se il servizio email rifiuta l'invio; la schermata "Controlla la tua email" indica l'indirizzo e lo spam. Guida per capire dove si fermano le email in `docs/SUPABASE.md`.
-- Libreria predefinita dalla libreria di un account (`scripts/preset-da-libreria.mjs`) e aggiornamento degli utenti esistenti: le frasi dell'account di origine vengono riconosciute (niente doppioni), esami e indicazioni tolti dalla base spariscono se non personalizzati.
+- **Libreria predefinita v5 = libreria dell'account di Iacopo al 21/10/2026** (34 esami, 759 frasi, copiata una volta sola con `scripts/preset-da-libreria.mjs`), con la sua proposta di referto negativo per RX torace e RX addome.
+- Aggiornamento degli utenti esistenti: le frasi non modificate prendono testo, gruppo e posizione della nuova base; quelle scritte o modificate restano; esami e indicazioni tolti spariscono se non personalizzati; versione precedente salvata. L'account di origine resta identico, senza doppioni.
 
 ## v0.2.1 — 17/10/2026
 

@@ -2,9 +2,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { buildPreset, presetModule, readLibrary } from '../../scripts/preset-da-libreria.mjs';
-import { cloneDefaults } from '../../js/lib/library.js';
 import { baseForUser, mergeBase, forStorage, phraseHash } from '../../js/lib/library-merge.js';
 import { V4_BASE } from '../../js/lib/library-base/legacy-v4.js';
+import { V4_LIBRARY } from '../fixtures/library-v4/index.mjs';
+
+// Libreria di un utente con la base v4 (quella da cui si partiva prima dell'issue #3).
+const cloneDefaults = () => baseForUser(V4_LIBRARY);
 
 const clone = (v) => JSON.parse(JSON.stringify(v));
 const texts = (groups) => Object.values(groups).flat().map((p) => p.text);
@@ -22,14 +25,16 @@ function referenceLibrary() {
   lib.removedBase.push('esame|RX MANO');
   lib.indicazioniByEsame[ESAME] = ['Dispnea', 'Controllo post-operatorio'];
   lib.abbreviazioni = { '/x': 'personale' };
-  lib.negativoByEsame = { [ESAME]: ['x'] };
+  lib.negativoByEsame = { [ESAME]: ['x', 'u:abc123def456'] };
   return lib;
 }
 
 test('preset: ordine, ID stabili e niente dati personali dell\'account', () => {
   const exported = { app: 'ModReport', kind: 'libreria', data: forStorage(referenceLibrary()) };
   const { preset, warnings, stats } = buildPreset(clone(exported));
-  assert.ok(!('abbreviazioni' in preset) && !('negativoByEsame' in preset) && !('removedBase' in preset));
+  assert.ok(!('abbreviazioni' in preset) && !('removedBase' in preset));
+  // Le scelte del referto negativo diventano la proposta della base, con gli ID nuovi; quelle rotte si perdono.
+  assert.deepEqual(preset.negativoByEsame, { [ESAME]: ['rx-torace-2p:ig.abc123def456'] });
   assert.ok(!preset.refertoByEsame['RX MANO']);
   assert.equal(Object.keys(preset.refertoByEsame[ESAME])[0], 'Cuore');
   const nuova = preset.refertoByEsame[ESAME].Cuore.find((p) => p.text === 'Protesi valvolare in sede.');

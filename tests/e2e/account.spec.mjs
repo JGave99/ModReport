@@ -67,7 +67,7 @@ test('ordine delle sezioni: si trascina in un elenco a parte, resta salvato e va
   await page.goto('account.html#libreria');
   await page.locator('.lib-tree__item', { hasText: 'RX TORACE 2PR' }).first().click();
   const items = page.locator('.order-list .order-item');
-  await expect(items).toHaveCount(9);
+  await expect(items).toHaveCount(11);
   await expect(page.locator('.lib-section__head [aria-label="Sposta il gruppo su"]')).toHaveCount(0);
   // Da tastiera: Pneumotorace in cima
   await items.filter({ hasText: 'Pneumotorace' }).focus();
@@ -81,12 +81,12 @@ test('ordine delle sezioni: si trascina in un elenco a parte, resta salvato e va
   await page.mouse.down();
   await page.mouse.move(from.x + 40, to.y + 4, { steps: 8 });
   await page.mouse.up();
-  const order = ['Pneumotorace', 'Cuore', 'Parenchima', 'Interstizio e circolo', 'Versamento pleurico', 'Mediastino', 'Diaframma', 'Scheletro', 'Presidi'];
+  const order = ['Pneumotorace', 'Cuore', 'Parenchima', 'Interstizio e circolo', 'Pleura', 'Mediastino', 'Diaframma', 'Scheletro', 'Altro', 'Device', 'Tecnica'];
   await expect(items).toHaveText(order.map((n) => new RegExp('^' + n)));
   await expect(page.locator('#lib-status')).toHaveText('Libreria salvata ✓');
   // Il database (jsonb) riordina le chiavi: l'ordine voluto è salvato a parte.
   const saved = await page.evaluate(() => window.__fakeSupabase.db.tables.user_data[0].data);
-  expect(Object.keys(saved.refertoByEsame['RX TORACE 2PR'])[0]).toBe('Cuore');
+  expect(Object.keys(saved.refertoByEsame['RX TORACE 2PR'])[0]).toBe('Altro'); // jsonb: per lunghezza e poi alfabetico
   expect(saved.ordineGruppi['RX TORACE 2PR']).toEqual(order);
   // Dopo il ricaricamento l'ordine resta
   await page.reload();
@@ -110,6 +110,7 @@ test('ordine delle sezioni: si trascina in un elenco a parte, resta salvato e va
   const body = text.trim().split('\n');
   const idx = (re) => body.findIndex((l) => re.test(l));
   expect(idx(/pneumotorace/i)).toBeGreaterThan(idx(/diaframm/i));
-  expect(idx(/ombra cardiaca|cuore/i)).toBeGreaterThan(idx(/pneumotorace/i));
-  expect(idx(/addensament/i)).toBeGreaterThan(idx(/ombra cardiaca|cuore/i));
+  // Referto negativo proposto (Parenchima e Cuore), nell'ordine delle sezioni: prima Cuore, poi Parenchima
+  expect(idx(/profilo cardiomediastinico/i)).toBeGreaterThan(idx(/pneumotorace/i));
+  expect(idx(/addensament/i)).toBeGreaterThan(idx(/profilo cardiomediastinico/i));
 });

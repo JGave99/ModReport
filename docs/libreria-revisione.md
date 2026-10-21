@@ -1,16 +1,27 @@
-# Libreria predefinita v4 — punti per la revisione clinica
+# Libreria predefinita v5
 
-La libreria (js/lib/library-base/: rx.js, eco.js, tc.js, rm.js) è una **BOZZA** scritta con l'aiuto di modelli linguistici:
-prima del lancio deve essere rivista da 2-3 radiologi (voce 👤 dello Step 6 in docs/PIANO-LAVORI.md).
+**Dal 21/10/2026 (issue #3)** la libreria predefinita è la copia della libreria dell'account di riferimento
+(Iacopo Gavesi, radiologo), presa una volta sola e non più sincronizzata: `js/lib/library-base/preset.js`,
+generata con `node scripts/preset-da-libreria.mjs <esportazione>` (vedi lo script per i formati accettati).
+Contenuto: 4 metodiche, 34 esami, 759 frasi; per RX torace 2PR, RX torace AP e RX addome c'è anche la proposta
+di referto negativo scelta nell'account.
 
-**Regole di struttura** (helpers.js):
-- un gruppo per distretto; la prima frase normale entra nel "Referto negativo" predefinito (ogni utente può scegliere, per esame, quali frasi inserire);
-- le frasi patologiche sostituiscono quella normale del gruppo; le frasi "aggiuntive" non entrano nel referto negativo predefinito e non sostituiscono nulla;
-- niente gruppi "Tecnica" e "Conclusioni" (v4, issue #1): chi li vuole li aggiunge nella sua libreria. La classe di dose e la tecnica le indica già il RIS;
+**Come si aggiorna una libreria esistente** (library-merge.js): le frasi della base mantengono il loro ID; quelle
+che l'utente non ha modificato prendono testo, gruppo e posizione della nuova base; quelle modificate o scritte
+dall'utente restano. Esami, indicazioni e metodiche della base precedente (v4, `legacy-v4.js`) che non ci sono più
+spariscono solo se l'utente non li ha personalizzati. Prima dell'aggiornamento la pagina Account salva una versione.
+
+**Regole di struttura:**
+- un gruppo per distretto (o per aspetto); i gruppi compaiono nell'editor nell'ordine scelto;
+- la prima frase normale di ogni gruppo è quella del "Referto negativo" quando non c'è una scelta (dell'utente o
+  della base);
+- le frasi patologiche sostituiscono quella normale del gruppo; le frasi "aggiuntive" non entrano nel referto negativo
+  predefinito e non sostituiscono nulla;
 - le categorie (TI-RADS, BI-RADS, PI-RADS, LI-RADS, Bosniak, Fazekas…) sono solo liste di scelta del medico, mai calcolate;
 - nessuna raccomandazione di follow-up o di altri esami (docs/legale/destinazione-uso.md).
 
-**Contenuto:** 38 esami, circa 840 frasi. Le frasi possono essere modificate da ogni utente nella propria libreria; le correzioni della base arrivano agli utenti con un aggiornamento della versione (DEFAULTS_VERSION) senza toccare le frasi che hanno personalizzato.
+## Storico: note di revisione della libreria v3-v4 (bozza scritta con modelli linguistici, sostituita dalla v5)
+La v4 completa è in `tests/fixtures/library-v4/` (usata dai test per simulare gli utenti esistenti).
 
 ## RX (12 esami, 280 frasi)
 - RX TORACE 2PR ha 38 frasi: candidate allo sfoltimento Strie, Spondilosi dorsale, Limiti tecnici.

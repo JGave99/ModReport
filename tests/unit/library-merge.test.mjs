@@ -139,6 +139,8 @@ test('ordine dei gruppi: librerie salvate prima della correzione tornano all\'or
   const scrambled = asJsonb(lib);
   const { data } = migrateLibrary(scrambled);
   const keys = Object.keys(data.refertoByEsame['RX TORACE 2PR']);
-  assert.deepEqual(keys.slice(0, 3), ['Parenchima', 'Interstizio e circolo', 'Versamento pleurico']);
+  const { DEFAULT_LIBRARY } = await import('../../js/lib/default-library.js');
+  const baseKeys = Object.keys(DEFAULT_LIBRARY.refertoByEsame['RX TORACE 2PR']);
+  assert.deepEqual(keys.slice(0, baseKeys.length), baseKeys);
   assert.equal(keys[keys.length - 1], 'Mio', 'i gruppi dell\'utente vanno in fondo');
 });
