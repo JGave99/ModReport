@@ -1,6 +1,6 @@
 # Novità
 
-## [Non pubblicato] — branch `migliorie-audit`
+## v0.2.2 — 21/10/2026
 
 ### Issue #3 — Nuovi profili
 - Admin → Utenti registrati: "Elimina account" per gli altri utenti (non per sé né per altri amministratori), con conferma scrivendo l'email. Cancella anche i file caricati; registro delle eliminazioni (`admin_actions`). Migrazione `20261021120000_admin-elimina-utenti.sql`.
