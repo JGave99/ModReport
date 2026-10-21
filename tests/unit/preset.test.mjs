@@ -1,7 +1,7 @@
 // Nuova libreria predefinita dalla libreria di un account (issue #3) e aggiornamento degli utenti esistenti.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildPreset, presetModule } from '../../scripts/preset-da-libreria.mjs';
+import { buildPreset, presetModule, readLibrary } from '../../scripts/preset-da-libreria.mjs';
 import { cloneDefaults } from '../../js/lib/library.js';
 import { baseForUser, mergeBase, forStorage, phraseHash } from '../../js/lib/library-merge.js';
 import { V4_BASE } from '../../js/lib/library-base/legacy-v4.js';
@@ -82,4 +82,24 @@ test('nuovo utente: la base è esattamente la libreria di riferimento', () => {
   const fresh = baseForUser({ defaultsVersion: 5, ...preset });
   assert.deepEqual(Object.keys(fresh.refertoByEsame[ESAME]), Object.keys(ref.refertoByEsame[ESAME]));
   assert.deepEqual(fresh.indicazioniByEsame[ESAME], ['Dispnea', 'Controllo post-operatorio']);
+});
+
+// Come jsonb: chiavi ordinate per lunghezza e poi byte per byte (ASCII basta per il test).
+const asJsonb = (v) => (Array.isArray(v) ? v.map(asJsonb) : v && typeof v === 'object'
+  ? Object.fromEntries(Object.keys(v).sort((a, b) => a.length - b.length || (a < b ? -1 : a > b ? 1 : 0)).map((k) => [k, asJsonb(v[k])])) : v);
+
+test('preset dal SQL Editor: CSV o JSON della colonna data, anche senza ordine dei gruppi salvato', () => {
+  const lib = referenceLibrary();
+  const stored = asJsonb(forStorage(lib));
+  const csv = 'data\n"' + JSON.stringify(stored).replace(/"/g, '""') + '"\n';
+  assert.deepEqual(readLibrary(csv), stored);
+  assert.deepEqual(readLibrary(JSON.stringify([{ data: stored }])), stored);
+  assert.deepEqual(readLibrary(JSON.stringify([{ data: JSON.stringify(stored) }])), stored);
+  assert.throws(() => readLibrary('data\n"{}"\n'), /non contiene una libreria/);
+  // Con ordineGruppi l'ordine voluto torna; senza, si usa quello dei predefiniti.
+  assert.equal(Object.keys(buildPreset(readLibrary(csv)).preset.refertoByEsame[ESAME])[0], 'Cuore');
+  const old = asJsonb(lib);
+  const { preset, warnings } = buildPreset(old);
+  assert.equal(Object.keys(preset.refertoByEsame[ESAME])[0], 'Parenchima');
+  assert.match(warnings[0], /ordine dei gruppi/);
 });

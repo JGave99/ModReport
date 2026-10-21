@@ -1,8 +1,9 @@
 // Crea la libreria predefinita da una libreria esportata da un account (issue #3: la base diventa la libreria
 // di riferimento di un radiologo, copiata una volta sola).
 //
-// Uso: node scripts/preset-da-libreria.mjs <libreria.json> [--out js/lib/library-base/preset.js]
-// Il file è quello di Account → Libreria → Esporta (oppure il solo campo "data" di user_data).
+// Uso: node scripts/preset-da-libreria.mjs <libreria.json|.csv> [--out js/lib/library-base/preset.js]
+// Il file può essere: quello di Account → Libreria → Esporta; il campo "data" di user_data (JSON);
+// il risultato del SQL Editor di Supabase scaricato in CSV o copiato come JSON (colonna "data").
 //
 // - Prende metodiche, esami, indicazioni e frasi nell'ordine dell'account (anche l'ordine dei gruppi).
 // - Lascia fuori ciò che è personale: abbreviazioni, scelta del referto negativo, elementi eliminati, impronte.
@@ -10,16 +11,52 @@
 //   così nell'account di origine vengono riconosciute e non si duplicano (library-merge.js, findTwin).
 import { readFileSync, writeFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
-import { normalize, isBaseId, phraseHash } from '../js/lib/library-merge.js';
+import { isBaseId, phraseHash } from '../js/lib/library-merge.js';
+import { migrateLibrary } from '../js/lib/library.js';
 
 const slug = (s) => String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
   .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'esame';
 
+// CSV del SQL Editor (RFC 4180): restituisce le righe come oggetti { colonna: valore }.
+function parseCsv(text) {
+  const rows = [];
+  let row = [];
+  let field = '';
+  let quoted = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (quoted) {
+      if (c === '"' && text[i + 1] === '"') { field += '"'; i++; } else if (c === '"') quoted = false; else field += c;
+    } else if (c === '"') quoted = true;
+    else if (c === ',') { row.push(field); field = ''; } else if (c === '\n' || c === '\r') {
+      if (c === '\r' && text[i + 1] === '\n') i++;
+      row.push(field); rows.push(row); row = []; field = '';
+    } else field += c;
+  }
+  if (field || row.length) { row.push(field); rows.push(row); }
+  const [head, ...body] = rows.filter((r) => r.some((x) => x !== ''));
+  return body.map((r) => Object.fromEntries(head.map((h, i) => [h.trim(), r[i]])));
+}
+
+// Trova la libreria in uno dei formati accettati.
+export function readLibrary(text) {
+  const trimmed = String(text).replace(/^\uFEFF/, '').trim();
+  let v = trimmed.startsWith('{') || trimmed.startsWith('[') ? JSON.parse(trimmed) : parseCsv(trimmed);
+  if (Array.isArray(v)) v = v.length === 1 ? v[0] : (() => { throw new Error('Il risultato ha ' + v.length + ' righe: ne serve una.'); })();
+  if (v && v.data !== undefined && !v.refertoByEsame) v = v.data;
+  if (typeof v === 'string') v = JSON.parse(v);
+  if (!v || typeof v !== 'object' || !v.refertoByEsame) throw new Error('Il file non contiene una libreria ModReport.');
+  return v;
+}
+
 export function buildPreset(input) {
   const raw = input && input.data && input.data.refertoByEsame ? input.data : input;
   if (!raw || typeof raw !== 'object' || !raw.refertoByEsame) throw new Error('Il file non contiene una libreria ModReport.');
-  const lib = normalize(raw);
+  // La libreria come la vede l'utente nell'app oggi: aggiornata ai predefiniti correnti, con l'ordine dei gruppi
+  // (ordineGruppi; se manca, perché salvata prima della v0.2.1, quello dei predefiniti).
+  const lib = migrateLibrary(raw).data;
   const warnings = [];
+  if (!raw.ordineGruppi) warnings.push('La libreria non ha l\'ordine dei gruppi salvato (ultimo salvataggio prima della v0.2.1): uso l\'ordine dei predefiniti per gli esami della base.');
   const preset = { metodiche: [], esamiByMetodica: {}, indicazioniByEsame: {}, refertoByEsame: {} };
   const usedCodes = new Set();
   const usedIds = new Set();
@@ -81,7 +118,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   if (!file) { console.error('Uso: node scripts/preset-da-libreria.mjs <libreria.json> [--out percorso]'); process.exit(1); }
   const outIdx = rest.indexOf('--out');
   const out = outIdx !== -1 ? rest[outIdx + 1] : 'js/lib/library-base/preset.js';
-  const { preset, warnings, stats } = buildPreset(JSON.parse(readFileSync(file, 'utf8')));
+  const { preset, warnings, stats } = buildPreset(readLibrary(readFileSync(file, 'utf8')));
   writeFileSync(out, presetModule(preset));
   console.log('Scritto ' + out + ': ' + stats.metodiche + ' metodiche, ' + stats.esami + ' esami, ' + stats.frasi + ' frasi.');
   if (warnings.length) console.log('Da controllare (' + warnings.length + '):\n- ' + warnings.join('\n- '));
