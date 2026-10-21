@@ -49,5 +49,5 @@ function open({ title, message = '', input = null, okText = 'OK', cancelText = '
 export const alertDialog = (title, message) => open({ title, message, cancelText: null });
 export const confirmDialog = (title, message, { okText = 'Conferma', danger = false } = {}) =>
   open({ title, message, okText, danger }).then((v) => v === true);
-export const promptDialog = (title, { message = '', label = '', value = '', type = 'text', okText = 'OK', validate, autocomplete, inputmode } = {}) =>
-  open({ title, message, okText, validate, input: { label, value, type, autocomplete, inputmode } });
+export const promptDialog = (title, { message = '', label = '', value = '', type = 'text', okText = 'OK', danger = false, validate, autocomplete, inputmode } = {}) =>
+  open({ title, message, okText, danger, validate, input: { label, value, type, autocomplete, inputmode } });

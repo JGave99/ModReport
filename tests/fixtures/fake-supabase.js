@@ -241,6 +241,22 @@
       })), error: null };
     },
     update_my_display_name: () => ({ data: null, error: null }),
+    list_app_users() {
+      const u = currentUser();
+      if (!u || !db.tables.app_admins.some((a) => a.user_id === u.id)) return { data: null, error: err('Permesso negato', '42501') };
+      return { data: db.users.map((x) => ({ id: x.id, email: x.email, created_at: x.created_at, last_sign_in_at: null, is_admin: db.tables.app_admins.some((a) => a.user_id === x.id) })), error: null };
+    },
+    admin_delete_user({ p_user }) {
+      const u = currentUser();
+      if (!u || !db.tables.app_admins.some((a) => a.user_id === u.id)) return { data: null, error: err('Permesso negato', '42501') };
+      if (p_user === u.id) return { data: null, error: err('Per il tuo account usa "Elimina account" nella pagina Account', '22023') };
+      if (db.tables.app_admins.some((a) => a.user_id === p_user)) return { data: null, error: err('Non si può eliminare un altro amministratore', '42501') };
+      if (Object.keys(db.storage).some((k) => k.split('/')[1] === p_user)) return { data: null, error: err('L\'utente ha ancora file caricati: eliminali prima', '55000') };
+      Object.keys(db.tables).forEach((t) => { db.tables[t] = db.tables[t].filter((r) => r.user_id !== p_user && r.id !== p_user); });
+      db.users = db.users.filter((x) => x.id !== p_user);
+      save();
+      return { data: null, error: null };
+    },
     delete_my_account: () => {
       const u = currentUser();
       if (!u) return { data: null, error: err('Not authenticated', '401') };

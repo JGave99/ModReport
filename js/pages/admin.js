@@ -3,7 +3,8 @@
 import { getSupabase } from '../lib/supabase.js';
 import { $, escapeHtml, formatDateTime } from '../lib/dom.js';
 import { requireSession } from '../lib/session.js';
-import { alertDialog } from '../lib/dialog.js';
+import { alertDialog, promptDialog } from '../lib/dialog.js';
+import { toast } from '../lib/toast.js';
 
 const sb = getSupabase();
 const STATUS_LABEL = { in_attesa: 'in attesa', approvato: 'approvato', rifiutato: 'rifiutato' };
@@ -11,6 +12,7 @@ let allRequests = [];
 let currentFilter = 'in_attesa';
 let allUsers = [];
 let usersLoaded = false;
+let me = null;
 
 async function loadRequests() {
   const { data, error } = await sb
@@ -117,8 +119,54 @@ function renderUsers() {
         <span class="req-date">Iscritto il ${escapeHtml(formatDateTime(u.created_at))}</span>
       </div>
       <p class="muted" style="margin:0;">Ultimo accesso: ${u.last_sign_in_at ? escapeHtml(formatDateTime(u.last_sign_in_at)) : 'mai'}</p>`;
+    // Gli amministratori (e il proprio account) non si eliminano da qui.
+    if (!u.is_admin && u.id !== me) {
+      const actions = document.createElement('div');
+      actions.className = 'req-actions';
+      const del = document.createElement('button');
+      del.className = 'btn btn--sm btn--danger';
+      del.textContent = 'Elimina account';
+      del.onclick = () => deleteUser(u, del);
+      actions.appendChild(del);
+      card.appendChild(actions);
+    }
     list.appendChild(card);
   });
+}
+
+// Eliminazione di un account (issue #3): prima i file dell'utente con l'API dello storage, poi tutto il
+// resto sul server (admin_delete_user controlla di nuovo permessi e verifica in due passaggi).
+async function deleteUser(u, button) {
+  const email = u.email || u.id;
+  const typed = await promptDialog('Eliminare l\'account di ' + email + '?', {
+    message: 'Vengono cancellati definitivamente profilo, libreria, carte intestate, documenti, archivio nel cloud, messaggi e appartenenza ai team (i team di cui è proprietario passano a un altro membro). Non si può annullare.\n\nPer confermare scrivi l\'email dell\'utente.',
+    label: 'Email dell\'utente',
+    okText: 'Elimina definitivamente',
+    danger: true,
+    validate: (v) => (v.trim().toLowerCase() === String(email).toLowerCase() ? null : 'L\'email non coincide.'),
+  });
+  if (typed === null) return;
+  button.disabled = true;
+  try {
+    for (const bucket of ['letterheads', 'verifiche']) {
+      const { data: files, error } = await sb.storage.from(bucket).list(u.id, { limit: 1000 });
+      if (error) throw error;
+      const paths = (files || []).map((f) => u.id + '/' + f.name);
+      if (paths.length) {
+        const { error: rmError } = await sb.storage.from(bucket).remove(paths);
+        if (rmError) throw rmError;
+      }
+    }
+    const { error } = await sb.rpc('admin_delete_user', { p_user: u.id });
+    if (error) throw error;
+  } catch (e) {
+    button.disabled = false;
+    await alertDialog('Eliminazione non riuscita', e.message || String(e));
+    return;
+  }
+  allUsers = allUsers.filter((x) => x.id !== u.id);
+  renderUsers();
+  toast('Account di ' + email + ' eliminato');
 }
 
 $('user-search').addEventListener('input', renderUsers);
@@ -138,6 +186,7 @@ document.querySelectorAll('.tab-btn[data-view]').forEach((btn) => {
   if (!sb) { $('gate').textContent = 'Configurazione cloud mancante.'; return; }
   const user = await requireSession(sb);
   if (!user) return;
+  me = user.id;
   const { data: adminRow } = await sb.from('app_admins').select('user_id').eq('user_id', user.id).maybeSingle();
   if (!adminRow) {
     $('gate').textContent = 'Questa pagina è riservata agli amministratori del sito.';

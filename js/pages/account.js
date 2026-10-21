@@ -108,7 +108,8 @@ async function loadLibrary() {
     saveVersion(sb, currentUser.id, res.raw, { reason: 'aggiornamento' }).catch(() => {});
     persist();
     const r = res.report;
-    if (r && (r.esamiAggiunti.length || r.frasiAggiunte)) toast('Libreria aggiornata: ' + r.esamiAggiunti.length + ' esami e ' + r.frasiAggiunte + ' frasi nuove (le tue modifiche sono state mantenute).', { duration: 7000 });
+    if (r && (r.esamiTolti || []).length) toast('Libreria aggiornata ai nuovi predefiniti: le tue modifiche sono state mantenute; la versione precedente è in "Versioni".', { duration: 9000 });
+    else if (r && (r.esamiAggiunti.length || r.frasiAggiunte)) toast('Libreria aggiornata: ' + r.esamiAggiunti.length + ' esami e ' + r.frasiAggiunte + ' frasi nuove (le tue modifiche sono state mantenute).', { duration: 7000 });
   }
 }
 

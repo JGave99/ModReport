@@ -109,7 +109,7 @@ Altre due modalità che **non usano nessun database**:
 |---|---|
 | Utente | `profiles` (nome, titolo), `user_data` (**libreria personale** in JSON, con abbreviazioni e referto negativo), `library_versions` (ultime 30 copie), `letterheads` (carte intestate) |
 | Team | `teams`, `team_members`, `team_invites`, `team_libraries`, `channels`, `messages`, `channel_reads` |
-| Amministrazione | `app_admins`, `verification_requests` |
+| Amministrazione | `app_admins`, `verification_requests`, `admin_actions` (registro: quale amministratore ha eliminato quale account) |
 | Legale | `consent_log` (accettazione di termini e informativa) |
 | Versione precedente | `app_presets` (libreria base copiata ai nuovi utenti da `copy_base_preset_to_new_user`), `subscriptions` (abbonamenti Stripe del 18-24/09, Step 7): restano, non più usate dal codice |
 | Storico | `report_archive`: referti salvati nel cloud dalle versioni vecchie; l'app li sposta nel browser e li cancella |
@@ -125,7 +125,7 @@ Entrambi privati, ciascun utente vede solo la propria cartella.
 
 - **RLS** su tutte le tabelle: ognuno vede solo i propri dati; nel team, solo i membri.
 - **MFA**: chi ha attivato la verifica in due passaggi deve usarla per accedere ai dati (policy `mfa_required`).
-- **Funzioni RPC** per le operazioni delicate: `create_team`, `create_team_invite`, `join_team_with_code`, `leave_team`, `remove_team_member`, `set_team_member_role`, `revoke_team_invite`, `accept_terms`, `delete_my_account`, `list_app_users`, `update_my_display_name`, `my_channels_last_message`.
+- **Funzioni RPC** per le operazioni delicate: `create_team`, `create_team_invite`, `join_team_with_code`, `leave_team`, `remove_team_member`, `set_team_member_role`, `revoke_team_invite`, `accept_terms`, `delete_my_account`, `admin_delete_user` (solo amministratori), `list_app_users`, `update_my_display_name`, `my_channels_last_message`.
 - **Trigger di guardia**: date, autori e campi protetti li decide il server, non il browser.
 
 ## 6. Dove stanno i dati

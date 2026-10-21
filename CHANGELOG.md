@@ -1,5 +1,12 @@
 # Novità
 
+## [Non pubblicato] — branch `migliorie-audit`
+
+### Issue #3 — Nuovi profili
+- Admin → Utenti registrati: "Elimina account" per gli altri utenti (non per sé né per altri amministratori), con conferma scrivendo l'email. Cancella anche i file caricati; registro delle eliminazioni (`admin_actions`). Migrazione `20261021120000_admin-elimina-utenti.sql`.
+- Registrazione: messaggio chiaro se il servizio email rifiuta l'invio; la schermata "Controlla la tua email" indica l'indirizzo e lo spam. Guida per capire dove si fermano le email in `docs/SUPABASE.md`.
+- Libreria predefinita dalla libreria di un account (`scripts/preset-da-libreria.mjs`) e aggiornamento degli utenti esistenti: le frasi dell'account di origine vengono riconosciute (niente doppioni), esami e indicazioni tolti dalla base spariscono se non personalizzati.
+
 ## v0.2.1 — 17/10/2026
 
 ### Issue #2 — Ordine delle sezioni e delle frasi

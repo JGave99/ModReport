@@ -11,6 +11,20 @@ Dal 26/09/2024 il server email predefinito di Supabase invia **solo agli indiriz
 3. **Authentication → Logs**: cercare `email_address_not_authorized` e `over_email_send_rate_limit` per capire quante registrazioni sono già fallite.
 4. **Authentication → Emails → Templates**: tradurre in italiano i modelli "Confirm signup", "Reset password", "Change email".
 
+### Se le email di conferma non arrivano (issue #3)
+Il codice chiede l'invio a Supabase, che lo passa a Brevo: se uno dei due rifiuta, la registrazione mostra
+"Non siamo riusciti a inviare l'email". Se invece compare "Controlla la tua email" ma non arriva nulla:
+1. **Supabase → Authentication → Logs**: cercare `mail`, `smtp`, `confirmation`. Un errore SMTP indica credenziali
+   sbagliate (login e chiave SMTP di Brevo) o mittente non valido.
+2. **Brevo → Transactional → Logs** (o *Real time*): l'email c'è? stato *Delivered*, *Soft/Hard bounce*, *Blocked*?
+   Se non compare nulla, l'email non è partita da Supabase (punto 1).
+3. **Brevo → account**: i nuovi account devono essere attivati per le email transazionali; se l'SMTP è
+   "non attivo" o sospeso, va chiesta l'attivazione al supporto Brevo.
+4. **Brevo → Senders**: il mittente usato in Supabase (*Sender email*) deve essere verificato. Senza un dominio
+   proprio (indirizzo Gmail o simili) molte email finiscono nello **spam**: controllare anche Spam e Promozioni.
+5. **Supabase → Authentication → Sign In / Providers**: "Confirm email" attivo (in produzione) e
+   **Rate Limits** delle email ≥ 30/ora.
+
 ## 2. URL di ritorno dei link (urgente)
 
 **Authentication → URL Configuration**:

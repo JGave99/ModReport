@@ -1261,6 +1261,7 @@ $('view-signup').addEventListener('submit', (e) => {
     if (isExistingUserSignup(data)) { authMessage('signup', authErrorMessage({ code: 'user_already_exists' })); return; }
     if (data.user && !data.session) {
       pendingEmail = email;
+      $('check-email-text').textContent = 'Ti abbiamo inviato un link di conferma a ' + email + ': aprilo per attivare l\'account. Se non arriva entro qualche minuto controlla Spam e Promozioni, poi usa "Reinvia l\'email".';
       showAuthView('check-email');
       return;
     }

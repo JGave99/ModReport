@@ -2,6 +2,7 @@
 // La logica di aggiornamento (ID stabili, base versionata, modifiche dell'utente) è in library-merge.js.
 import { DEFAULT_LIBRARY, DEFAULTS_VERSION } from './default-library.js';
 import { V1_TEXTS, V2_TEXTS, DEPRECATED_TEXTS, V2_METODICHE } from './library-base/legacy.js';
+import { V4_BASE } from './library-base/legacy-v4.js';
 import { baseForUser, mergeBase, migrateFromV2, normalize, forStorage, orderGroupsLikeBase, GROUP_ORDER_KEY } from './library-merge.js';
 import { DEFAULT_ABBREVIATIONS } from './voice-text.js';
 
@@ -22,9 +23,12 @@ export function migrateLibrary(raw) {
   let report = null;
   let changed = false;
   if (version < DEFAULTS_VERSION) {
+    // Dalla v5 la base è la libreria di riferimento dell'issue #3, diversa nella struttura: si confronta anche
+    // con la v4 per togliere esami e indicazioni che non ci sono più.
+    const previous = version < 5 && DEFAULTS_VERSION >= 5 ? V4_BASE : null;
     ({ data, report } = version < 3
-      ? migrateFromV2(raw, DEFAULT_LIBRARY, { V1_TEXTS, V2_TEXTS, DEPRECATED_TEXTS, V2_METODICHE })
-      : mergeBase(raw, DEFAULT_LIBRARY));
+      ? migrateFromV2(raw, DEFAULT_LIBRARY, { V1_TEXTS, V2_TEXTS, DEPRECATED_TEXTS, V2_METODICHE }, { previous })
+      : mergeBase(raw, DEFAULT_LIBRARY, { previous }));
     changed = true;
   } else {
     data = normalize(raw);

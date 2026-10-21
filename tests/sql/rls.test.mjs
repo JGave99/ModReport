@@ -291,3 +291,33 @@ test('libreria del team: la leggono i membri, la modificano proprietario e ammin
     assert.equal(u.team_id, teamC, 'il team non cambia');
   });
 });
+
+test('amministratore del sito: elimina l\'account di un altro utente, con registro (issue #3)', async () => {
+  // C (non amministratore del sito) non può; X non può eliminare se stesso né un altro amministratore.
+  await as(C, () => assert.rejects(q(`select public.admin_delete_user('${E}')`), /Permesso negato/));
+  await as(X, () => assert.rejects(q(`select public.admin_delete_user('${X}')`), /Elimina account/));
+  await q(`insert into auth.users (id, email) values ('99999999-0000-4000-8000-000000000009', 'altro.admin@modreport.it')`);
+  await q(`insert into public.app_admins (user_id) values ('99999999-0000-4000-8000-000000000009')`);
+  await as(X, () => assert.rejects(q(`select public.admin_delete_user('99999999-0000-4000-8000-000000000009')`), /altro amministratore/));
+  // Le funzioni interne non sono chiamabili dal browser.
+  await as(X, () => assert.rejects(q(`select public.delete_user_data('${E}')`), /permission denied/));
+  // Con file ancora caricati si ferma; l'amministratore vede e cancella le carte intestate.
+  await q(`insert into storage.objects (bucket_id, name, owner) values ('letterheads', '${E}/carta.pdf', '${E}')`);
+  await as(X, () => assert.rejects(q(`select public.admin_delete_user('${E}')`), /file caricati/));
+  await as(X, async () => {
+    assert.equal((await q(`select name from storage.objects where bucket_id = 'letterheads' and name like '${E}/%'`)).length, 1);
+    await q(`delete from storage.objects where bucket_id = 'letterheads' and name like '${E}/%'`);
+  });
+  await as(X, () => q(`select public.admin_delete_user('${E}')`));
+  assert.equal((await q(`select id from auth.users where id = '${E}'`)).length, 0);
+  assert.equal((await q(`select * from public.team_members where user_id = '${E}'`)).length, 0);
+  await as(X, async () => {
+    const [log] = await q(`select admin_id, action, target_id from public.admin_actions`);
+    assert.deepEqual([log.admin_id, log.action, log.target_id], [X, 'elimina_utente', E]);
+  });
+  await as(C, async () => assert.equal((await q('select * from public.admin_actions')).length, 0, 'registro visibile solo agli amministratori'));
+  // Con la verifica in due passaggi attiva serve una sessione aal2.
+  await q(`insert into auth.mfa_factors (user_id) values ('${X}')`);
+  await as(X, () => assert.rejects(q(`select public.admin_delete_user('${C}')`), /due passaggi/));
+  await q(`delete from auth.mfa_factors where user_id = '${X}'`);
+});

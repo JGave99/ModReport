@@ -13,6 +13,7 @@ Le regole di sicurezza vere stanno qui (RLS, funzioni, trigger, policy dello Sto
 | `migrations/20261005120000_libreria.sql` | Versioni salvate della libreria (ultime 30) e libreria condivisa del team |
 | `migrations/20261016120000_utenti-collegamenti.sql` | Cosa succede ai dati quando un utente viene eliminato (in produzione mancava: l'eliminazione dell'account falliva) |
 | `migrations/20261016130000_pulizia-versione-precedente.sql` | Toglie trigger e funzioni della versione precedente non più usati (copia della vecchia libreria base ai nuovi utenti) |
+| `migrations/20261021120000_admin-elimina-utenti.sql` | Gli amministratori del sito eliminano l'account di altri utenti (`admin_delete_user`), con registro `admin_actions` (issue #3) |
 | `tests/supabase-shim.sql` | Ambiente Supabase minimo per i test (non va applicato in produzione) |
 | `tests/produzione-2026-10-16.sql` | Schema reale della produzione prima delle migrazioni: `tests/sql/produzione.test.mjs` verifica che si applichino senza errori |
 

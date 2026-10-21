@@ -24,7 +24,10 @@ const BY_CODE = {
   insufficient_aal: 'Serve la verifica in due passaggi per questa operazione.',
 };
 
+const EMAIL_NOT_SENT = 'Non siamo riusciti a inviare l\'email (servizio di posta non disponibile). Riprova tra qualche minuto; se il problema continua scrivici.';
+
 const BY_TEXT = [
+  [/error sending|sending .*email|smtp/i, EMAIL_NOT_SENT],
   [/invalid login credentials/i, BY_CODE.invalid_credentials],
   [/email not confirmed/i, BY_CODE.email_not_confirmed],
   [/already registered|already exists/i, BY_CODE.user_already_exists],

@@ -25,3 +25,9 @@ test('escapeHtml protegge anche le virgolette negli attributi', () => {
   assert.equal(escapeHtml(null), '');
   assert.equal(escapeHtml(12), '12');
 });
+
+test('invio email non riuscito (SMTP): messaggio chiaro invece di quello generico', () => {
+  const msg = authErrorMessage({ code: 'unexpected_failure', message: 'Error sending confirmation email' });
+  assert.match(msg, /Non siamo riusciti a inviare l'email/);
+  assert.match(authErrorMessage({ message: 'Error sending recovery email' }), /inviare l'email/);
+});

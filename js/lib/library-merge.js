@@ -155,6 +155,15 @@ function placeBasePhrase(userGroups, baseGroups, baseGroup, basePhrase) {
 }
 
 // Aggiorna un esame dell'utente rispetto all'esame della base. Restituisce il numero di frasi aggiunte.
+// Frase dell'utente che corrisponde a una frase nuova della base, da "adottare" invece di duplicarla:
+// stessa origine (la base è stata creata dalla libreria di un utente: u:X diventa esame:ig.X) o stesso testo.
+function findTwin(userGroups, basePhrase, baseById) {
+  const own = phrasesIn(userGroups).map((x) => x.phrase).filter((p) => !baseById.has(p.id));
+  const m = /:ig\.([a-z0-9]+)$/.exec(basePhrase.id);
+  const byOrigin = m && own.find((p) => typeof p.id === 'string' && p.id.toLowerCase().replace(/[^a-z0-9:]/g, '') === 'u:' + m[1]);
+  return byOrigin || own.find((p) => p.text.trim() === basePhrase.text.trim()) || null;
+}
+
 function mergeExam(userGroups, baseGroups, removed) {
   const present = new Map(phrasesIn(userGroups).map((x) => [x.phrase.id, x]));
   const baseById = new Map();
@@ -167,6 +176,8 @@ function mergeExam(userGroups, baseGroups, removed) {
     if (!isBaseId(id)) continue;
     const untouched = x.phrase.bh && phraseHash(x.phrase) === x.phrase.bh;
     const base = baseById.get(id);
+    // Modificata dall'utente ma ora uguale alla base (es. la base ha adottato il suo testo): torna "non modificata".
+    if (!untouched && base && phraseHash(x.phrase) === phraseHash(base.phrase)) x.phrase.bh = phraseHash(base.phrase);
     if (!untouched) continue;
     if (!base) {
       const list = userGroups[x.group];
@@ -184,6 +195,8 @@ function mergeExam(userGroups, baseGroups, removed) {
   for (const [g, list] of Object.entries(baseGroups)) {
     for (const p of list) {
       if (present.has(p.id) || removed.has(p.id)) continue;
+      const twin = findTwin(userGroups, p, baseById);
+      if (twin) { twin.id = p.id; twin.bh = phraseHash(p); continue; }
       placeBasePhrase(userGroups, baseGroups, g, p);
       added += 1;
     }
@@ -198,7 +211,10 @@ const appendMissing = (target, items, skip) => {
 };
 
 // Allinea la libreria dell'utente a una nuova versione della base (versione già ≥ 3).
-export function mergeBase(rawData, base) {
+// previous: struttura della base precedente ({ metodiche, esamiByMetodica, indicazioniByEsame }). Se c'è, si
+// tolgono anche esami, indicazioni e metodiche che erano della base precedente e nella nuova non ci sono più
+// (solo se l'utente non li ha personalizzati) e gruppi ed esami prendono l'ordine della nuova base.
+export function mergeBase(rawData, base, { previous = null } = {}) {
   const data = normalize(rawData);
   const removed = new Set(data.removedBase);
   const report = { esamiAggiunti: [], frasiAggiunte: 0 };
@@ -229,20 +245,65 @@ export function mergeBase(rawData, base) {
       report.frasiAggiunte += mergeExam(data.refertoByEsame[esame], base.refertoByEsame[esame] || {}, removed);
     }
   }
+  if (previous) retirePrevious(data, base, previous, removed, report);
   data.defaultsVersion = base.defaultsVersion;
   return { data, report };
+}
+
+function retirePrevious(data, base, previous, removed, report) {
+  const inBase = (esame) => !!(base.refertoByEsame && base.refertoByEsame[esame]);
+  const prevExams = new Set(Object.values(previous.esamiByMetodica || {}).flat());
+  report.esamiTolti = [];
+  for (const [m, list] of Object.entries(data.esamiByMetodica)) {
+    data.esamiByMetodica[m] = list.filter((esame) => {
+      if (inBase(esame)) return true;
+      const groups = isObj(data.refertoByEsame[esame]) ? data.refertoByEsame[esame] : {};
+      mergeExam(groups, {}, removed); // toglie le frasi della base precedente non modificate
+      if (phrasesIn(groups).length || !prevExams.has(esame)) return true;
+      delete data.refertoByEsame[esame];
+      delete data.indicazioniByEsame[esame];
+      if (data.negativoByEsame) delete data.negativoByEsame[esame];
+      report.esamiTolti.push(esame);
+      return false;
+    });
+    // Ordine degli esami: quello della nuova base, poi quelli aggiunti dall'utente.
+    const order = (base.esamiByMetodica && base.esamiByMetodica[m]) || [];
+    data.esamiByMetodica[m] = [...order.filter((e) => data.esamiByMetodica[m].includes(e)), ...data.esamiByMetodica[m].filter((e) => !order.includes(e))];
+  }
+  for (const [esame, list] of Object.entries(data.indicazioniByEsame)) {
+    if (!inBase(esame) || !Array.isArray(list)) continue;
+    const now = base.indicazioniByEsame[esame] || [];
+    const before = (previous.indicazioniByEsame || {})[esame] || [];
+    const kept = list.filter((t) => now.includes(t) || !before.includes(t));
+    data.indicazioniByEsame[esame] = [...now.filter((t) => kept.includes(t)), ...kept.filter((t) => !now.includes(t))];
+  }
+  const prevMetodiche = new Set(previous.metodiche || []);
+  data.metodiche = data.metodiche.filter((m) => {
+    if (base.metodiche.includes(m) || !prevMetodiche.has(m) || (data.esamiByMetodica[m] || []).length) return true;
+    delete data.esamiByMetodica[m];
+    return false;
+  });
+  data.metodiche = [...base.metodiche.filter((m) => data.metodiche.includes(m)), ...data.metodiche.filter((m) => !base.metodiche.includes(m))];
+  orderGroupsLikeBase(data, base);
 }
 
 // Migrazione dalle versioni 1-2 (frasi senza id) alla 3. legacy: { V1_TEXTS, V2_TEXTS, DEPRECATED_TEXTS }.
 // Gli esami mai personalizzati passano ai nuovi predefiniti; in quelli personalizzati restano le frasi
 // dell'utente, spariscono le vecchie frasi predefinite non modificate e arrivano quelle nuove.
-export function migrateFromV2(rawData, base, legacy) {
+export function migrateFromV2(rawData, base, legacy, { previous = null } = {}) {
   const data = normalize(rawData);
   const restored = [];
   for (const esame of Object.values(data.esamiByMetodica).flat()) {
     const baseGroups = base.refertoByEsame[esame];
     if (!baseGroups) {
-      for (const list of Object.values(data.refertoByEsame[esame] || {})) list.forEach((p) => { if (!p.id) p.id = newPhraseId(); });
+      // Esame che la base corrente non ha più: i vecchi predefiniti non modificati spariscono, il resto è dell'utente.
+      const old = new Set([...(legacy.V1_TEXTS[esame] || []), ...(legacy.V2_TEXTS[esame] || [])]);
+      const groups = isObj(data.refertoByEsame[esame]) ? data.refertoByEsame[esame] : {};
+      for (const [g, list] of Object.entries(groups)) {
+        groups[g] = list.filter((p) => p.id || !old.has(p.text));
+        groups[g].forEach((p) => { if (!p.id) p.id = newPhraseId(); });
+        if (!groups[g].length) delete groups[g];
+      }
       continue;
     }
     const old = new Set([...(legacy.V1_TEXTS[esame] || []), ...(legacy.V2_TEXTS[esame] || [])]);
@@ -274,6 +335,6 @@ export function migrateFromV2(rawData, base, legacy) {
   for (const m of legacy.V2_METODICHE || []) if (!data.metodiche.includes(m)) data.removedBase.push(tomb.metodica(m));
   for (const esame of Object.keys(legacy.V2_TEXTS)) if (!userExams.has(esame)) data.removedBase.push(tomb.esame(esame));
   data.defaultsVersion = 2;
-  const { data: merged, report } = mergeBase(data, base);
+  const { data: merged, report } = mergeBase(data, base, { previous });
   return { data: merged, report: { ...report, esamiAggiornati: restored } };
 }
