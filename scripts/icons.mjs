@@ -10,7 +10,8 @@ const ICONS = ['mic', 'mic-off', 'archive', 'messages-square', 'circle-user', 'p
   'moon', 'type', 'shield-check', 'file-text', 'arrow-up', 'arrow-down', 'keyboard', 'info', 'lock', 'check', 'ellipsis', 'hard-drive',
   'external-link', 'menu', 'rotate-ccw', 'folder-open', 'building-2', 'mail', 'credit-card', 'graduation-cap', 'badge-check',
   'chart-column', 'list-checks', 'log-in', 'user-round', 'circle-help', 'layers', 'cloud', 'zap', 'monitor-smartphone', 'eye-off',
-  'server', 'timer', 'wifi-off', 'stethoscope', 'chevron-left', 'pause', 'play', 'arrow-left'];
+  'server', 'timer', 'wifi-off', 'stethoscope', 'chevron-left', 'pause', 'play', 'arrow-left',
+  'calendar-days', 'megaphone', 'user-check', 'link', 'refresh-cw', 'bookmark', 'sparkles', 'star'];
 
 const symbols = ICONS.map((name) => {
   const svg = readFileSync(join(root, 'node_modules/lucide-static/icons', name + '.svg'), 'utf8');

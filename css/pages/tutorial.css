@@ -65,3 +65,7 @@
   .dots{ margin-left: 0; }
   .stage{ min-height: 420px; padding: var(--s-4); }
 }
+
+/* Novità dell'ultima versione */
+.news{ margin-top: var(--s-10); background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--r-lg); padding: var(--s-6); scroll-margin-top: 72px; }
+.news__title{ font-size: var(--fs-xl); margin-bottom: var(--s-4); }

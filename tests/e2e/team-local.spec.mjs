@@ -7,7 +7,8 @@ test('team: creazione, messaggio con nome deciso dal server, invito con scadenza
   await page.fill('#create-team-name', 'Studio Rossi');
   await page.click('#btn-create-team');
   await expect(page.locator('#page-root')).toBeVisible();
-  await expect(page.locator('.channel-item .chname')).toHaveText(['generale']);
+  await expect(page.locator('.channel-item .chname')).toHaveText(['avvisi', 'generale']);
+  await page.locator('.channel-item', { hasText: 'generale' }).click();
   await page.fill('#msg-input', 'Buongiorno');
   await page.click('#btn-send');
   await expect(page.locator('.chat-msg .msg-name')).toHaveText('Maria Rossi');

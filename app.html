@@ -155,6 +155,7 @@
           <a role="menuitem" href="account.html"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#circle-user"></use></svg>Il mio account</a>
           <a role="menuitem" href="account.html#libreria"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#library-big"></use></svg>Libreria delle frasi</a>
           <a role="menuitem" href="tutorial.html"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#circle-play"></use></svg>Tutorial</a>
+          <button role="menuitem" id="btn-news"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#sparkles"></use></svg>Novità</button>
           <div class="menu__sep" role="separator"></div>
           <div class="menu__label">Tema</div>
           <button role="menuitemradio" data-theme-set="dark"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#moon"></use></svg>Scuro</button>
@@ -218,6 +219,7 @@
           <div class="btn-pair" id="negativo-actions" hidden>
             <button class="btn btn--sm" id="btn-negativo" title="Inserisce le frasi del referto negativo (Alt+N)"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#circle-check"></use></svg>Referto negativo</button>
             <button class="btn btn--sm btn--icon" id="btn-negativo-config" title="Scegli le frasi del referto negativo per questo esame" aria-label="Scegli le frasi del referto negativo"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#settings"></use></svg></button>
+            <button class="btn btn--sm btn--icon" id="btn-tipo" title="Referti tipo: modelli completi per questo esame" aria-label="Referti tipo"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#bookmark"></use></svg></button>
           </div>
         </div>
         <div class="block__body" id="referto-body"></div>
@@ -320,6 +322,22 @@
   </div>
 </dialog>
 
+<dialog class="dialog dialog--wide" id="news-dialog" aria-labelledby="news-title">
+  <div class="dialog__head"><h2 id="news-title">Novità</h2><button class="btn btn--ghost btn--icon" id="news-close" aria-label="Chiudi"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#x"></use></svg></button></div>
+  <div class="dialog__body" id="news-body"></div>
+  <div class="dialog__actions"><a class="btn" href="tutorial.html#novita">Rivedile nel tutorial</a><button class="btn btn--primary" id="news-ok">Ho capito</button></div>
+</dialog>
+
+<dialog class="dialog dialog--wide" id="tipo-dialog" aria-labelledby="tipo-title">
+  <div class="dialog__head"><h2 id="tipo-title">Referti tipo · <span id="tipo-esame"></span></h2><button class="btn btn--ghost btn--icon" id="tipo-close" aria-label="Chiudi"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#x"></use></svg></button></div>
+  <div class="dialog__body">
+    <p>Un referto tipo è un referto completo già scritto (frasi e campi) da riusare con un clic, per esempio per i controlli che si ripetono. Si salva nella tua libreria personale.</p>
+    <div id="tipo-list" class="tipo-list"></div>
+    <div class="row"><button class="btn btn--primary" id="tipo-save"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#plus"></use></svg>Salva il referto attuale come referto tipo</button></div>
+    <p class="subtle">Si salva il testo del referto senza l'indicazione. Non deve contenere dati del paziente.</p>
+  </div>
+</dialog>
+
 <dialog class="dialog dialog--wide" id="negativo-dialog" aria-labelledby="negativo-title">
   <div class="dialog__head"><h2 id="negativo-title">Referto negativo · <span id="negativo-esame"></span></h2></div>
   <div class="dialog__body">
@@ -340,6 +358,7 @@
       <dt><kbd>Ctrl</kbd> <kbd>K</kbd></dt><dd>Ricerca rapida di esami, frasi e comandi</dd>
       <dt><kbd>Ctrl</kbd> <kbd>Invio</kbd></dt><dd>Copia il referto</dd>
       <dt><kbd>Alt</kbd> <kbd>N</kbd></dt><dd>Referto negativo</dd>
+      <dt><kbd>Alt</kbd> <kbd>Maiusc</kbd> <kbd>1</kbd>…<kbd>6</kbd></dt><dd>Frasi più usate dell'esame</dd>
       <dt><kbd>Tab</kbd> / <kbd>Maiusc</kbd> <kbd>Tab</kbd></dt><dd>Campo da compilare successivo / precedente</dd>
       <dt><kbd>1</kbd>…<kbd>9</kbd></dt><dd>Scelta nel campo selezionato</dd>
       <dt><kbd>Alt</kbd> <kbd>1</kbd>…<kbd>5</kbd></dt><dd>Passa al referto 1-5</dd>

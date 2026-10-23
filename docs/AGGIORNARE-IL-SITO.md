@@ -80,6 +80,7 @@ Il test `tests/unit/pages.test.mjs` segnala le pagine dimenticate.
 Le modifiche al database stanno in `supabase/migrations/`, un file SQL per ogni modifica, in ordine di data. I test SQL (`npm test`) le provano su un database finto.
 
 1. **Prima sul progetto di prova**: SQL Editor → incollare il file nuovo → *Run*. Poi si prova l'anteprima.
+   Se sono cambiate le funzioni del server (`supabase/functions/`), si pubblicano con la CLI: vedi `supabase/functions/README.md`.
 2. **Poi in produzione**, prima del merge su `main`:
    - backup da *Database → Backups*, oppure esportazione;
    - stesso file nel SQL Editor del progetto di produzione.

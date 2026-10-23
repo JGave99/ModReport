@@ -2,10 +2,13 @@
 import { getSupabase, pageUrl } from '../lib/supabase.js';
 import { $, icon } from '../lib/dom.js';
 import { toast } from '../lib/toast.js';
-import { confirmDialog } from '../lib/dialog.js';
+import { confirmDialog, promptDialog } from '../lib/dialog.js';
+import { detectPII } from '../lib/import-analysis.js';
 import { authErrorMessage, isExistingUserSignup, readAuthErrorFromHash } from '../lib/auth-messages.js';
 import { LibraryStore, cloneDefaults } from '../lib/library.js';
 import { DEFAULT_NEGATIVO } from '../lib/default-library.js';
+import { watchTeamBadge } from '../lib/team-unread.js';
+import { NEWS, newsHtml } from '../lib/news.js';
 import { attachDictation, stopAllDictation, setDictationDisabled, setLocalDictationPreferred } from '../lib/dictation.js';
 import { buildReportPdf } from '../lib/pdf.js';
 import { passwordProblem } from '../lib/auth-policy.js';
@@ -19,7 +22,7 @@ import {
 } from '../lib/report-text.js';
 import { abbreviationEdit } from '../lib/voice-text.js';
 import { createPalette } from '../lib/palette.js';
-import { tomb } from '../lib/library-merge.js';
+import { tomb, newPhraseId } from '../lib/library-merge.js';
 
 // Il fragment dell'URL va letto prima che supabase-js lo consumi.
 const initialHash = window.location.hash;
@@ -37,6 +40,8 @@ let DATA = cloneDefaults();
 // Frasi del referto negativo scelte per ogni esame: stanno nella libreria personale (negativoByEsame),
 // valgono anche quando nell'editor si usa la libreria di un team.
 let negativoByEsame = {};
+// Referti tipo (modelli completi) per esame, anche questi nella libreria personale: { esame: [{ id, nome, testo }] }.
+let refertiTipo = {};
 let currentUser = null;
 let recoveryMode = isRecoveryLink;
 let pendingEmail = '';
@@ -274,6 +279,33 @@ function renderReferto() {
   note.textContent = 'Frasi di esempio da verificare. Ogni frase si aggiunge in fondo al referto; una patologica sostituisce la normale dello stesso distretto; un secondo clic la toglie.';
   el.refertoBody.appendChild(note);
 
+  // Più usate: scorciatoie verso le frasi che usi di più per questo esame.
+  const top = topPhrases(groups);
+  if (top.length) {
+    const g = document.createElement('div');
+    g.className = 'group group--top';
+    const label = document.createElement('div');
+    label.className = 'group__label';
+    label.append(icon('star'), 'Più usate');
+    label.title = 'Alt+Maiusc+1…' + top.length + ' per inserirle da tastiera';
+    const row = document.createElement('div');
+    row.className = 'chip-row';
+    top.forEach(({ gi, pi, phrase }, i) => {
+      const b = document.createElement('button');
+      b.className = 'chip phrase' + (phrase.neg ? ' phrase--abnormal' : '') + (phrase.opz ? ' phrase--optional' : '');
+      b.dataset.gi = gi;
+      b.dataset.pi = pi;
+      b.title = phrase.text + ' (Alt+Maiusc+' + (i + 1) + ')';
+      const k = document.createElement('kbd');
+      k.textContent = i + 1;
+      b.append(k, phrase.label);
+      b.onclick = () => togglePhrase(gi, pi);
+      row.appendChild(b);
+    });
+    g.append(label, row);
+    el.refertoBody.appendChild(g);
+  }
+
   groups.forEach((group, gi) => {
     const g = document.createElement('div');
     g.className = 'group' + (isTechniqueGroup(group.name) || isConclusionGroup(group.name) ? ' group--section' : '');
@@ -354,6 +386,7 @@ function togglePhrase(gi, pi) {
   // Le frasi nuove entrano sempre in fondo al referto, nell'ordine dei clic (issue #2), anche se il cursore è nel testo.
   const plan = planToggle(ta.value, groups, gi, pi, { blankBefore: pendingEsameOpen });
   const first = plan.edits.reduce((m, e) => Math.min(m, e.start), Infinity);
+  if (plan.action !== 'remove') countUsage(phrase);
   applyEditsToReport(plan.edits);
   if (plan.action === 'insert') pendingEsameOpen = false;
   if (plan.action === 'replace') flash('Sostituita: «' + plan.replaced.map((p) => p.label).join('», «') + '»', 2500);
@@ -743,20 +776,29 @@ function openNegativoDialog() {
   $('negativo-dialog').showModal();
 }
 
-async function saveNegativo(ids) {
-  const esame = state.esame;
+// Modifica e salva la libreria personale (anche se nell'editor si usa quella di un team).
+async function savePersonal(mutate) {
   let status = null;
   const store = new LibraryStore({ supabase: sb, userId: currentUser.id, onStatus: (st) => { status = st; } });
   const res = await store.load();
   if (res.status === 'error') throw new Error('libreria non raggiungibile');
   const data = res.data;
-  data.negativoByEsame = { ...(data.negativoByEsame || {}) };
-  if (ids) data.negativoByEsame[esame] = ids; else delete data.negativoByEsame[esame];
+  mutate(data);
   store.schedule(() => data);
   await store.flush();
   if (status !== 'saved') throw new Error(status === 'conflict' ? 'la libreria è stata modificata altrove, riprova' : 'salvataggio non riuscito');
-  negativoByEsame = data.negativoByEsame;
+  negativoByEsame = data.negativoByEsame || {};
+  refertiTipo = data.refertiTipo || {};
   if (librarySource() === 'personale') { DATA = data; try { libCacheStore().setItem(libCacheKey(), JSON.stringify(DATA)); } catch (e) { /* ignora */ } }
+  return data;
+}
+
+async function saveNegativo(ids) {
+  const esame = state.esame;
+  await savePersonal((data) => {
+    data.negativoByEsame = { ...(data.negativoByEsame || {}) };
+    if (ids) data.negativoByEsame[esame] = ids; else delete data.negativoByEsame[esame];
+  });
 }
 
 $('btn-negativo-config').onclick = openNegativoDialog;
@@ -775,6 +817,149 @@ $('negativo-save').onclick = () => withBusy($('negativo-save'), async () => {
 });
 
 // ============================================================
+// REFERTI TIPO (modelli completi per esame)
+// ============================================================
+// Testo del referto senza intestazione (indicazione) e senza la riga dell'esame.
+function reportBody() {
+  let t = el.reportText.value.replace(HEADER_RE, '');
+  const lines = t.split('\n');
+  while (lines.length && !lines[0].trim()) lines.shift();
+  if (lines.length && state.esame && lines[0].trim() === state.esame) lines.shift();
+  return lines.join('\n').trim();
+}
+
+function renderTipoList() {
+  const list = $('tipo-list');
+  list.innerHTML = '';
+  const items = refertiTipo[state.esame] || [];
+  if (!items.length) { list.innerHTML = '<p class="subtle">Nessun referto tipo per questo esame.</p>'; return; }
+  items.forEach((t) => {
+    const row = document.createElement('div');
+    row.className = 'tipo-item';
+    const info = document.createElement('div');
+    info.className = 'tipo-item__info';
+    const name = document.createElement('strong');
+    name.textContent = t.nome;
+    const preview = document.createElement('span');
+    preview.className = 'subtle';
+    preview.textContent = t.testo.split('\n').filter(Boolean).slice(0, 2).join(' ').slice(0, 140);
+    info.append(name, preview);
+    const ins = document.createElement('button');
+    ins.className = 'btn btn--sm btn--primary';
+    ins.textContent = 'Inserisci';
+    ins.onclick = () => { insertTipo(t); $('tipo-dialog').close(); };
+    const ren = document.createElement('button');
+    ren.className = 'btn btn--ghost btn--icon btn--sm';
+    ren.setAttribute('aria-label', 'Rinomina ' + t.nome);
+    ren.appendChild(icon('pencil'));
+    ren.onclick = async () => {
+      const nome = await promptDialog('Rinomina il referto tipo', { label: 'Nome', value: t.nome, okText: 'Salva', validate: (v) => (v.trim() ? null : 'Scrivi un nome.') });
+      if (nome === null) return;
+      await changeTipi((list2) => list2.map((x) => (x.id === t.id ? { ...x, nome: nome.trim().slice(0, 60) } : x)));
+    };
+    const del = document.createElement('button');
+    del.className = 'btn btn--ghost btn--icon btn--sm';
+    del.setAttribute('aria-label', 'Elimina ' + t.nome);
+    del.appendChild(icon('trash-2'));
+    del.onclick = async () => {
+      if (!await confirmDialog('Eliminare il referto tipo "' + t.nome + '"?', '', { okText: 'Elimina', danger: true })) return;
+      await changeTipi((list2) => list2.filter((x) => x.id !== t.id));
+    };
+    row.append(info, ins, ren, del);
+    list.appendChild(row);
+  });
+}
+
+async function changeTipi(fn) {
+  const esame = state.esame;
+  try {
+    await savePersonal((data) => {
+      data.refertiTipo = { ...(data.refertiTipo || {}) };
+      const next = fn([...(data.refertiTipo[esame] || [])]);
+      if (next.length) data.refertiTipo[esame] = next; else delete data.refertiTipo[esame];
+    });
+  } catch (e) { toast('Non salvato: ' + e.message, { type: 'error' }); return; }
+  renderTipoList();
+}
+
+function insertTipo(t) {
+  const ta = el.reportText;
+  const text = ta.value;
+  const sep = !text ? '' : pendingEsameOpen ? (text.endsWith('\n\n') ? '' : text.endsWith('\n') ? '\n' : '\n\n') : (text.endsWith('\n') ? '' : '\n');
+  const start = text.length + sep.length;
+  replaceRange(ta, text.length, text.length, sep + t.testo + '\n');
+  pendingEsameOpen = false;
+  caret = null;
+  renderWorkspaceTabs();
+  saveDraft();
+  refreshPressed();
+  flash('Referto tipo inserito: ' + t.nome, 2500);
+  selectFirstFieldIn(start, start + t.testo.length);
+}
+
+function openTipoDialog() {
+  if (!state.esame) { flash('Scegli prima un esame.', 2500); return; }
+  $('tipo-esame').textContent = state.esame;
+  renderTipoList();
+  $('tipo-dialog').showModal();
+}
+
+$('btn-tipo').onclick = openTipoDialog;
+$('tipo-close').onclick = () => $('tipo-dialog').close();
+$('tipo-save').onclick = async () => {
+  const testo = reportBody();
+  if (!testo) { toast('Il referto è vuoto: componilo prima di salvarlo come referto tipo.', { type: 'error' }); return; }
+  if (detectPII(testo).length) { toast('Il testo contiene possibili dati del paziente: toglili prima di salvarlo.', { type: 'error', duration: 7000 }); return; }
+  if ((refertiTipo[state.esame] || []).length >= 20) { toast('Massimo 20 referti tipo per esame.', { type: 'error' }); return; }
+  const nome = await promptDialog('Nuovo referto tipo', { label: 'Nome (es. Controllo protesi d\'anca)', okText: 'Salva', validate: (v) => (v.trim() ? null : 'Scrivi un nome.') });
+  if (nome === null) return;
+  await changeTipi((list) => [...list, { id: newPhraseId(), nome: nome.trim().slice(0, 60), testo: testo.slice(0, 8000) }]);
+  toast('Referto tipo salvato');
+};
+
+// ============================================================
+// FRASI PIÙ USATE (per esame, su questo dispositivo) e scorciatoie Alt+Maiusc+1…6
+// ============================================================
+const usageKey = () => 'mr-usage-' + (currentUser ? currentUser.id : 'anon');
+function readUsage() {
+  try { return JSON.parse(localStorage.getItem(usageKey())) || {}; } catch (e) { return {}; }
+}
+function countUsage(phrase) {
+  if (!state.esame || isSharedDevice()) return;
+  const usage = readUsage();
+  const key = phrase.id || phrase.text;
+  usage[state.esame] = usage[state.esame] || {};
+  usage[state.esame][key] = (usage[state.esame][key] || 0) + 1;
+  try { localStorage.setItem(usageKey(), JSON.stringify(usage)); } catch (e) { /* ignora */ }
+}
+// Le frasi usate almeno 2 volte, dalla più usata: [{ gi, pi, phrase, n }].
+function topPhrases(groups, max = 6) {
+  const counts = readUsage()[state.esame] || {};
+  const out = [];
+  groups.forEach((g, gi) => g.phrases.forEach((p, pi) => {
+    const n = counts[p.id || p.text] || 0;
+    if (n >= 2) out.push({ gi, pi, phrase: p, n });
+  }));
+  return out.sort((a, b) => b.n - a.n).slice(0, max);
+}
+
+// ============================================================
+// NOVITÀ (una volta per versione; poi dal menu dell'account e dal tutorial)
+// ============================================================
+const newsKey = () => 'mr-news-' + (currentUser ? currentUser.id : 'anon');
+function newsSeen() { try { return localStorage.getItem(newsKey()) === NEWS.version; } catch (e) { return true; } }
+function markNewsSeen() { try { localStorage.setItem(newsKey(), NEWS.version); } catch (e) { /* ignora */ } }
+function openNews() {
+  $('news-title').textContent = NEWS.title;
+  $('news-body').innerHTML = newsHtml();
+  $('news-dialog').showModal();
+}
+$('btn-news').onclick = openNews;
+$('news-close').onclick = () => { markNewsSeen(); $('news-dialog').close(); };
+$('news-ok').onclick = () => { markNewsSeen(); $('news-dialog').close(); };
+$('news-dialog').addEventListener('close', markNewsSeen);
+
+// ============================================================
 // SCORCIATOIE DA TASTIERA
 // ============================================================
 document.addEventListener('keydown', (e) => {
@@ -786,6 +971,12 @@ document.addEventListener('keydown', (e) => {
   if (mod && !e.shiftKey && (e.key === 'p' || e.key === 'P')) { e.preventDefault(); $('btn-open-print').click(); return; }
   if (mod && e.key === '/') { e.preventDefault(); $('shortcuts-dialog').showModal(); return; }
   if (e.altKey && !mod && e.code === 'KeyN') { e.preventDefault(); insertNegativeReport(); return; }
+  if (e.altKey && e.shiftKey && !mod && /^Digit[1-6]$/.test(e.code)) {
+    const top = state.esame ? topPhrases(currentGroups()) : [];
+    const pick = top[Number(e.code.slice(5)) - 1];
+    if (pick) { e.preventDefault(); togglePhrase(pick.gi, pick.pi); }
+    return;
+  }
   if (e.altKey && !mod && /^Digit[1-5]$/.test(e.code)) { e.preventDefault(); switchWorkspace(Number(e.code.slice(5)) - 1); }
 });
 // ============================================================
@@ -798,6 +989,7 @@ function paletteItems() {
     { group: 'Comandi', icon: 'copy', label: 'Copia solo l\'indicazione', run: () => copyText('indicazione') },
     { group: 'Comandi', icon: 'circle-check', label: 'Referto negativo', hint: 'Alt+N', run: insertNegativeReport },
     { group: 'Comandi', icon: 'circle-check', label: 'Scegli le frasi del referto negativo', run: () => { if (state.esame) openNegativoDialog(); } },
+    { group: 'Comandi', icon: 'bookmark', label: 'Referti tipo', hint: 'modelli completi', run: openTipoDialog },
     { group: 'Comandi', icon: 'printer', label: 'Stampa', hint: 'Ctrl+P', run: () => $('btn-open-print').click() },
     { group: 'Comandi', icon: 'save', label: 'Salva nell\'archivio', hint: 'Ctrl+S', run: () => $('btn-archive').click() },
     { group: 'Comandi', icon: 'mic', label: 'Detta nel referto', run: () => $('btn-mic-report').click() },
@@ -812,6 +1004,7 @@ function paletteItems() {
       label: p.label, hint: g.name, keywords: p.text, rank: -1, run: () => togglePhrase(gi, pi),
     })));
     (DATA.indicazioniByEsame[state.esame] || []).forEach((txt) => items.push({ group: 'Indicazioni', icon: 'info', label: txt, run: () => toggleIndicazione(txt) }));
+    (refertiTipo[state.esame] || []).forEach((t) => items.push({ group: 'Referti tipo', icon: 'bookmark', label: t.nome, keywords: t.testo, run: () => insertTipo(t) }));
   }
   DATA.metodiche.forEach((m) => (DATA.esamiByMetodica[m] || []).forEach((e) => items.push({
     group: 'Esami', icon: 'chevron-right', label: e, hint: m, run: () => selectExam(m, e),
@@ -1330,6 +1523,7 @@ async function loadLibrary() {
     try { cached = JSON.parse(libCacheStore().getItem(libCacheKey())); } catch (e) { cached = null; }
     DATA = cached || cloneDefaults();
     negativoByEsame = DATA.negativoByEsame || {};
+    refertiTipo = DATA.refertiTipo || {};
     bannerText.textContent = cached
       ? 'Sei offline o il server non risponde: stai usando la copia della tua libreria salvata su questo computer.'
       : 'La tua libreria personale non è stata caricata (problema di connessione): stai vedendo le frasi predefinite.';
@@ -1338,6 +1532,7 @@ async function loadLibrary() {
   }
   DATA = res.data;
   negativoByEsame = DATA.negativoByEsame || {};
+  refertiTipo = DATA.refertiTipo || {};
   banner.hidden = true;
   try { libCacheStore().setItem(libCacheKey(), JSON.stringify(DATA)); } catch (e) { /* spazio esaurito: si continua senza copia */ }
 }
@@ -1373,7 +1568,8 @@ async function showApp() {
   workspaces = draft ? draft.workspaces : Array.from({ length: WORKSPACE_COUNT }, emptyWorkspace);
   loadWorkspace(draft ? draft.activeWorkspace : 0);
   if (draft) flash('Bozza ripristinata', 2500);
-  if (needsOnboarding()) openOnboarding();
+  if (needsOnboarding()) { openOnboarding(); markNewsSeen(); } else if (!newsSeen()) openNews();
+  if (!isLocalMode()) watchTeamBadge(sb, currentUser.id);
   document.body.dataset.ready = '1';
 }
 

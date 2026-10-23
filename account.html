@@ -47,6 +47,7 @@
         <a href="#libreria" data-panel="libreria"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#library-big"></use></svg>Libreria delle frasi</a>
         <a href="#importa" data-panel="importa"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#file-input"></use></svg>Importa referti</a>
         <a href="#stampa" data-panel="stampa"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#printer"></use></svg>Stampa e firma</a>
+        <a href="#turni" data-panel="turni"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#calendar-days"></use></svg>Turni</a>
         <a href="#preferenze" data-panel="preferenze"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#settings"></use></svg>Preferenze</a>
         <a href="tutorial.html"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#circle-play"></use></svg>Tutorial</a>
       </nav>
@@ -214,6 +215,41 @@
         </div>
       </section>
 
+      <!-- TURNI -->
+      <section class="panel" id="panel-turni" aria-labelledby="t-turni">
+        <h1 class="page-title" id="t-turni">Turni</h1>
+        <div class="stack">
+          <div class="card stack">
+            <p class="muted">I tuoi turni sono privati: li vedono i colleghi solo dei team con cui decidi di condividerli. È un calendario personale, non sostituisce quello ufficiale della struttura. I turni finiti da più di 12 mesi si cancellano da soli.</p>
+            <div class="cal-toolbar">
+              <button class="btn btn--ghost btn--icon" id="cal-prev" aria-label="Mese precedente"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#chevron-left"></use></svg></button>
+              <h2 class="cal-title" id="cal-title" aria-live="polite"></h2>
+              <button class="btn btn--ghost btn--icon" id="cal-next" aria-label="Mese successivo"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#chevron-right"></use></svg></button>
+              <button class="btn btn--sm" id="cal-today">Oggi</button>
+              <span class="spacer"></span>
+              <button class="btn btn--primary btn--sm" id="cal-add"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#plus"></use></svg>Aggiungi turno</button>
+            </div>
+            <div class="cal" id="cal-grid" role="grid" aria-labelledby="cal-title"></div>
+            <p class="subtle">Clic su un giorno per aggiungere un turno, su un turno per modificarlo. <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#copy"></use></svg> copia i turni di quella settimana nella successiva.</p>
+            <div class="msg" id="cal-message" role="status"></div>
+          </div>
+          <div class="card stack" id="share-card">
+            <h2 class="section-title">Condivisione con i team</h2>
+            <p class="muted">Scegli con quali team condividere i turni. "Completo": i colleghi vedono tipo, orario, sede e note. "Solo di turno": vedono soltanto quando sei di turno.</p>
+            <div id="share-list"></div>
+          </div>
+          <div class="card stack" id="feed-card">
+            <h2 class="section-title">Google Calendar e altri calendari</h2>
+            <div class="row">
+              <button class="btn" id="ics-download"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#download"></use></svg>Scarica i turni (.ics)</button>
+              <span class="subtle">da importare una volta in Google Calendar, Outlook o Calendario di Apple.</span>
+            </div>
+            <div id="feed-box" class="stack"></div>
+            <div class="msg" id="feed-message" role="status"></div>
+          </div>
+        </div>
+      </section>
+
       <!-- PREFERENZE -->
       <section class="panel" id="panel-preferenze" aria-labelledby="t-preferenze">
         <h1 class="page-title" id="t-preferenze">Preferenze</h1>
@@ -258,6 +294,33 @@
       </section>
     </main>
   </div>
+
+  <dialog class="dialog" id="shift-dialog" aria-labelledby="shift-title">
+    <form method="dialog" id="shift-form" novalidate>
+      <div class="dialog__head"><h2 id="shift-title">Turno</h2></div>
+      <div class="dialog__body">
+        <div class="form-grid">
+          <div class="field"><label for="shift-day">Giorno</label><input type="date" id="shift-day" required></div>
+          <div class="field"><label for="shift-tipo">Tipo</label><input type="text" id="shift-tipo" list="shift-tipi" maxlength="40" required autocomplete="off"><datalist id="shift-tipi"></datalist></div>
+          <div class="field"><label for="shift-start">Inizio</label><input type="time" id="shift-start" required></div>
+          <div class="field"><label for="shift-end">Fine</label><input type="time" id="shift-end" required></div>
+        </div>
+        <div class="field"><label for="shift-sede">Sede o reparto</label><input type="text" id="shift-sede" list="shift-sedi" maxlength="80" autocomplete="off"><datalist id="shift-sedi"></datalist></div>
+        <div class="field"><label for="shift-note">Note</label><textarea id="shift-note" rows="2" maxlength="500" placeholder="es. reperibile per TC, sostituisco un collega"></textarea></div>
+        <div class="field" id="shift-repeat-field"><label for="shift-repeat">Ripeti ogni settimana</label>
+          <select id="shift-repeat"><option value="0">No</option><option value="1">Per 1 settimana</option><option value="2">Per 2 settimane</option><option value="3">Per 3 settimane</option><option value="4">Per 4 settimane</option><option value="8">Per 8 settimane</option><option value="12">Per 12 settimane</option><option value="26">Per 6 mesi</option></select>
+        </div>
+        <p class="subtle">Se la fine è prima dell'inizio, il turno finisce il giorno dopo (es. notte 20:00–08:00). Non scrivere dati dei pazienti nelle note.</p>
+        <div class="msg msg--error" id="shift-error" role="alert"></div>
+      </div>
+      <div class="dialog__actions">
+        <button type="button" class="btn btn--danger" id="shift-delete" hidden>Elimina</button>
+        <span class="spacer"></span>
+        <button type="button" class="btn" id="shift-cancel">Annulla</button>
+        <button type="submit" class="btn btn--primary" id="shift-save">Salva</button>
+      </div>
+    </form>
+  </dialog>
 
   <dialog class="dialog dialog--wide" id="versions-dialog" aria-labelledby="versions-title">
     <div class="dialog__head">

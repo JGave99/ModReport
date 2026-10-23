@@ -1,5 +1,17 @@
 # Novità
 
+## [Non pubblicato] — branch `migliorie-audit`
+
+### Issue #4 — Turni, team e referti tipo
+- **Turni** (Account → Turni): calendario mensile con tipo, orario, sede e note; ripetizione settimanale, copia della settimana, tipi e sedi proposti dal team. Privati, condivisibili per team (completi o "solo di turno"), cancellati dopo 12 mesi.
+- **Google Calendar**: file .ics da importare e link personale segreto (funzione `turni-ics`), rigenerabile e disattivabile.
+- **Team**: tipo e sede, approvazione degli ingressi, qualifica dei membri, impostazioni ed eliminazione del team (proprietario), sedi e tipi di turno comuni (amministratori), canali creati solo da proprietario e amministratori, canale **Avvisi** in cui scrivono solo loro, vista **Turni del team**.
+- Contatore dei messaggi non letti sul link "Team" in tutte le pagine.
+- **Referti tipo** per esame (icona segnalibro nel blocco Referto e Ctrl+K) e riga **Più usate** con Alt+Maiusc+1…6.
+- Finestra **Novità** dopo l'aggiornamento (e dal menu dell'account), sezione Novità e passo "Turni" nel tutorial.
+- Informativa aggiornata (turni, qualifica, richieste di ingresso): versione 2026-10-23, da riaccettare.
+- Migrazione `20261023120000_team-turni.sql`.
+
 ## v0.2.2 — 21/10/2026
 
 ### Issue #3 — Nuovi profili

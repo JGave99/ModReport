@@ -66,7 +66,7 @@ test('produzione: dati esistenti intatti, vecchie funzioni sostituite', async ()
   const old = await q("select policyname from pg_policies where schemaname = 'public' and policyname like '%Membri%'");
   assert.deepEqual(old, []);
   await as(B, async () => {
-    assert.equal((await q('select id from public.channels')).length, 1);
+    assert.equal((await q('select id from public.channels')).length, 2, 'generale e avvisi');
     assert.equal((await q('select id from public.messages')).length, 1);
   });
 });

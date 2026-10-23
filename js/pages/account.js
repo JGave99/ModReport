@@ -18,6 +18,8 @@ import { migrateLibrary } from '../lib/library.js';
 import { newPhraseId, forStorage } from '../lib/library-merge.js';
 import { isLocalMode, setLocalMode, clearLocalData } from '../lib/local-backend.js';
 import { saveVersion, listVersions, loadVersion, deleteVersion, VERSION_REASONS } from '../lib/library-versions.js';
+import { initTurni } from './account-turni.js';
+import { watchTeamBadge } from '../lib/team-unread.js';
 
 const LETTERHEAD_MAX_BYTES = 5 * 1024 * 1024;
 const sb = getSupabase();
@@ -883,9 +885,11 @@ $('btn-logout').onclick = async () => {
 };
 
 // ---- Pannelli con indirizzo (#profilo, #libreria, …) ----
-const PANELS = ['profilo', 'libreria', 'importa', 'stampa', 'preferenze'];
+const PANELS = ['profilo', 'libreria', 'importa', 'stampa', 'turni', 'preferenze'];
+let turni = null;
 function showPanel() {
   const name = PANELS.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'profilo';
+  if (name === 'turni' && turni) turni.show();
   PANELS.forEach((p) => $('panel-' + p).classList.toggle('is-active', p === name));
   document.querySelectorAll('.sidenav [data-panel]').forEach((a) => {
     if (a.dataset.panel === name) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
@@ -1039,7 +1043,10 @@ $('versions-list').addEventListener('click', async (e) => {
   } else {
     await refreshMfa();
     await loadAdminTeams();
+    watchTeamBadge(sb, currentUser.id);
   }
+  turni = initTurni({ sb, user: currentUser, local: isLocalMode() });
+  if (location.hash === '#turni') turni.show();
   $('gate').hidden = true;
   $('page-root').hidden = false;
 })();

@@ -89,6 +89,13 @@ export function normalize(raw) {
     data.negativoByEsame = isObj(data.negativoByEsame) ? Object.fromEntries(Object.entries(data.negativoByEsame)
       .filter(([, ids]) => Array.isArray(ids)).map(([e, ids]) => [e, ids.filter((id) => typeof id === 'string')])) : {};
   }
+  // Referti tipo dell'utente: { esame: [{ id, nome, testo }] }.
+  if (data.refertiTipo !== undefined) {
+    data.refertiTipo = isObj(data.refertiTipo) ? Object.fromEntries(Object.entries(data.refertiTipo)
+      .filter(([, list]) => Array.isArray(list))
+      .map(([e, list]) => [e, list.filter((t) => isObj(t) && typeof t.testo === 'string' && typeof t.nome === 'string')
+        .map((t) => ({ id: String(t.id || newPhraseId()), nome: t.nome, testo: t.testo }))])) : {};
+  }
   for (const m of data.metodiche) if (!Array.isArray(data.esamiByMetodica[m])) data.esamiByMetodica[m] = [];
   const order = isObj(data[GROUP_ORDER_KEY]) ? data[GROUP_ORDER_KEY] : {};
   delete data[GROUP_ORDER_KEY];

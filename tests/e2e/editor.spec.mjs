@@ -178,3 +178,60 @@ test('referto negativo personalizzato: si scelgono le frasi, si salvano nella li
   await page.click('#btn-negativo-config');
   await expect(dialog.locator('input:checked')).toHaveCount(2); // la proposta della libreria predefinita
 });
+
+test('referti tipo e frasi più usate (issue #4)', async ({ page }) => {
+  await login(page);
+  await chip(page, '#metodica-row', 'RX');
+  await chip(page, '#esame-body', 'RX TORACE 2PR');
+  await page.click('#btn-negativo');
+  const ta = page.locator('#report-text');
+  const composed = await ta.inputValue();
+  // Salva come referto tipo
+  await page.click('#btn-tipo');
+  await page.click('#tipo-save');
+  const name = page.locator('dialog.dialog[open]').last();
+  await name.locator('input').fill('Torace negativo');
+  await name.locator('button[type=submit]').click();
+  await expect(page.locator('#tipo-list')).toContainText('Torace negativo');
+  await page.click('#tipo-close');
+  // Nuovo referto: lo si inserisce con un clic
+  await page.locator('#workspace-tabs button', { hasText: '2' }).click();
+  await chip(page, '#metodica-row', 'RX');
+  await chip(page, '#esame-body', 'RX TORACE 2PR');
+  await page.click('#btn-tipo');
+  await page.locator('#tipo-list button', { hasText: 'Inserisci' }).click();
+  expect((await ta.inputValue()).trim()).toBe(composed.trim());
+  // Con dati del paziente non si salva
+  await ta.fill('RX TORACE 2PR\n\nPaziente Mario Rossi nato il 01/02/1950.\n');
+  await page.click('#btn-tipo');
+  await page.click('#tipo-save');
+  await expect(page.locator('.toast').last()).toContainText('dati del paziente');
+  await page.click('#tipo-close');
+  // Più usate: dopo due usi la frase compare in cima e si inserisce con Alt+Maiusc+1
+  await ta.fill('');
+  const pnx = page.locator('#referto-body .group', { has: page.locator('.group__label', { hasText: 'Pneumotorace' }) }).locator('.phrase').first();
+  await pnx.click();
+  await pnx.click();
+  await pnx.click();
+  await chip(page, '#esame-body', 'RX ADDOME');
+  await chip(page, '#esame-body', 'RX TORACE 2PR');
+  await expect(page.locator('#referto-body .group--top .phrase')).toHaveCount(1);
+  await ta.fill('RX TORACE 2PR\n');
+  await page.locator('body').press('Alt+Shift+Digit1');
+  await expect(ta).toHaveValue(/pneumotorace/i);
+});
+
+test('novità: una volta dopo l\'aggiornamento, poi dal menu dell\'account', async ({ page }) => {
+  await login(page);
+  await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('mr-news-')).forEach((k) => localStorage.removeItem(k)));
+  await page.reload();
+  await expect(page.locator('#news-dialog')).toBeVisible();
+  await expect(page.locator('#news-body')).toContainText('I tuoi turni');
+  await page.click('#news-ok');
+  await page.reload();
+  await page.waitForSelector('body[data-ready="1"]');
+  await expect(page.locator('#news-dialog')).toBeHidden();
+  await page.click('#user-menu-btn');
+  await page.click('#btn-news');
+  await expect(page.locator('#news-dialog')).toBeVisible();
+});

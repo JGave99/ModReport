@@ -13,5 +13,5 @@ window.MR_LEGAL = Object.freeze({
   SUPABASE_REGIONE: '',  // regione del progetto Supabase, es. "Unione Europea (Francoforte)"
   EMAIL_PROVIDER: 'Brevo — Sendinblue SAS (Francia), per le email di conferma e di recupero della password', // fornitore SMTP delle email di servizio
   TERMS_VERSION: '2026-10-04',
-  PRIVACY_VERSION: '2026-10-16',
+  PRIVACY_VERSION: '2026-10-23',
 });

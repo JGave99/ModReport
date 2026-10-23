@@ -41,12 +41,15 @@
     <hr>
     <form id="create-form" class="stack" style="gap:6px;">
       <label class="field__label" for="create-team-name">Oppure crea un nuovo team</label>
+      <input type="text" class="input" id="create-team-name" maxlength="80" placeholder="es. Radiologia — Ospedale San Marco">
       <div class="row">
-        <input type="text" class="input" id="create-team-name" maxlength="80" placeholder="es. Radiologia — Ospedale San Marco" style="flex:1;">
+        <select class="input" id="create-team-tipo" aria-label="Tipo di team" style="width:auto;"><option value="reparto">Reparto ospedaliero</option><option value="studio">Studio</option><option value="gruppo">Gruppo</option></select>
+        <input type="text" class="input" id="create-team-sede" maxlength="80" placeholder="Sede (facoltativa)" aria-label="Sede" style="flex:1; min-width:140px;">
         <button class="btn" id="btn-create-team" type="submit">Crea</button>
       </div>
       <div class="form-msg" id="create-msg" role="alert"></div>
     </form>
+    <div id="pending-box" hidden></div>
     <hr>
     <div class="row">
       <a class="btn" href="app.html"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#arrow-left"></use></svg>Torna al referto</a>
@@ -65,13 +68,19 @@
     </nav>
     <div class="topbar__end">
       <select class="team-select" id="team-select" aria-label="Team attivo"></select>
-      <button class="btn" id="btn-members"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#users"></use></svg><span>Membri</span></button>
-      <button class="btn" id="btn-invite" hidden><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#plus"></use></svg><span>Invita</span></button>
+      <button class="btn" id="btn-members" aria-label="Membri" title="Membri"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#users"></use></svg><span>Membri</span></button>
+      <button class="btn" id="btn-settings" aria-label="Impostazioni del team" title="Impostazioni del team" hidden><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#settings"></use></svg><span>Impostazioni</span></button>
+      <button class="btn" id="btn-invite" aria-label="Invita colleghi" title="Invita colleghi" hidden><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#plus"></use></svg><span>Invita</span></button>
       <button class="btn btn--ghost" id="btn-other-team">Altro team</button>
     </div>
   </header>
 
-  <div class="team-app">
+  <div class="team-tabs" role="tablist" aria-label="Sezioni del team">
+    <button role="tab" id="tab-chat" aria-selected="true" aria-controls="chat-view"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#messages-square"></use></svg>Messaggi</button>
+    <button role="tab" id="tab-turni" aria-selected="false" aria-controls="turni-view"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#calendar-days"></use></svg>Turni</button>
+  </div>
+
+  <div class="team-app" id="chat-view" role="tabpanel" aria-labelledby="tab-chat">
     <aside class="sidebar">
       <div class="sidebar__title">
         <span>Canali</span>
@@ -87,6 +96,7 @@
         <div class="empty-chat">Nessun canale selezionato.</div>
       </div>
       <div class="privacy-note">Non scrivere dati che identificano i pazienti (nomi, date di nascita, codici, numeri di accettazione).</div>
+      <div class="composer-note" id="composer-note" hidden><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#megaphone"></use></svg>In questo canale scrivono solo proprietario e amministratori.</div>
       <div class="send-error" id="send-error" role="alert" hidden></div>
       <form class="composer" id="composer" hidden>
         <label class="visually-hidden" for="msg-input">Messaggio</label>
@@ -95,11 +105,25 @@
       </form>
     </main>
   </div>
+  <section class="team-turni" id="turni-view" role="tabpanel" aria-labelledby="tab-turni" hidden>
+    <div class="turni-toolbar">
+      <button class="btn btn--ghost btn--icon" id="turni-prev" aria-label="Settimana precedente"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#chevron-left"></use></svg></button>
+      <h2 class="turni-title" id="turni-title" aria-live="polite"></h2>
+      <button class="btn btn--ghost btn--icon" id="turni-next" aria-label="Settimana successiva"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#chevron-right"></use></svg></button>
+      <button class="btn btn--sm" id="turni-today">Questa settimana</button>
+      <span class="spacer"></span>
+      <select class="input" id="turni-qualifica" aria-label="Filtra per qualifica" style="width:auto;"><option value="">Tutte le qualifiche</option></select>
+      <a class="btn btn--sm" href="account.html#turni"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#calendar-days"></use></svg>I miei turni</a>
+    </div>
+    <p class="subtle" id="turni-hint"></p>
+    <div class="turni-week" id="turni-week"></div>
+  </section>
 </div>
 
 <dialog class="dialog" id="members-panel" aria-labelledby="members-title">
   <div class="dialog__head"><h2 id="members-title">Membri del team</h2><button class="btn btn--ghost btn--icon" data-close aria-label="Chiudi"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#x"></use></svg></button></div>
   <div class="dialog__body">
+    <div id="pending-requests"></div>
     <div id="members-list"></div>
     <div class="form-msg" id="members-msg" role="alert"></div>
     <div><button class="btn btn--danger" id="btn-leave-team"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#log-out"></use></svg>Esci dal team</button></div>
@@ -122,6 +146,35 @@
     <div class="form-msg" id="invite-msg" role="alert"></div>
     <h3 class="section-title">Inviti attivi</h3>
     <div id="invite-list"></div>
+  </div>
+</dialog>
+
+<dialog class="dialog dialog--wide" id="settings-panel" aria-labelledby="settings-title">
+  <div class="dialog__head"><h2 id="settings-title">Impostazioni del team</h2><button class="btn btn--ghost btn--icon" data-close aria-label="Chiudi"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#x"></use></svg></button></div>
+  <div class="dialog__body">
+    <form id="team-form" class="stack" novalidate>
+      <h3 class="section-title">Team</h3>
+      <div class="form-grid">
+        <div class="field"><label for="team-nome">Nome</label><input type="text" id="team-nome" maxlength="80" required></div>
+        <div class="field"><label for="team-tipo">Tipo</label><select id="team-tipo"><option value="">—</option><option value="reparto">Reparto ospedaliero</option><option value="studio">Studio</option><option value="gruppo">Gruppo</option></select></div>
+        <div class="field"><label for="team-sede">Sede</label><input type="text" id="team-sede" maxlength="80"></div>
+      </div>
+      <label class="check"><input type="checkbox" id="team-approvazione"><span>Chi entra con un invito deve essere approvato da proprietario o amministratori</span></label>
+      <div class="row"><button class="btn btn--primary" type="submit" id="team-save">Salva</button><span class="form-msg" id="team-msg" role="status"></span></div>
+    </form>
+    <form id="turni-config-form" class="stack" novalidate>
+      <h3 class="section-title">Sedi e tipi di turno</h3>
+      <p class="muted">Compaiono come proposte quando i membri inseriscono i turni, così tutti scrivono le sedi allo stesso modo.</p>
+      <div class="field"><label for="cfg-sedi">Sedi e reparti (una per riga)</label><textarea id="cfg-sedi" rows="4" placeholder="Pronto Soccorso&#10;TC&#10;Risonanza"></textarea></div>
+      <div class="field"><span class="field__label">Tipi di turno del team</span><div id="cfg-tipi" class="cfg-tipi"></div>
+        <button type="button" class="btn btn--sm" id="cfg-add-tipo"><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#plus"></use></svg>Aggiungi tipo</button></div>
+      <div class="row"><button class="btn btn--primary" type="submit" id="cfg-save">Salva sedi e tipi</button><span class="form-msg" id="cfg-msg" role="status"></span></div>
+    </form>
+    <div class="card card--danger stack" id="danger-zone">
+      <h3 class="section-title">Elimina il team</h3>
+      <p class="muted">Vengono eliminati canali, messaggi, inviti, libreria del team e condivisioni dei turni. I turni personali dei membri restano loro.</p>
+      <div><button class="btn btn--danger" id="btn-delete-team">Elimina il team</button></div>
+    </div>
   </div>
 </dialog>
 
