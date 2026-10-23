@@ -144,3 +144,15 @@ test('ordine dei gruppi: librerie salvate prima della correzione tornano all\'or
   assert.deepEqual(keys.slice(0, baseKeys.length), baseKeys);
   assert.equal(keys[keys.length - 1], 'Mio', 'i gruppi dell\'utente vanno in fondo');
 });
+
+test('confronti (punto 04): conservati e ripuliti; senza modifiche valgono i predefiniti', async () => {
+  const { normalize } = await import('../../js/lib/library-merge.js');
+  const { DEFAULT_CONFRONTI } = await import('../../js/lib/default-library.js');
+  const d = normalize({ confronti: [{ id: 'c1', label: 'Conf', text: 'Confronto con TC del [data].' }, { label: 'vuoto', text: '  ' }, 'x', { text: 'Senza etichetta e id.' }] });
+  assert.equal(d.confronti.length, 2);
+  assert.deepEqual(d.confronti[0], { id: 'c1', label: 'Conf', text: 'Confronto con TC del [data].' });
+  assert.ok(d.confronti[1].id && d.confronti[1].label);
+  assert.ok(!('confronti' in normalize({ confronti: 'rotto' })));
+  assert.ok(!('confronti' in normalize({})));
+  assert.deepEqual(DEFAULT_CONFRONTI.map((c) => c.label), ['Confronto', 'Presa visione', 'Non precedenti']);
+});

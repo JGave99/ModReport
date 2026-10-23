@@ -114,3 +114,28 @@ test('ordine delle sezioni: si trascina in un elenco a parte, resta salvato e va
   expect(idx(/profilo cardiomediastinico/i)).toBeGreaterThan(idx(/pneumotorace/i));
   expect(idx(/addensament/i)).toBeGreaterThan(idx(/profilo cardiomediastinico/i));
 });
+
+test('confronto con precedenti (punto 04): pulsanti personalizzabili, uguali per tutti gli esami', async ({ page }) => {
+  await login(page);
+  await page.goto('account.html#libreria');
+  const editor = page.locator('#confronti-editor');
+  await expect(editor.locator('.lib-phrase')).toHaveCount(3);
+  await editor.locator('input').first().fill('Confronto TC');
+  await editor.locator('textarea').first().fill('Confronto con precedente TC del [data].');
+  await editor.locator('button', { hasText: 'Aggiungi pulsante' }).click();
+  await editor.locator('input').last().fill('Esterno');
+  await editor.locator('textarea').last().fill('Confronto con esame esterno del [data], visionato su CD.');
+  await editor.locator('[aria-label="Elimina il pulsante"]').nth(1).click(); // via "Presa visione"
+  await expect(page.locator('#lib-status')).toHaveText('Libreria salvata ✓');
+  await page.goto('app.html');
+  await page.waitForSelector('body[data-ready="1"]');
+  await expect(page.locator('#confronti-row .chip')).toHaveText(['Confronto TC', 'Non precedenti', 'Esterno']);
+  await page.locator('#metodica-row button', { hasText: 'TC' }).first().click();
+  await page.locator('#confronti-row .chip', { hasText: 'Esterno' }).click();
+  await expect(page.locator('#report-text')).toHaveValue(/Confronto con esame esterno del \[data\], visionato su CD\./);
+  // Si torna ai predefiniti
+  await page.goto('account.html#libreria');
+  await page.locator('#confronti-editor button', { hasText: 'Ripristina i predefiniti' }).click();
+  await page.locator('dialog[open] button[type=submit]').click();
+  await expect(page.locator('#confronti-editor .lib-phrase')).toHaveCount(3);
+});

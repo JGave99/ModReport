@@ -141,3 +141,4 @@ dialog.dialog--palette{ width: min(640px, 94vw); margin-top: 12vh; }
 .tipo-item{ display: flex; align-items: center; gap: var(--s-2); padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--r-sm); }
 .tipo-item__info{ flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .tipo-item__info .subtle{ overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-xs); }
+.confronti-edit{ display: inline-block; margin-top: 6px; font-size: var(--fs-xs); }

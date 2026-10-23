@@ -89,6 +89,14 @@ export function normalize(raw) {
     data.negativoByEsame = isObj(data.negativoByEsame) ? Object.fromEntries(Object.entries(data.negativoByEsame)
       .filter(([, ids]) => Array.isArray(ids)).map(([e, ids]) => [e, ids.filter((id) => typeof id === 'string')])) : {};
   }
+  // Frasi del confronto con i precedenti (punto 04), uguali per tutti gli esami: [{ id, label, text }].
+  if (data.confronti !== undefined) {
+    data.confronti = Array.isArray(data.confronti) ? data.confronti
+      .filter((c) => isObj(c) && typeof c.text === 'string' && c.text.trim())
+      .map((c) => ({ id: String(c.id || newPhraseId()), label: String(c.label || c.text.slice(0, 28)), text: c.text }))
+      .slice(0, 20) : undefined;
+    if (data.confronti === undefined) delete data.confronti;
+  }
   // Referti tipo dell'utente: { esame: [{ id, nome, testo }] }.
   if (data.refertiTipo !== undefined) {
     data.refertiTipo = isObj(data.refertiTipo) ? Object.fromEntries(Object.entries(data.refertiTipo)

@@ -13,7 +13,8 @@ import { requireSession, needsMfa } from '../lib/session.js';
 import { detectPII, splitIntoSentences, classifyFinding } from '../lib/import-analysis.js';
 import { alertDialog, confirmDialog, promptDialog } from '../lib/dialog.js';
 import { toast } from '../lib/toast.js';
-import { createLibraryEditor } from '../lib/library-editor.js';
+import { createLibraryEditor, renderConfronti } from '../lib/library-editor.js';
+import { DEFAULT_CONFRONTI } from '../lib/default-library.js';
 import { migrateLibrary } from '../lib/library.js';
 import { newPhraseId, forStorage } from '../lib/library-merge.js';
 import { isLocalMode, setLocalMode, clearLocalData } from '../lib/local-backend.js';
@@ -91,6 +92,7 @@ function setLibraryLocked(locked) {
   document.querySelectorAll('[data-lib-banner]').forEach((b) => { b.hidden = !locked; });
   $('library-editor').classList.toggle('locked', locked);
   $('library-editor').inert = locked; // blocca anche la tastiera, non solo il mouse
+  $('confronti-editor').inert = locked;
   ['lib-export', 'lib-import-file', 'btn-reset-data', 'ai-analyze-btn', 'ai-add-indicazione-btn'].forEach((id) => { $(id).disabled = locked; });
 }
 
@@ -157,8 +159,11 @@ function fillSelect(selectEl, items, placeholder) {
 // ---- Editor della libreria e strumenti (esporta, importa, ripristina) ----
 let editor = null;
 
+let confrontiEditor = null;
 function refreshLibraryViews() {
   if (editor) editor.render();
+  if (!confrontiEditor) confrontiEditor = renderConfronti($('confronti-editor'), { getData: () => DATA, onChange: persist, defaults: DEFAULT_CONFRONTI });
+  else confrontiEditor.render();
   refreshAiSelects();
   renderAbbreviations();
 }
@@ -888,7 +893,10 @@ $('btn-logout').onclick = async () => {
 const PANELS = ['profilo', 'libreria', 'importa', 'stampa', 'turni', 'preferenze'];
 let turni = null;
 function showPanel() {
-  const name = PANELS.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'profilo';
+  const hash = location.hash.slice(1);
+  // #confronti: la sezione del punto 04 dentro la libreria.
+  const name = hash === 'confronti' ? 'libreria' : PANELS.includes(hash) ? hash : 'profilo';
+  if (hash === 'confronti') setTimeout(() => $('confronti-card').scrollIntoView({ block: 'start' }), 0);
   if (name === 'turni' && turni) turni.show();
   PANELS.forEach((p) => $('panel-' + p).classList.toggle('is-active', p === name));
   document.querySelectorAll('.sidenav [data-panel]').forEach((a) => {
@@ -1047,6 +1055,7 @@ $('versions-list').addEventListener('click', async (e) => {
   }
   turni = initTurni({ sb, user: currentUser, local: isLocalMode() });
   if (location.hash === '#turni') turni.show();
+  if (location.hash === '#confronti') setTimeout(() => $('confronti-card').scrollIntoView({ block: 'start' }), 0);
   $('gate').hidden = true;
   $('page-root').hidden = false;
 })();

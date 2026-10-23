@@ -6,7 +6,7 @@ import { confirmDialog, promptDialog } from '../lib/dialog.js';
 import { detectPII } from '../lib/import-analysis.js';
 import { authErrorMessage, isExistingUserSignup, readAuthErrorFromHash } from '../lib/auth-messages.js';
 import { LibraryStore, cloneDefaults } from '../lib/library.js';
-import { DEFAULT_NEGATIVO } from '../lib/default-library.js';
+import { DEFAULT_NEGATIVO, DEFAULT_CONFRONTI } from '../lib/default-library.js';
 import { watchTeamBadge } from '../lib/team-unread.js';
 import { NEWS, newsHtml } from '../lib/news.js';
 import { attachDictation, stopAllDictation, setDictationDisabled, setLocalDictationPreferred } from '../lib/dictation.js';
@@ -426,6 +426,7 @@ function renderAll() {
   renderMetodica();
   renderEsame();
   renderIndicazione();
+  renderConfronti();
   renderReferto();
   renderContext();
   renderWorkspaceTabs();
@@ -736,9 +737,20 @@ function insertComparison(txt) {
   insertConfronto(txt);
   selectFirstFieldIn(before, el.reportText.value.length);
 }
-$('btn-confronto').onclick = () => insertComparison('Confronto con precedente analogo del [data].');
-$('btn-presa-visione').onclick = () => insertComparison('Presa visione di precedente analogo del [data].');
-$('btn-non-precedenti').onclick = () => insertConfronto('Non disponibili precedenti per confronto.');
+// Pulsanti del confronto: quelli della libreria in uso (personale o del team), altrimenti i predefiniti.
+const confronti = () => (Array.isArray(DATA.confronti) ? DATA.confronti : DEFAULT_CONFRONTI).filter((c) => c.text.trim());
+function renderConfronti() {
+  const row = $('confronti-row');
+  row.innerHTML = '';
+  confronti().forEach((c) => {
+    const b = document.createElement('button');
+    b.className = 'chip';
+    b.textContent = c.label || c.text.slice(0, 28);
+    b.title = c.text;
+    b.onclick = () => insertComparison(c.text);
+    row.appendChild(b);
+  });
+}
 $('btn-negativo').onclick = insertNegativeReport;
 
 // Scelta dell'utente; altrimenti la proposta della libreria predefinita; altrimenti la prima frase normale di ogni gruppo.
@@ -990,6 +1002,7 @@ function paletteItems() {
     { group: 'Comandi', icon: 'circle-check', label: 'Referto negativo', hint: 'Alt+N', run: insertNegativeReport },
     { group: 'Comandi', icon: 'circle-check', label: 'Scegli le frasi del referto negativo', run: () => { if (state.esame) openNegativoDialog(); } },
     { group: 'Comandi', icon: 'bookmark', label: 'Referti tipo', hint: 'modelli completi', run: openTipoDialog },
+    ...confronti().map((c) => ({ group: 'Confronto', icon: 'plus', label: c.label || c.text, keywords: c.text, run: () => insertComparison(c.text) })),
     { group: 'Comandi', icon: 'printer', label: 'Stampa', hint: 'Ctrl+P', run: () => $('btn-open-print').click() },
     { group: 'Comandi', icon: 'save', label: 'Salva nell\'archivio', hint: 'Ctrl+S', run: () => $('btn-archive').click() },
     { group: 'Comandi', icon: 'mic', label: 'Detta nel referto', run: () => $('btn-mic-report').click() },

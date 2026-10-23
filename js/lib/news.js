@@ -35,6 +35,12 @@ export const NEWS = {
       text: 'Ogni team ha un canale Avvisi in cui scrivono solo proprietario e amministratori, per le comunicazioni importanti. Il numero accanto a "Team" nel menu indica i canali con messaggi non letti.',
     },
     {
+      icon: 'pencil',
+      title: 'Confronto con precedenti personalizzabile',
+      text: 'I pulsanti del punto 04 (Confronto, Presa visione, Non precedenti) ora si modificano: in Account → Libreria delle frasi, sezione "Confronto con precedenti", cambi etichette e testi, li riordini o ne aggiungi. Valgono per tutte le metodiche e tutti gli esami.',
+      link: { href: 'account.html#confronti', label: 'Personalizza il confronto' },
+    },
+    {
       icon: 'bookmark',
       title: 'Referti tipo',
       text: 'Nel blocco Referto, l\'icona segnalibro salva il referto composto come modello per quell\'esame e lo reinserisce con un clic (anche da Ctrl+K).',
