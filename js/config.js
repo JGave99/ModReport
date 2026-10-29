@@ -30,7 +30,7 @@
       SUPABASE_KEY: 'sb_publishable_jrlMnG_aEk-GvpiDu9lhtg_17yNNTk4',
     },
   };
-  var PRODUZIONE = ['jgave99.github.io'];
+  var PRODUZIONE = ['modreport.it', 'www.modreport.it', 'jgave99.github.io'];
   window.MR_ENV = PRODUZIONE.indexOf(window.location.hostname) >= 0 ? 'produzione' : 'prova';
   window.MR_CONFIG = Object.freeze(ENVS[window.MR_ENV]);
 })();
