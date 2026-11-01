@@ -9,10 +9,10 @@
 
   const DEFAULT_DB = {
     users: [{ id: '00000000-0000-4000-8000-000000000001', email: 'demo@modreport.test', password: 'password-demo-123', confirmed: true, user_metadata: { nome: 'Maria', cognome: 'Rossi' }, created_at: now() }],
-    tables: { user_data: [], report_archive: [], letterheads: [], profiles: [], teams: [], team_members: [], channels: [], messages: [], channel_reads: [], team_invites: [], app_admins: [], verification_requests: [] },
+    tables: { user_data: [], report_archive: [], letterheads: [], profiles: [], teams: [], team_members: [], channels: [], messages: [], channel_reads: [], team_invites: [], app_admins: [], verification_requests: [], shifts: [], shift_shares: [], calendar_feeds: [] },
     storage: {},
   };
-  const UNIQUE = { user_data: ['user_id'], channel_reads: ['user_id', 'channel_id'], team_members: ['team_id', 'user_id'], app_admins: ['user_id'], profiles: ['id'] };
+  const UNIQUE = { user_data: ['user_id'], channel_reads: ['user_id', 'channel_id'], team_members: ['team_id', 'user_id'], app_admins: ['user_id'], profiles: ['id'], shift_shares: ['user_id', 'team_id'], calendar_feeds: ['user_id'] };
 
   const load = () => { try { return JSON.parse(sessionStorage.getItem(KEY)) || null; } catch { return null; } };
   const db = load() || JSON.parse(JSON.stringify(DEFAULT_DB));
@@ -52,6 +52,10 @@
     eq(c, v) { this.filters.push((r) => String(r[c]) === String(v)); return this; }
     neq(c, v) { this.filters.push((r) => String(r[c]) !== String(v)); return this; }
     in(c, vs) { this.filters.push((r) => vs.map(String).includes(String(r[c]))); return this; }
+    gte(c, v) { this.filters.push((r) => String(r[c]) >= String(v)); return this; }
+    gt(c, v) { this.filters.push((r) => String(r[c]) > String(v)); return this; }
+    lte(c, v) { this.filters.push((r) => String(r[c]) <= String(v)); return this; }
+    lt(c, v) { this.filters.push((r) => String(r[c]) < String(v)); return this; }
     order(c, o) { this.orderBy = [c, !o || o.ascending !== false]; return this; }
     limit(n) { this.max = n; return this; }
     range(a, b) { this.rangeFrom = a; this.max = b - a + 1; return this; }
@@ -162,12 +166,20 @@
     messages(m) {
       const u = currentUser();
       const ch = db.tables.channels.find((c) => c.id === m.channel_id);
-      const member = ch && db.tables.team_members.find((x) => x.team_id === ch.team_id && x.user_id === u.id);
+      const member = ch && db.tables.team_members.find((x) => x.team_id === ch.team_id && x.user_id === u.id && (x.stato || 'attivo') === 'attivo');
       if (!member) return err('Non fai parte di questo team', '42501');
+      if (ch.solo_admin && !['owner', 'admin'].includes(member.role)) return err('new row violates row-level security policy for table "messages"', '42501');
       m.user_id = u.id; m.nome_mittente = member.nome; m.created_at = now(); m.testo = String(m.testo || '').trim();
       return null;
     },
+    shifts(s) {
+      s.user_id = currentUser().id; s.created_at = now(); s.updated_at = now();
+      if (!(new Date(s.ends_at) > new Date(s.starts_at))) return err('violates check constraint', '23514');
+      return null;
+    },
     channels(c) {
+      const m = memberOf(c.team_id, currentUser().id);
+      if (!m || !['owner', 'admin'].includes(m.role)) return err('new row violates row-level security policy for table "channels"', '42501');
       c.created_by = currentUser().id; c.created_at = now();
       c.nome = String(c.nome || '').trim().toLowerCase().replace(/\s+/g, '-').slice(0, 60);
       return null;
@@ -177,12 +189,76 @@
   const ok = (data) => { save(); return { data, error: null }; };
 
   const rpcHandlers = {
-    create_team({ p_nome }) {
+    create_team({ p_nome, p_tipo = null, p_sede = null }) {
       const u = currentUser(); const id = uuid();
-      db.tables.teams.push({ id, nome: String(p_nome).trim().slice(0, 80), created_by: u.id, created_at: now() });
-      db.tables.team_members.push({ team_id: id, user_id: u.id, nome: displayName(u), role: 'owner', joined_at: now() });
-      db.tables.channels.push({ id: uuid(), team_id: id, nome: 'generale', created_by: u.id, created_at: now() });
+      db.tables.teams.push({ id, nome: String(p_nome).trim().slice(0, 80), created_by: u.id, created_at: now(), tipo: p_tipo || null, sede: p_sede || null, richiede_approvazione: false, turni_config: {} });
+      db.tables.team_members.push({ team_id: id, user_id: u.id, nome: displayName(u), role: 'owner', stato: 'attivo', qualifica: null, joined_at: now() });
+      db.tables.channels.push({ id: uuid(), team_id: id, nome: 'generale', created_by: u.id, created_at: now(), solo_admin: false });
+      db.tables.channels.push({ id: uuid(), team_id: id, nome: 'avvisi', created_by: u.id, created_at: now(), solo_admin: true });
       return ok(id);
+    },
+    update_team({ p_team, p_nome, p_tipo = null, p_sede = null, p_richiede_approvazione = false }) {
+      const m = memberOf(p_team, currentUser().id);
+      if (!m || m.role !== 'owner') return { data: null, error: err('Solo il proprietario può modificare il team', '42501') };
+      Object.assign(db.tables.teams.find((t) => t.id === p_team), { nome: String(p_nome).trim().slice(0, 80), tipo: p_tipo || null, sede: p_sede || null, richiede_approvazione: !!p_richiede_approvazione });
+      return ok(null);
+    },
+    delete_team({ p_team, p_conferma }) {
+      const m = memberOf(p_team, currentUser().id);
+      const t = db.tables.teams.find((x) => x.id === p_team);
+      if (!m || m.role !== 'owner') return { data: null, error: err('Solo il proprietario può eliminare il team', '42501') };
+      if (String(p_conferma || '').trim().toLowerCase() !== t.nome.trim().toLowerCase()) return { data: null, error: err('Per confermare scrivi esattamente il nome del team', '22023') };
+      const chans = db.tables.channels.filter((c) => c.team_id === p_team).map((c) => c.id);
+      db.tables.messages = db.tables.messages.filter((x) => !chans.includes(x.channel_id));
+      ['channels', 'team_members', 'team_invites', 'shift_shares'].forEach((tb) => { db.tables[tb] = db.tables[tb].filter((r) => r.team_id !== p_team); });
+      db.tables.teams = db.tables.teams.filter((x) => x.id !== p_team);
+      return ok(null);
+    },
+    set_team_turni_config({ p_team, p_config }) {
+      const m = memberOf(p_team, currentUser().id);
+      if (!m || !['owner', 'admin'].includes(m.role)) return { data: null, error: err('Solo proprietario e amministratori', '42501') };
+      db.tables.teams.find((t) => t.id === p_team).turni_config = p_config;
+      return ok(null);
+    },
+    set_my_qualifica({ p_team, p_qualifica }) {
+      const m = memberOf(p_team, currentUser().id);
+      if (!m) return { data: null, error: err('Non fai parte di questo team', '22023') };
+      m.qualifica = p_qualifica || null;
+      return ok(null);
+    },
+    approve_team_member({ p_team, p_user, p_approve }) {
+      const me = memberOf(p_team, currentUser().id);
+      if (!me || !['owner', 'admin'].includes(me.role)) return { data: null, error: err('Solo proprietario e amministratori', '42501') };
+      const m = memberOf(p_team, p_user);
+      if (p_approve) { m.stato = 'attivo'; m.joined_at = now(); } else db.tables.team_members = db.tables.team_members.filter((x) => x !== m);
+      return ok(null);
+    },
+    team_shifts({ p_team, p_from, p_to }) {
+      const u = currentUser();
+      const me = memberOf(p_team, u.id);
+      if (!me || (me.stato || 'attivo') !== 'attivo') return { data: [], error: null };
+      const out = [];
+      for (const sh of db.tables.shift_shares.filter((x) => x.team_id === p_team)) {
+        const m = memberOf(p_team, sh.user_id);
+        if (!m || (m.stato || 'attivo') !== 'attivo') continue;
+        for (const s of db.tables.shifts.filter((x) => x.user_id === sh.user_id && x.ends_at > p_from && x.starts_at < p_to)) {
+          const full = sh.dettaglio !== 'occupato';
+          out.push({ user_id: s.user_id, nome: m.nome, qualifica: m.qualifica || null, starts_at: s.starts_at, ends_at: s.ends_at, tipo: full ? s.tipo : 'Di turno', sede: full ? s.sede : null, note: full ? s.note : null, colore: full ? s.colore : null, dettaglio: sh.dettaglio });
+        }
+      }
+      return { data: out.sort((a, b) => (a.starts_at < b.starts_at ? -1 : 1)), error: null };
+    },
+    create_calendar_feed() {
+      const u = currentUser();
+      const token = (uuid() + uuid()).replace(/-/g, '');
+      db.tables.calendar_feeds = db.tables.calendar_feeds.filter((f) => f.user_id !== u.id);
+      db.tables.calendar_feeds.push({ user_id: u.id, token_hash: 'fake-' + token, created_at: now() });
+      return ok(token);
+    },
+    delete_calendar_feed() {
+      const u = currentUser();
+      db.tables.calendar_feeds = db.tables.calendar_feeds.filter((f) => f.user_id !== u.id);
+      return ok(null);
     },
     create_team_invite({ p_team, p_max_uses = 10, p_valid_days = 7 }) {
       const m = memberOf(p_team, currentUser().id);
@@ -200,14 +276,17 @@
       const u = currentUser();
       const inv = db.tables.team_invites.find((i) => i.code === String(invite_code).trim());
       if (!inv || inv.revoked_at) return ok('invalid');
-      if (memberOf(inv.team_id, u.id)) return ok(inv.team_id);
+      const already = memberOf(inv.team_id, u.id);
+      if (already) return ok((already.stato || 'attivo') === 'attivo' ? inv.team_id : 'pending');
       if (new Date(inv.expires_at) < new Date() || inv.uses >= inv.max_uses) return ok('expired');
-      db.tables.team_members.push({ team_id: inv.team_id, user_id: u.id, nome: displayName(u), role: 'member', joined_at: now() });
+      const needsOk = !!(db.tables.teams.find((t) => t.id === inv.team_id) || {}).richiede_approvazione;
+      db.tables.team_members.push({ team_id: inv.team_id, user_id: u.id, nome: displayName(u), role: 'member', stato: needsOk ? 'in_attesa' : 'attivo', qualifica: null, joined_at: now() });
       inv.uses += 1;
-      return ok(inv.team_id);
+      return ok(needsOk ? 'pending' : inv.team_id);
     },
     remove_team_member({ p_team, p_user }) {
       db.tables.team_members = db.tables.team_members.filter((m) => !(m.team_id === p_team && m.user_id === p_user));
+      db.tables.shift_shares = db.tables.shift_shares.filter((m) => !(m.team_id === p_team && m.user_id === p_user));
       return ok(null);
     },
     leave_team({ p_team }) {
@@ -215,6 +294,7 @@
       const others = db.tables.team_members.filter((x) => x.team_id === p_team && x.user_id !== u.id);
       if (m && m.role === 'owner' && others.length) return { data: null, error: err('Prima di uscire trasferisci la proprietà del team a un altro membro', '42501') };
       db.tables.team_members = db.tables.team_members.filter((x) => !(x.team_id === p_team && x.user_id === u.id));
+      db.tables.shift_shares = db.tables.shift_shares.filter((x) => !(x.team_id === p_team && x.user_id === u.id));
       if (!others.length) db.tables.teams = db.tables.teams.filter((t) => t.id !== p_team);
       return ok(null);
     },

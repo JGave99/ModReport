@@ -38,6 +38,7 @@ flowchart LR
 | **Integrazione GitHub ↔ Supabase** | sul progetto di produzione | collegata, con *Deploy to production* **spento**: nessuna migrazione parte da sola | — |
 | **Brevo** | SMTP `smtp-relay.brevo.com:587` | email di conferma, recupero password e cambio email, inviate da Supabase | gratis (300 email al giorno) |
 | **Riconoscimento vocale del browser** | Google (Chrome), Microsoft (Edge), Apple (Safari) | dettatura: l'audio va al fornitore del browser, mai a ModReport; disattivabile | — |
+| **Supabase Edge Functions** | `supabase/functions/turni-ics` (vedi `supabase/functions/README.md`) | calendario dei turni per Google Calendar tramite link segreto | gratis (piano Free) |
 | **Stripe** | — | **non attivo**: era il checkout del 18-24/09/2026, poi tolto; tornerà con lo Step 7 (vedi `SUPABASE.md` §4) | — |
 
 Le credenziali (password, chiavi segrete, chiave SMTP, password dei database) **non stanno nel repository**: si tengono in un password manager.
@@ -63,9 +64,9 @@ Altre due modalità che **non usano nessun database**:
 |---|---|
 | `index.html` / `landing.js` | homepage, video di presentazione, prezzi, FAQ |
 | `app.html` / `app.js` | **editor del referto**: accesso, 5 schede, metodica → esame → indicazione → confronto → frasi, referto negativo, campi, dettatura, copia, stampa PDF, ricerca (Ctrl+K) |
-| `account.html` / `account.js` | profilo, sicurezza (MFA), preferenze, abbreviazioni, **libreria delle frasi** (modifica, importazione, versioni, libreria del team), carta intestata, eliminazione account |
+| `account.html` / `account.js` | profilo, sicurezza (MFA), preferenze, abbreviazioni, **libreria delle frasi** (modifica, importazione, versioni, libreria del team), carta intestata, **turni** (calendario, condivisione, .ics e link per Google), eliminazione account |
 | `archivio.html` / `archivio.js` | archivio dei referti **solo locale** (IndexedDB), statistiche, CSV; sposta nel browser i vecchi referti rimasti nel cloud |
-| `team.html` / `team.js` | team di studio o reparto: canali, messaggi, inviti, ruoli |
+| `team.html` / `team.js` | team di studio o reparto: messaggi (canale Avvisi solo per amministratori), **turni del team**, inviti con approvazione, ruoli e qualifiche, impostazioni ed eliminazione del team |
 | `admin.html` / `admin.js` | solo amministratori: utenti, verifica dei professionisti |
 | `tutorial.html` / `tutorial.js` | guida animata |
 | `informativa-privacy.html`, `termini-servizio.html` | testi legali (dati in `js/legal-config.js`) |
@@ -108,7 +109,8 @@ Altre due modalità che **non usano nessun database**:
 | Area | Tabelle |
 |---|---|
 | Utente | `profiles` (nome, titolo), `user_data` (**libreria personale** in JSON, con abbreviazioni e referto negativo), `library_versions` (ultime 30 copie), `letterheads` (carte intestate) |
-| Team | `teams`, `team_members`, `team_invites`, `team_libraries`, `channels`, `messages`, `channel_reads` |
+| Team | `teams` (tipo, sede, approvazione, sedi e tipi di turno), `team_members` (ruolo, qualifica, stato attivo/in attesa), `team_invites`, `team_libraries`, `channels` (`solo_admin` per Avvisi), `messages`, `channel_reads` |
+| Turni | `shifts` (privati, cancellati dopo 12 mesi), `shift_shares` (condivisione per team: completa o solo "di turno"), `calendar_feeds` (impronta del link per Google) |
 | Amministrazione | `app_admins`, `verification_requests`, `admin_actions` (registro: quale amministratore ha eliminato quale account) |
 | Legale | `consent_log` (accettazione di termini e informativa) |
 | Versione precedente | `app_presets` (libreria base copiata ai nuovi utenti da `copy_base_preset_to_new_user`), `subscriptions` (abbonamenti Stripe del 18-24/09, Step 7): restano, non più usate dal codice |
@@ -125,7 +127,7 @@ Entrambi privati, ciascun utente vede solo la propria cartella.
 
 - **RLS** su tutte le tabelle: ognuno vede solo i propri dati; nel team, solo i membri.
 - **MFA**: chi ha attivato la verifica in due passaggi deve usarla per accedere ai dati (policy `mfa_required`).
-- **Funzioni RPC** per le operazioni delicate: `create_team`, `create_team_invite`, `join_team_with_code`, `leave_team`, `remove_team_member`, `set_team_member_role`, `revoke_team_invite`, `accept_terms`, `delete_my_account`, `admin_delete_user` (solo amministratori), `list_app_users`, `update_my_display_name`, `my_channels_last_message`.
+- **Funzioni RPC** per le operazioni delicate: `create_team`, `update_team`, `delete_team`, `set_team_turni_config`, `set_my_qualifica`, `approve_team_member`, `team_shifts`, `create_calendar_feed`, `delete_calendar_feed`, `calendar_feed_events` (letta dalla funzione pubblica), `create_team_invite`, `join_team_with_code`, `leave_team`, `remove_team_member`, `set_team_member_role`, `revoke_team_invite`, `accept_terms`, `delete_my_account`, `admin_delete_user` (solo amministratori), `list_app_users`, `update_my_display_name`, `my_channels_last_message`.
 - **Trigger di guardia**: date, autori e campi protetti li decide il server, non il browser.
 
 ## 6. Dove stanno i dati

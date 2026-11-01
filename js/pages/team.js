@@ -5,13 +5,16 @@ import { $, icon } from '../lib/dom.js';
 import { requireSession } from '../lib/session.js';
 import { confirmDialog, promptDialog, alertDialog } from '../lib/dialog.js';
 import { isLocalMode } from '../lib/local-backend.js';
+import { toast } from '../lib/toast.js';
+import { QUALIFICHE, colorFor as shiftColor, mergeTipi, weekStart, addDays, dayKey, formatRange } from '../lib/shifts.js';
 
 const sb = getSupabase();
 const ROLE_LABEL = { owner: 'Proprietario', admin: 'Amministratore', member: 'Membro' };
 const AVATAR_COLORS = ['#0369a1', '#0f766e', '#7c3aed', '#b45309', '#be123c', '#4d7c0f', '#1d4ed8', '#a21caf'];
 
 let me = null;
-let memberships = [];         // [{ team_id, role, nome, team_nome }]
+let memberships = [];         // team attivi: [{ team_id, role, nome, qualifica, team_nome, team }]
+let pendingTeams = [];        // richieste in attesa di approvazione: [{ team_id, team_nome }]
 let currentTeam = null;       // membership corrente
 let channels = [];
 let currentChannelId = null;
@@ -46,17 +49,51 @@ function setFormMsg(id, text, ok) {
 // TEAM: elenco, scelta, creazione, ingresso con codice
 // ============================================================
 async function loadMemberships() {
-  const { data: rows, error } = await sb.from('team_members').select('team_id, role, nome').eq('user_id', me.id);
+  const { data: rows, error } = await sb.from('team_members').select('team_id, role, nome, stato, qualifica').eq('user_id', me.id);
   if (error) throw error;
   const ids = (rows || []).map((r) => r.team_id);
   let teams = [];
   if (ids.length) {
-    const res = await sb.from('teams').select('id, nome').in('id', ids);
+    const res = await sb.from('teams').select('id, nome, tipo, sede, richiede_approvazione, turni_config').in('id', ids);
     if (res.error) throw res.error;
     teams = res.data || [];
   }
-  memberships = (rows || []).map((r) => ({ ...r, team_nome: (teams.find((t) => t.id === r.team_id) || {}).nome || 'Team' }))
-    .sort((a, b) => a.team_nome.localeCompare(b.team_nome, 'it'));
+  const all = (rows || []).map((r) => {
+    const team = teams.find((t) => t.id === r.team_id) || {};
+    return { ...r, team, team_nome: team.nome || 'Team' };
+  }).sort((a, b) => a.team_nome.localeCompare(b.team_nome, 'it'));
+  memberships = all.filter((m) => (m.stato || 'attivo') === 'attivo');
+  pendingTeams = all.filter((m) => m.stato === 'in_attesa');
+}
+
+// Richieste di ingresso in attesa di approvazione (si possono ritirare).
+function renderPendingBox() {
+  const box = $('pending-box');
+  box.innerHTML = '';
+  box.hidden = !pendingTeams.length;
+  if (!pendingTeams.length) return;
+  const title = document.createElement('p');
+  title.className = 'field__label';
+  title.textContent = 'In attesa di approvazione';
+  box.appendChild(title);
+  pendingTeams.forEach((p) => {
+    const row = document.createElement('div');
+    row.className = 'list-item';
+    const name = document.createElement('div');
+    name.className = 'grow';
+    name.textContent = p.team_nome + ' — un amministratore deve accettare la richiesta';
+    const btn = document.createElement('button');
+    btn.className = 'btn btn--sm';
+    btn.textContent = 'Ritira';
+    btn.onclick = async () => {
+      const { error } = await sb.rpc('leave_team', { p_team: p.team_id });
+      if (error) { setFormMsg('join-msg', error.message); return; }
+      await loadMemberships();
+      renderPendingBox();
+    };
+    row.append(name, btn);
+    box.appendChild(row);
+  });
 }
 
 function renderTeamSelect() {
@@ -79,6 +116,7 @@ function showSetup({ title = 'Team', text, code = '' } = {}) {
   $('setup-text').textContent = text || 'Non fai ancora parte di nessun team. Creane uno per il tuo studio o reparto, oppure entra con un codice di invito.';
   $('join-code-input').value = code;
   $('btn-setup-back').hidden = memberships.length === 0;
+  renderPendingBox();
   setFormMsg('join-msg', '');
   setFormMsg('create-msg', '');
 }
@@ -91,10 +129,12 @@ async function openTeam(teamId) {
   $('page-root').hidden = false;
   renderTeamSelect();
   $('btn-invite').hidden = !isAdmin();
-  $('btn-new-channel').hidden = false;
+  $('btn-settings').hidden = !isAdmin();
+  $('btn-new-channel').hidden = !isAdmin();
   currentChannelId = null;
   await loadChannels();
   await loadMembersMini();
+  if (!$('turni-view').hidden) renderTurni();
 }
 
 $('team-select').onchange = (e) => openTeam(e.target.value);
@@ -113,6 +153,12 @@ $('join-form').addEventListener('submit', async (e) => {
   if (data === 'expired') { setFormMsg('join-msg', 'Invito scaduto o già usato da tutti i posti disponibili. Chiedi un nuovo invito.'); return; }
   history.replaceState(null, '', window.location.pathname);
   await loadMemberships();
+  if (data === 'pending') {
+    $('join-code-input').value = '';
+    renderPendingBox();
+    setFormMsg('join-msg', 'Richiesta inviata: entrerai nel team quando un amministratore la accetta.', true);
+    return;
+  }
   await openTeam(data);
 });
 
@@ -121,10 +167,11 @@ $('create-form').addEventListener('submit', async (e) => {
   const nome = $('create-team-name').value.trim();
   if (!nome) { setFormMsg('create-msg', 'Scrivi il nome del team.'); return; }
   $('btn-create-team').disabled = true;
-  const { data, error } = await sb.rpc('create_team', { p_nome: nome });
+  const { data, error } = await sb.rpc('create_team', { p_nome: nome, p_tipo: $('create-team-tipo').value, p_sede: $('create-team-sede').value.trim() });
   $('btn-create-team').disabled = false;
   if (error) { setFormMsg('create-msg', error.message); return; }
   $('create-team-name').value = '';
+  $('create-team-sede').value = '';
   await loadMemberships();
   await openTeam(data);
 });
@@ -133,12 +180,13 @@ $('create-form').addEventListener('submit', async (e) => {
 // CANALI E NON LETTI
 // ============================================================
 async function loadChannels() {
-  const { data, error } = await sb.from('channels').select('id, nome, created_at').eq('team_id', currentTeam.team_id).order('created_at', { ascending: true });
+  const { data, error } = await sb.from('channels').select('id, nome, created_at, solo_admin').eq('team_id', currentTeam.team_id).order('created_at', { ascending: true });
   if (error) {
     $('channel-list').innerHTML = '<div style="padding:8px; font-size:12px; color:var(--ink-soft);">Errore nel caricamento dei canali.</div>';
     return;
   }
-  channels = data || [];
+  // Il canale Avvisi in cima.
+  channels = (data || []).sort((a, b) => (b.solo_admin ? 1 : 0) - (a.solo_admin ? 1 : 0));
   const [last, reads] = await Promise.all([
     sb.rpc('my_channels_last_message'),
     sb.from('channel_reads').select('channel_id, last_read_at').eq('user_id', me.id),
@@ -171,9 +219,11 @@ function renderChannelList() {
     const b = document.createElement('button');
     b.className = 'channel-item';
     b.setAttribute('aria-current', ch.id === currentChannelId ? 'true' : 'false');
-    const hash = document.createElement('span'); hash.textContent = '#'; hash.style.opacity = '.6';
+    const hash = ch.solo_admin ? icon('megaphone') : document.createElement('span');
+    if (!ch.solo_admin) { hash.textContent = '#'; hash.style.opacity = '.6'; } else hash.setAttribute('aria-label', 'Avvisi');
     const name = document.createElement('span'); name.className = 'chname'; name.textContent = ch.nome;
     b.append(hash, name);
+    if (ch.solo_admin) b.title = 'Avvisi: scrivono solo proprietario e amministratori';
     if (hasUnread(ch)) {
       const dot = document.createElement('span'); dot.className = 'unread-dot'; dot.title = 'Messaggi non letti';
       b.appendChild(dot);
@@ -228,10 +278,13 @@ async function selectChannel(channelId) {
   renderChannelList();
   const ch = channels.find((c) => c.id === channelId);
   $('chat-head').innerHTML = '';
-  const hash = document.createElement('span'); hash.className = 'hash'; hash.textContent = '#';
+  const hash = ch && ch.solo_admin ? icon('megaphone') : document.createElement('span');
+  if (!(ch && ch.solo_admin)) { hash.className = 'hash'; hash.textContent = '#'; }
   const name = document.createElement('span'); name.textContent = ch ? ch.nome : '';
   $('chat-head').append(hash, name);
-  $('composer').hidden = false;
+  const readOnly = !!(ch && ch.solo_admin && !isAdmin());
+  $('composer').hidden = readOnly;
+  $('composer-note').hidden = !(ch && ch.solo_admin);
   $('send-error').hidden = true;
   const wrap = $('messages-wrap');
   wrap.innerHTML = '<div class="empty-chat">Caricamento…</div>';
@@ -354,10 +407,54 @@ $('msg-input').addEventListener('keydown', (e) => {
 // ============================================================
 // MEMBRI
 // ============================================================
-async function loadMembers() {
-  const { data, error } = await sb.from('team_members').select('user_id, nome, role, joined_at').eq('team_id', currentTeam.team_id).order('joined_at', { ascending: true });
+// Membri attivi (chi è in attesa di approvazione è a parte).
+async function loadMembers({ withPending = false } = {}) {
+  const { data, error } = await sb.from('team_members').select('user_id, nome, role, joined_at, stato, qualifica').eq('team_id', currentTeam.team_id).order('joined_at', { ascending: true });
   if (error) throw error;
-  return data || [];
+  return (data || []).filter((m) => withPending || (m.stato || 'attivo') === 'attivo');
+}
+
+function qualificaSelect(value, label) {
+  const sel = document.createElement('select');
+  sel.setAttribute('aria-label', label);
+  sel.innerHTML = '<option value="">Qualifica…</option>' + Object.entries(QUALIFICHE).map(([v, l]) => '<option value="' + v + '">' + l + '</option>').join('');
+  sel.value = value || '';
+  return sel;
+}
+
+async function renderPendingRequests(all) {
+  const box = $('pending-requests');
+  box.innerHTML = '';
+  const pending = all.filter((m) => m.stato === 'in_attesa');
+  if (!isAdmin() || !pending.length) return;
+  const title = document.createElement('h3');
+  title.className = 'section-title';
+  title.textContent = 'Richieste di ingresso (' + pending.length + ')';
+  box.appendChild(title);
+  pending.forEach((m) => {
+    const item = document.createElement('div');
+    item.className = 'list-item';
+    const grow = document.createElement('div');
+    grow.className = 'grow';
+    grow.textContent = (m.nome || 'Utente') + (m.qualifica ? ' · ' + QUALIFICHE[m.qualifica] : '');
+    const yes = document.createElement('button');
+    yes.className = 'btn btn--sm btn--primary';
+    yes.textContent = 'Accetta';
+    const no = document.createElement('button');
+    no.className = 'btn btn--sm btn--danger';
+    no.textContent = 'Rifiuta';
+    const decide = async (approve) => {
+      const { error } = await sb.rpc('approve_team_member', { p_team: currentTeam.team_id, p_user: m.user_id, p_approve: approve });
+      if (error) { setFormMsg('members-msg', error.message); return; }
+      toast(approve ? (m.nome || 'Utente') + ' è entrato nel team' : 'Richiesta rifiutata');
+      renderMembersPanel();
+      loadMembersMini();
+    };
+    yes.onclick = () => decide(true);
+    no.onclick = () => decide(false);
+    item.append(grow, yes, no);
+    box.appendChild(item);
+  });
 }
 
 async function loadMembersMini() {
@@ -373,8 +470,10 @@ async function renderMembersPanel() {
   const list = $('members-list');
   list.innerHTML = '';
   setFormMsg('members-msg', '');
-  let members = [];
-  try { members = await loadMembers(); } catch (e) { setFormMsg('members-msg', 'Errore: ' + e.message); return; }
+  let all = [];
+  try { all = await loadMembers({ withPending: true }); } catch (e) { setFormMsg('members-msg', 'Errore: ' + e.message); return; }
+  renderPendingRequests(all);
+  const members = all.filter((m) => (m.stato || 'attivo') === 'attivo');
   members.forEach((m) => {
     const item = document.createElement('div');
     item.className = 'list-item';
@@ -382,7 +481,20 @@ async function renderMembersPanel() {
     grow.textContent = (m.nome || 'Utente') + (m.user_id === me.id ? ' (tu)' : '') + ' ';
     const badge = document.createElement('span'); badge.className = 'badge'; badge.textContent = ROLE_LABEL[m.role] || m.role;
     grow.appendChild(badge);
+    if (m.qualifica && m.user_id !== me.id) {
+      const q = document.createElement('span'); q.className = 'subtle'; q.textContent = ' · ' + QUALIFICHE[m.qualifica];
+      grow.appendChild(q);
+    }
     item.appendChild(grow);
+    if (m.user_id === me.id) {
+      const sel = qualificaSelect(m.qualifica, 'La tua qualifica nel team');
+      sel.onchange = async () => {
+        const { error } = await sb.rpc('set_my_qualifica', { p_team: currentTeam.team_id, p_qualifica: sel.value });
+        if (error) { setFormMsg('members-msg', error.message); return; }
+        setFormMsg('members-msg', 'Qualifica salvata.', true);
+      };
+      item.appendChild(sel);
+    }
     if (m.user_id !== me.id && currentTeam.role === 'owner') {
       const sel = document.createElement('select');
       sel.setAttribute('aria-label', 'Ruolo di ' + (m.nome || 'questo membro'));
@@ -440,6 +552,172 @@ $('btn-leave-team').onclick = async () => {
   if (memberships.length) await openTeam(memberships[0].team_id);
   else showSetup();
 };
+
+// ============================================================
+// IMPOSTAZIONI DEL TEAM (proprietario: team; amministratori: sedi e tipi di turno)
+// ============================================================
+function tipoRow(t = {}) {
+  const row = document.createElement('div');
+  row.className = 'cfg-tipo';
+  row.innerHTML = '<input type="text" class="input" maxlength="40" placeholder="Nome (es. Notte)" aria-label="Nome del tipo di turno">'
+    + '<input type="color" aria-label="Colore">'
+    + '<input type="time" aria-label="Inizio"><input type="time" aria-label="Fine">';
+  const [nome, colore, inizio, fine] = row.querySelectorAll('input');
+  nome.value = t.nome || '';
+  colore.value = t.colore || '#0ea5e9';
+  inizio.value = t.inizio || '08:00';
+  fine.value = t.fine || '14:00';
+  const del = document.createElement('button');
+  del.type = 'button';
+  del.className = 'btn btn--ghost btn--icon btn--sm';
+  del.setAttribute('aria-label', 'Togli questo tipo');
+  del.appendChild(icon('trash-2'));
+  del.onclick = () => row.remove();
+  row.appendChild(del);
+  return row;
+}
+
+function openSettings() {
+  const t = currentTeam.team || {};
+  const owner = currentTeam.role === 'owner';
+  $('team-form').hidden = !owner;
+  $('danger-zone').hidden = !owner;
+  $('team-nome').value = t.nome || currentTeam.team_nome;
+  $('team-tipo').value = t.tipo || '';
+  $('team-sede').value = t.sede || '';
+  $('team-approvazione').checked = !!t.richiede_approvazione;
+  const cfg = t.turni_config || {};
+  $('cfg-sedi').value = (cfg.sedi || []).join('\n');
+  $('cfg-tipi').innerHTML = '';
+  (cfg.tipi || []).forEach((x) => $('cfg-tipi').appendChild(tipoRow(x)));
+  setFormMsg('team-msg', '');
+  setFormMsg('cfg-msg', '');
+  $('settings-panel').showModal();
+}
+
+$('btn-settings').onclick = openSettings;
+$('cfg-add-tipo').onclick = () => { $('cfg-tipi').appendChild(tipoRow()); $('cfg-tipi').lastChild.querySelector('input').focus(); };
+
+$('team-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const nome = $('team-nome').value.trim();
+  if (!nome) { setFormMsg('team-msg', 'Scrivi il nome del team.'); return; }
+  const { error } = await sb.rpc('update_team', {
+    p_team: currentTeam.team_id, p_nome: nome, p_tipo: $('team-tipo').value, p_sede: $('team-sede').value.trim(),
+    p_richiede_approvazione: $('team-approvazione').checked,
+  });
+  if (error) { setFormMsg('team-msg', error.message); return; }
+  setFormMsg('team-msg', 'Salvato.', true);
+  await loadMemberships();
+  currentTeam = memberships.find((m) => m.team_id === currentTeam.team_id);
+  renderTeamSelect();
+  loadMembersMini();
+});
+
+$('turni-config-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const sedi = [...new Set($('cfg-sedi').value.split('\n').map((x) => x.trim().slice(0, 80)).filter(Boolean))].slice(0, 50);
+  const tipi = [...$('cfg-tipi').querySelectorAll('.cfg-tipo')].map((row) => {
+    const [nome, colore, inizio, fine] = row.querySelectorAll('input');
+    return { nome: nome.value.trim().slice(0, 40), colore: colore.value, inizio: inizio.value, fine: fine.value };
+  }).filter((x) => x.nome).slice(0, 30);
+  const { error } = await sb.rpc('set_team_turni_config', { p_team: currentTeam.team_id, p_config: { sedi, tipi } });
+  if (error) { setFormMsg('cfg-msg', error.message); return; }
+  setFormMsg('cfg-msg', 'Salvato.', true);
+  await loadMemberships();
+  currentTeam = memberships.find((m) => m.team_id === currentTeam.team_id);
+});
+
+$('btn-delete-team').onclick = async () => {
+  const nome = currentTeam.team_nome;
+  const typed = await promptDialog('Eliminare il team "' + nome + '"?', {
+    message: 'Vengono eliminati definitivamente canali, messaggi, inviti, libreria del team e condivisioni dei turni. Per confermare scrivi il nome del team.',
+    label: 'Nome del team', okText: 'Elimina definitivamente', danger: true,
+    validate: (v) => (v.trim().toLowerCase() === nome.trim().toLowerCase() ? null : 'Il nome non coincide.'),
+  });
+  if (typed === null) return;
+  const { error } = await sb.rpc('delete_team', { p_team: currentTeam.team_id, p_conferma: typed });
+  if (error) { await alertDialog('Team non eliminato', error.message); return; }
+  $('settings-panel').close();
+  toast('Team "' + nome + '" eliminato');
+  await loadMemberships();
+  if (memberships.length) await openTeam(memberships[0].team_id);
+  else showSetup();
+};
+
+// ============================================================
+// TURNI DEL TEAM (settimana): chi è di turno, dove; solo chi li condivide con il team
+// ============================================================
+let turniWeek = weekStart(new Date());
+const GIORNI = ['lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato', 'domenica'];
+const MESI = ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic'];
+
+async function renderTurni() {
+  const end = addDays(turniWeek, 7);
+  $('turni-title').textContent = turniWeek.getDate() + ' ' + MESI[turniWeek.getMonth()] + ' – ' + addDays(turniWeek, 6).getDate() + ' ' + MESI[addDays(turniWeek, 6).getMonth()] + ' ' + addDays(turniWeek, 6).getFullYear();
+  const box = $('turni-week');
+  box.innerHTML = '<p class="subtle">Caricamento…</p>';
+  const [{ data, error }, mine] = await Promise.all([
+    sb.rpc('team_shifts', { p_team: currentTeam.team_id, p_from: turniWeek.toISOString(), p_to: end.toISOString() }),
+    sb.from('shift_shares').select('team_id').eq('user_id', me.id).eq('team_id', currentTeam.team_id),
+  ]);
+  if (error) { box.innerHTML = '<p class="msg msg--error">Turni non caricati: ' + error.message.replace(/</g, '&lt;') + '</p>'; return; }
+  const sharing = (mine.data || []).length > 0;
+  $('turni-hint').textContent = sharing
+    ? 'Vedi i turni dei colleghi che li condividono con questo team.'
+    : 'Non stai condividendo i tuoi turni con questo team: puoi farlo in "I miei turni" → Condivisione con i team.';
+  const filter = $('turni-qualifica').value;
+  const rows = (data || []).filter((s) => !filter || s.qualifica === filter);
+  const tipi = mergeTipi((currentTeam.team && currentTeam.team.turni_config && currentTeam.team.turni_config.tipi) || []);
+  box.innerHTML = '';
+  const today = dayKey(new Date());
+  for (let i = 0; i < 7; i++) {
+    const day = addDays(turniWeek, i);
+    const list = rows.filter((s) => dayKey(new Date(s.starts_at)) === dayKey(day));
+    const sec = document.createElement('section');
+    sec.className = 'turni-day' + (dayKey(day) === today ? ' is-today' : '');
+    const h = document.createElement('h3');
+    h.textContent = GIORNI[i] + ' ' + day.getDate() + ' ' + MESI[day.getMonth()];
+    sec.appendChild(h);
+    if (!list.length) {
+      const p = document.createElement('p'); p.className = 'subtle'; p.textContent = 'Nessun turno condiviso.';
+      sec.appendChild(p);
+    }
+    list.forEach((s) => {
+      const item = document.createElement('div');
+      item.className = 'turno';
+      item.style.setProperty('--c', s.colore || shiftColor(s.tipo, tipi));
+      const who = document.createElement('div');
+      who.className = 'turno__who';
+      who.textContent = s.nome + (s.qualifica ? ' · ' + QUALIFICHE[s.qualifica] : '');
+      const what = document.createElement('div');
+      what.className = 'turno__what';
+      what.textContent = s.tipo + ' · ' + formatRange(s) + (s.sede ? ' · ' + s.sede : '');
+      item.append(who, what);
+      if (s.note) { const n = document.createElement('div'); n.className = 'turno__note'; n.textContent = s.note; item.appendChild(n); }
+      sec.appendChild(item);
+    });
+    box.appendChild(sec);
+  }
+}
+
+$('turni-prev').onclick = () => { turniWeek = addDays(turniWeek, -7); renderTurni(); };
+$('turni-next').onclick = () => { turniWeek = addDays(turniWeek, 7); renderTurni(); };
+$('turni-today').onclick = () => { turniWeek = weekStart(new Date()); renderTurni(); };
+$('turni-qualifica').innerHTML += Object.entries(QUALIFICHE).map(([v, l]) => '<option value="' + v + '">' + l + '</option>').join('');
+$('turni-qualifica').onchange = renderTurni;
+
+function showTab(name) {
+  const turni = name === 'turni';
+  $('tab-chat').setAttribute('aria-selected', String(!turni));
+  $('tab-turni').setAttribute('aria-selected', String(turni));
+  $('chat-view').hidden = turni;
+  $('turni-view').hidden = !turni;
+  try { localStorage.setItem('mr-team-tab', name); } catch (e) { /* ignora */ }
+  if (turni) renderTurni();
+}
+$('tab-chat').onclick = () => showTab('chat');
+$('tab-turni').onclick = () => showTab('turni');
 
 // ============================================================
 // INVITI
@@ -532,4 +810,7 @@ document.querySelectorAll('dialog [data-close]').forEach((b) => b.addEventListen
   let saved = null;
   try { saved = localStorage.getItem('mr-team'); } catch (e) { /* ignora */ }
   await openTeam(memberships.some((m) => m.team_id === saved) ? saved : memberships[0].team_id);
+  let tab = null;
+  try { tab = localStorage.getItem('mr-team-tab'); } catch (e) { /* ignora */ }
+  if (tab === 'turni' || new URLSearchParams(window.location.search).get('vista') === 'turni') showTab('turni');
 })();

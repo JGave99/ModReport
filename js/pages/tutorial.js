@@ -1,5 +1,6 @@
 // Tour animato (tutorial.html). Le scene sono decorative: il contenuto è nella didascalia.
 import { $, iconHtml } from '../lib/dom.js';
+import { NEWS, newsHtml } from '../lib/news.js';
 
 const d = (s) => ' style="--d:' + s + 's"';
 const chip = (text, delay, extra = '') => '<span class="m-chip ' + extra + (delay != null ? ' hl"' + d(delay) : '"') + '>' + text + '</span>';
@@ -67,6 +68,12 @@ const SCENES = [
       '<div class="m-bub s"' + d(2.4) + '>Perfetto, grazie!</div>' +
       '<div class="m-note s"' + d(3.2) + '>' + iconHtml('triangle-alert') + 'Non inserire mai dati che identificano i pazienti nei messaggi.</div>',
   },
+  {
+    t: 'Turni',
+    p: 'In Account → Turni segni i tuoi turni con tipo, orario e sede; puoi ripeterli ogni settimana. Se li condividi con il team, in Team → Turni vedi chi è di turno e dove. Puoi anche collegarli a Google Calendar.',
+    h: '<div class="m-two"><div><div class="m-lbl s">Ottobre</div>' + chip('Lun 19 · Mattina', 0.4) + chip('Mer 21 · Notte', 1.2) + chip('Sab 24 · Reperibilità', 2) +
+      '</div><div class="m-doc"><div class="s"' + d(1) + '><b>Team → Turni</b></div><br><div class="s"' + d(2) + '>Maria · Notte · Pronto Soccorso</div><div class="s"' + d(3) + '>Luca · Mattina · TC</div></div></div>',
+  },
 ];
 
 const DURATION = 9000;
@@ -122,3 +129,7 @@ $('back-link').addEventListener('click', (e) => {
 
 setPlaying(playing);
 go(0);
+
+// Novità dell'ultima versione (le stesse della finestra nell'editor).
+$('novita-title').textContent = NEWS.title;
+$('novita-body').innerHTML = newsHtml();

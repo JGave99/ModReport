@@ -5,6 +5,8 @@ import { requireSession, isSharedDevice } from '../lib/session.js';
 import { confirmDialog, alertDialog } from '../lib/dialog.js';
 import { listEntries, addEntry, deleteEntry, clearEntries, exportEntries, importEntries } from '../lib/local-archive.js';
 import { computeStats, statsCsv } from '../lib/archive-stats.js';
+import { watchTeamBadge } from '../lib/team-unread.js';
+import { isLocalMode } from '../lib/local-backend.js';
 
 const sb = getSupabase();
 let currentUser = null;
@@ -224,6 +226,7 @@ function drawStats() {
   if (!currentUser) return;
   $('gate').classList.add('hidden');
   $('page-root').classList.remove('hidden');
+  if (!isLocalMode()) watchTeamBadge(sb, currentUser.id);
   if (isSharedDevice()) {
     $('shared-note').hidden = false;
     $('archive-tools').hidden = true;

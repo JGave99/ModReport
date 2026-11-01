@@ -17,3 +17,11 @@ export const DEFAULT_LIBRARY = {
 
 // Frasi proposte per il "Referto negativo" di alcuni esami, finché l'utente non sceglie le sue (⚙ nell'editor).
 export const DEFAULT_NEGATIVO = PRESET.negativoByEsame || {};
+
+// Frasi del punto 04 "Confronto con precedenti": uguali per tutte le metodiche e tutti gli esami. Ogni libreria
+// (personale o del team) può avere le sue in `confronti`; se non le ha, valgono queste.
+export const DEFAULT_CONFRONTI = [
+  { id: 'confronto', label: 'Confronto', text: 'Confronto con precedente analogo del [data].' },
+  { id: 'presa-visione', label: 'Presa visione', text: 'Presa visione di precedente analogo del [data].' },
+  { id: 'non-precedenti', label: 'Non precedenti', text: 'Non disponibili precedenti per confronto.' },
+];

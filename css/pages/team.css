@@ -50,6 +50,40 @@ body.page-team{ height: 100vh; height: 100dvh; display: flex; flex-direction: co
 .list-item select{ min-height: var(--h-sm); border-radius: var(--r-sm); border: 1px solid var(--border-strong); background: var(--bg); color: var(--text); }
 .invite-link{ background: var(--bg); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 10px 12px; font-size: var(--fs-sm); word-break: break-all; }
 
+/* Schede Messaggi / Turni, canale Avvisi, impostazioni, turni del team (issue #4) */
+.team-tabs{ display: flex; gap: 4px; padding: 6px var(--s-4) 0; border-bottom: 1px solid var(--border); background: var(--surface-1); }
+.team-tabs [role="tab"]{ display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--text-muted); font-weight: 600; font-size: var(--fs-sm); cursor: pointer; }
+.team-tabs [role="tab"][aria-selected="true"]{ color: var(--text); border-bottom-color: var(--primary); }
+.team-app[hidden], .team-turni[hidden]{ display: none; }
+.channel-item .icon{ width: 14px; height: 14px; opacity: .8; }
+.composer-note{ display: flex; align-items: center; gap: 6px; font-size: var(--fs-xs); color: var(--text-muted); padding: 0 var(--s-5) 6px; }
+.composer-note .icon{ width: 14px; height: 14px; }
+.team-turni{ flex: 1; min-height: 0; overflow-y: auto; padding: var(--s-4) var(--s-5); display: flex; flex-direction: column; gap: var(--s-3); }
+.turni-toolbar{ display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap; }
+.turni-title{ font-size: var(--fs-lg); font-weight: 700; min-width: 12em; text-align: center; }
+.turni-week{ display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--s-3); }
+.turni-day{ background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--r-md); padding: var(--s-3); display: flex; flex-direction: column; gap: 6px; }
+.turni-day.is-today{ border-color: var(--primary); }
+.turni-day h3{ font-size: var(--fs-sm); font-weight: 700; text-transform: capitalize; }
+.turno{ border-left: 3px solid var(--c); background: color-mix(in srgb, var(--c) 12%, transparent); border-radius: 4px; padding: 6px 8px; }
+.turno__who{ font-weight: 600; font-size: var(--fs-sm); }
+.turno__what{ font-size: var(--fs-xs); color: var(--text-muted); }
+.turno__note{ font-size: var(--fs-xs); color: var(--text-muted); font-style: italic; white-space: pre-wrap; }
+.cfg-tipi{ display: flex; flex-direction: column; gap: 6px; margin-bottom: 6px; }
+.cfg-tipo{ display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+#cfg-tipi .cfg-tipo input[type="text"]{ flex: 1; width: auto; min-width: 140px; }
+#cfg-tipi .cfg-tipo input[type="color"]{ flex: none; width: 44px; min-height: 0; height: 36px; padding: 2px; border: 1px solid var(--border-strong); border-radius: var(--r-sm); background: none; }
+#cfg-tipi .cfg-tipo input[type="time"]{ flex: none; width: auto; }
+#settings-panel form + form{ margin-top: var(--s-5); }
+#danger-zone{ margin-top: var(--s-5); }
+@media (max-width: 1100px){
+  .page-team .topbar__end #btn-members span, .page-team .topbar__end #btn-settings span, .page-team .topbar__end #btn-invite span{ display: none; }
+}
+@media (max-width: 760px){
+  .team-turni{ padding: var(--s-3); }
+  .turni-title{ min-width: 0; flex: 1; }
+}
+
 @media (max-width: 760px){
   body.page-team{ height: auto; overflow: auto; }
   .team-app{ flex-direction: column; }

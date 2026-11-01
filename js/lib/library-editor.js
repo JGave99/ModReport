@@ -426,3 +426,67 @@ export function createLibraryEditor(root, { getData, onChange }) {
 
   return { render, select(metodica, esame) { selected = { metodica, esame }; render(); } };
 }
+
+// Frasi del punto 04 "Confronto con precedenti" (uguali per tutti gli esami): etichetta del pulsante e testo.
+// Si modificano nella libreria corrente (personale o del team); senza modifiche valgono i predefiniti.
+export function renderConfronti(root, { getData, onChange, defaults }) {
+  const D = () => getData();
+  const list = () => {
+    if (!Array.isArray(D().confronti)) D().confronti = defaults.map((c) => ({ ...c }));
+    return D().confronti;
+  };
+  const changed = () => { onChange(); draw(); };
+  function draw() {
+    root.innerHTML = '';
+    const items = Array.isArray(D().confronti) ? D().confronti : defaults;
+    items.forEach((c, i) => {
+      const card = document.createElement('div');
+      card.className = 'lib-phrase';
+      const label = document.createElement('input');
+      label.className = 'input';
+      label.value = c.label;
+      label.maxLength = 40;
+      label.placeholder = 'Etichetta del pulsante';
+      label.setAttribute('aria-label', 'Etichetta del pulsante ' + (i + 1));
+      label.oninput = () => { list()[i].label = label.value; onChange(); };
+      const text = document.createElement('textarea');
+      text.className = 'input';
+      text.rows = 2;
+      text.value = c.text;
+      text.placeholder = 'Testo inserito nel referto. Campi da compilare: [data], [___]';
+      text.setAttribute('aria-label', 'Testo inserito nel referto ' + (i + 1));
+      text.oninput = () => { list()[i].text = text.value; onChange(); };
+      const top = document.createElement('div');
+      top.className = 'lib-phrase__top';
+      top.append(label,
+        btn('Sposta su', 'arrow-up', () => { move(list(), i, -1); changed(); }),
+        btn('Sposta giù', 'arrow-down', () => { move(list(), i, 1); changed(); }),
+        btn('Elimina il pulsante', 'trash-2', () => { list().splice(i, 1); changed(); }));
+      card.append(top, text);
+      root.appendChild(card);
+    });
+    if (!items.length) {
+      const empty = document.createElement('p');
+      empty.className = 'subtle';
+      empty.textContent = 'Nessun pulsante: il punto 04 nell\'editor resterà vuoto.';
+      root.appendChild(empty);
+    }
+    const actions = document.createElement('div');
+    actions.className = 'row';
+    actions.append(
+      btn('Aggiungi pulsante', 'plus', () => {
+        if (list().length >= 20) { toast('Massimo 20 pulsanti.'); return; }
+        list().push({ id: newPhraseId(), label: 'Nuovo', text: '' });
+        changed();
+        setTimeout(() => { const inputs = root.querySelectorAll('textarea'); if (inputs.length) inputs[inputs.length - 1].focus(); }, 0);
+      }, { cls: 'btn btn--sm' }),
+      btn('Ripristina i predefiniti', 'rotate-ccw', async () => {
+        if (!await confirmDialog('Ripristinare i pulsanti predefiniti del confronto?', 'Confronto, Presa visione e Non precedenti, con i testi originali.', { okText: 'Ripristina' })) return;
+        delete D().confronti;
+        changed();
+      }, { cls: 'btn btn--sm btn--ghost' }));
+    root.appendChild(actions);
+  }
+  draw();
+  return { render: draw };
+}
