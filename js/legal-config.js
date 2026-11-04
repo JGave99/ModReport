@@ -1,11 +1,11 @@
 // Dati legali del servizio, usati da informativa, termini e piè di pagina.
 // VANNO COMPILATI prima di pubblicare o di attivare i pagamenti: `npm run check:lancio` elenca quelli mancanti.
 window.MR_LEGAL = Object.freeze({
-  TITOLARE: '',          // nome e cognome o ragione sociale di chi fornisce il servizio (titolare del trattamento)
+  TITOLARE: 'Iacopo Gavesi',        // nome e cognome o ragione sociale di chi fornisce il servizio (titolare del trattamento)
   FORMA: '',             // es. "ditta individuale", "S.r.l."
   SEDE: '',              // indirizzo completo della sede
   PIVA: '',              // partita IVA
-  EMAIL: '',             // contatto per privacy e assistenza
+  EMAIL: 'iacopo.gavesidr@gmail.com', // contatto per privacy e assistenza
   PEC: '',               // PEC (facoltativa ma consigliata)
   FORO: '',              // città del foro competente per le controversie con i professionisti
   DPO: '',               // Responsabile della protezione dei dati, se nominato (altrimenti lasciare vuoto)

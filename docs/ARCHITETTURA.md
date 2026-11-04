@@ -30,7 +30,7 @@ flowchart LR
 | Servizio | Indirizzo / ID | A cosa serve | Costo |
 |---|---|---|---|
 | **GitHub — repository** | `github.com/JGave99/ModReport` (proprietario JGave99) | codice, issue, pull request, tag di versione | gratis |
-| **GitHub Pages** | <https://jgave99.github.io/ModReport/> | **sito di produzione**, pubblica `main` | gratis |
+| **GitHub Pages** | <https://modreport.it> (file `CNAME`; jgave99.github.io/ModReport rimanda qui) | **sito di produzione**, pubblica `main` | gratis |
 | **GitHub Actions** | `.github/workflows/ci.yml` | test automatici (lint, unit, SQL, e2e) su push a `main` e sulle pull request | gratis |
 | **Cloudflare Workers** | worker `modreport`, account Cloudflare di JGave (ID `ebf3daea43b40041991a1f4c26d5b0ef`) | **anteprime** di ogni branch: `https://<branch>-modreport.iaco-gavesi.workers.dev`; `main` su <https://modreport.iaco-gavesi.workers.dev> | gratis |
 | **Supabase — produzione** | progetto `umejthggxihtyqvcszgm` | login, database, file degli utenti reali | piano del progetto |
@@ -49,7 +49,7 @@ Le credenziali (password, chiavi segrete, chiave SMTP, password dei database) **
 |---|---|---|
 | Sito | GitHub Pages (`main`) | Cloudflare (ogni branch, e `main`) |
 | Database | Supabase `umejthggxihtyqvcszgm` | Supabase `blwcqwajcjklgzgbfdfc` |
-| Chi decide | `js/config.js`: produzione **solo** sui domini in `PRODUZIONE` (oggi `jgave99.github.io`) | tutti gli altri domini, anche localhost |
+| Chi decide | `js/config.js`: produzione **solo** sui domini in `PRODUZIONE` (oggi `modreport.it`, `www.modreport.it`, `jgave99.github.io`) | tutti gli altri domini, anche localhost |
 | Uso | utenti reali | test con i colleghi |
 
 Altre due modalità che **non usano nessun database**:

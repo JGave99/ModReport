@@ -28,8 +28,9 @@ Il codice chiede l'invio a Supabase, che lo passa a Brevo: se uno dei due rifiut
 ## 2. URL di ritorno dei link (urgente)
 
 **Authentication → URL Configuration**:
-- **Site URL**: `https://jgave99.github.io/ModReport/app.html` (poi il dominio definitivo).
-- **Redirect URLs**: `https://jgave99.github.io/ModReport/**` e, per lo sviluppo, `http://127.0.0.1:8765/**`.
+- **Site URL**: `https://modreport.it/app.html`.
+- **Redirect URLs**: `https://modreport.it/**`, `https://www.modreport.it/**` e, per lo sviluppo, `http://127.0.0.1:8765/**`.
+- Nel progetto di prova: Site URL e Redirect URLs dell'anteprima (`https://*-modreport.iaco-gavesi.workers.dev/**`). Se un link di conferma porta all'anteprima invece che a modreport.it, l'account è stato creato nel progetto di prova (vedi `PRODUZIONE` in `js/config.js`).
 
 Il codice ora passa `emailRedirectTo`/`redirectTo` verso `app.html`, che gestisce conferma email, recupero password e link scaduti. `index.html` inoltra comunque ad `app.html` i link che atterrano sulla home.
 

@@ -1,6 +1,13 @@
 # Novità
 
-## [Non pubblicato] — branch `migliorie-audit`
+## [Non pubblicato]
+
+### Dominio modreport.it
+- Il sito di produzione è <https://modreport.it> (file `CNAME`); `www.modreport.it` e il vecchio indirizzo GitHub Pages rimandano lì. Aggiornati canonical, Open Graph, `sitemap.xml`, `robots.txt` e documentazione.
+- Titolare e contatto (issue #6) in `js/legal-config.js`: compaiono nel piè di pagina, nell'informativa e nei termini; forma giuridica, sede e P.IVA compaiono solo quando vengono compilate.
+- Punto 04: il pulsante "Personalizza" nell'intestazione (issue #7) allineato agli altri pulsanti a icona.
+
+## v0.3.0 — 01/11/2026
 
 ### Issue #4 — Turni, team e referti tipo
 - **Turni** (Account → Turni): calendario mensile con tipo, orario, sede e note; ripetizione settimanale, copia della settimana, tipi e sedi proposti dal team. Privati, condivisibili per team (completi o "solo di turno"), cancellati dopo 12 mesi.

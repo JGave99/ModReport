@@ -7,12 +7,12 @@ Le impostazioni delle dashboard (email, chiavi, pagamenti) sono in [`SUPABASE.md
 
 | | Produzione | Prova |
 |---|---|---|
-| Sito | <https://jgave99.github.io/ModReport/> (GitHub Pages, branch `main`) | <https://migliorie-audit-modreport.iaco-gavesi.workers.dev> (Cloudflare, branch `migliorie-audit`) |
+| Sito | <https://modreport.it> (GitHub Pages, branch `main`; il vecchio indirizzo jgave99.github.io/ModReport rimanda qui) | <https://migliorie-audit-modreport.iaco-gavesi.workers.dev> (Cloudflare, branch `migliorie-audit`) |
 | Database e account | Supabase `umejthggxihtyqvcszgm` | Supabase `modreport-prova` (`blwcqwajcjklgzgbfdfc`) |
 | Chi lo usa | utenti reali | colleghi che provano le novità; nessun dato reale |
 
 - **Ogni branch** pubblicato su GitHub ha la sua anteprima: `https://<nome-branch>-modreport.iaco-gavesi.workers.dev`.
-- Anche il branch `main` è pubblicato su Cloudflare, all'indirizzo <https://modreport.iaco-gavesi.workers.dev>. Non è per gli utenti: serve come ultima verifica di `main` e usa il database **di prova**. Attenzione: finché `main` contiene il codice di prima delle migliorie (tag `v0.1.0`), questo indirizzo usa ancora il database di **produzione**.
+- Anche il branch `main` è pubblicato su Cloudflare, all'indirizzo <https://modreport.iaco-gavesi.workers.dev>. Non è per gli utenti: serve come ultima verifica di `main` e usa il database **di prova**.
 - Dashboard:
   - Cloudflare → *Workers & Pages* → `modreport`;
   - Supabase → progetto di produzione o `modreport-prova`;
@@ -22,11 +22,11 @@ Le impostazioni delle dashboard (email, chiavi, pagamenti) sono in [`SUPABASE.md
 ### Quale database usa il sito
 
 Lo decide `js/config.js`:
-- sui domini elencati in `PRODUZIONE` (oggi solo `jgave99.github.io`) l'app usa il database di produzione;
+- sui domini elencati in `PRODUZIONE` (oggi `modreport.it`, `www.modreport.it` e `jgave99.github.io`) l'app usa il database di produzione;
 - **ovunque altrove** (anteprime, sviluppo locale) usa quello di prova.
 
-Quando arriverà un dominio definitivo:
-1. aggiungerlo a `PRODUZIONE`;
+Il dominio `modreport.it` è collegato a GitHub Pages con il file `CNAME` (GitHub → Settings → Pages). Se un giorno cambia:
+1. aggiornare `CNAME` e aggiungere il nuovo dominio a `PRODUZIONE`;
 2. aggiornare *Site URL* e *Redirect URLs* nel progetto Supabase di produzione;
 3. aggiornare `sitemap.xml`, `robots.txt` e i meta `canonical`/Open Graph di `index.html`.
 
