@@ -1,16 +1,8 @@
 # Novità
 
-## [Non pubblicato]
+## v0.3.0 — 04/11/2026
 
-### Dominio modreport.it
-- Il sito di produzione è <https://modreport.it> (file `CNAME`); `www.modreport.it` e il vecchio indirizzo GitHub Pages rimandano lì. Aggiornati canonical, Open Graph, `sitemap.xml`, `robots.txt` e documentazione.
-- Titolare e contatto (issue #6) in `js/legal-config.js`: compaiono nel piè di pagina, nell'informativa e nei termini; forma giuridica, sede e P.IVA compaiono solo quando vengono compilate.
-- Produzione: chiave Supabase *publishable* al posto della chiave anon legacy (dismessa da Supabase a fine 2026).
-- Punto 04: il pulsante "Personalizza" nell'intestazione (issue #7) allineato agli altri pulsanti a icona.
-
-## v0.3.0 — 01/11/2026
-
-### Issue #4 — Turni, team e referti tipo
+### Issue #4 — Turni, team e referti tipo (online dal 01/11)
 - **Turni** (Account → Turni): calendario mensile con tipo, orario, sede e note; ripetizione settimanale, copia della settimana, tipi e sedi proposti dal team. Privati, condivisibili per team (completi o "solo di turno"), cancellati dopo 12 mesi.
 - **Google Calendar**: file .ics da importare e link personale segreto (funzione `turni-ics`), rigenerabile e disattivabile.
 - **Team**: tipo e sede, approvazione degli ingressi, qualifica dei membri, impostazioni ed eliminazione del team (proprietario), sedi e tipi di turno comuni (amministratori), canali creati solo da proprietario e amministratori, canale **Avvisi** in cui scrivono solo loro, vista **Turni del team**.
@@ -19,7 +11,14 @@
 - **Referti tipo** per esame (icona segnalibro nel blocco Referto e Ctrl+K) e riga **Più usate** con Alt+Maiusc+1…6.
 - Finestra **Novità** dopo l'aggiornamento (e dal menu dell'account), sezione Novità e passo "Turni" nel tutorial.
 - Informativa aggiornata (turni, qualifica, richieste di ingresso): versione 2026-10-23, da riaccettare.
-- Migrazione `20261023120000_team-turni.sql`.
+- Migrazione `20261023120000_team-turni.sql` e funzione `turni-ics` (applicate in produzione il 04/11).
+
+### Dominio modreport.it
+- Il sito di produzione è <https://modreport.it> (file `CNAME`); `www.modreport.it` e il vecchio indirizzo GitHub Pages rimandano lì. Aggiornati canonical, Open Graph, `sitemap.xml`, `robots.txt` e documentazione.
+- Titolare e contatto (issue #6) in `js/legal-config.js`: compaiono nel piè di pagina, nell'informativa e nei termini; forma giuridica, sede e P.IVA compaiono solo quando vengono compilate.
+- Produzione: chiave Supabase *publishable* al posto della chiave anon legacy (dismessa da Supabase a fine 2026).
+- Punto 04: il pulsante "Personalizza" nell'intestazione (issue #7) allineato agli altri pulsanti a icona.
+- Query utili per il SQL Editor di Supabase in `docs/QUERY-UTILI.md`.
 
 ## v0.2.2 — 21/10/2026
 
