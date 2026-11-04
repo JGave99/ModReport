@@ -89,3 +89,16 @@ test('produzione: l\'eliminazione dell\'account funziona anche con letture, cana
   await as(A, () => q('select public.delete_my_account()'));
   assert.equal((await q(`select id from auth.users where id = '${A}'`)).length, 0);
 });
+
+test('query utili (docs/QUERY-UTILI.md): funzionano sullo schema di produzione', async () => {
+  const blocks = [...read('docs/QUERY-UTILI.md').matchAll(/```sql\n([\s\S]*?)```/g)].map((m) => m[1]);
+  assert.equal(blocks.length, 7);
+  const migrazioni = await q(blocks[0]);
+  assert.deepEqual(migrazioni.map((r) => r.migrazione), migrations.map((m) => m.replace(/\.sql$/, '')), 'una riga per migrazione');
+  assert.deepEqual(migrazioni.filter((r) => !r.applicata), []);
+  for (const sql of blocks.slice(1)) await q(sql);
+  const utenti = await q(blocks[1]);
+  const admins = (await q('select count(*)::int as n from public.app_admins'))[0].n;
+  assert.ok(utenti.length > 0);
+  assert.equal(utenti.filter((u) => u.amministratore).length, admins);
+});

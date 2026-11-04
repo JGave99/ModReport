@@ -12,6 +12,7 @@ create table auth.users (
   email text,
   raw_user_meta_data jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
+  email_confirmed_at timestamptz,
   last_sign_in_at timestamptz
 );
 create table auth.mfa_factors (
