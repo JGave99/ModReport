@@ -17,13 +17,13 @@
 
 // Ambienti. "produzione" vale solo sui domini elencati in PRODUZIONE; ovunque altrove (anteprime Cloudflare
 // *.workers.dev, sviluppo locale, ecc.) si usa il progetto Supabase di prova: chi prova non tocca mai i dati reali.
-// Quando il sito passerà a un dominio definitivo, aggiungerlo a PRODUZIONE. L'host di ogni progetto va anche nella CSP
+// Se cambia il dominio di produzione, aggiornarlo in PRODUZIONE (e nel file CNAME). L'host di ogni progetto va anche nella CSP
 // (pagine e _headers).
 (function () {
   var ENVS = {
     produzione: {
       SUPABASE_URL: 'https://umejthggxihtyqvcszgm.supabase.co',
-      SUPABASE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVtZWp0aGdneGlodHlxdmNzemdtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg4NzI0MzEsImV4cCI6MjEwNDQ0ODQzMX0.BPaujgB70aLpWSifk5nH93fuyyyfOe8Uw4RupV1YQQE',
+      SUPABASE_KEY: 'sb_publishable_PfJOMppCQ7rQjWyyxxyUaA_nvHCQc42',
     },
     prova: {
       SUPABASE_URL: 'https://blwcqwajcjklgzgbfdfc.supabase.co',

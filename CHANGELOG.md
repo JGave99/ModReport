@@ -5,6 +5,7 @@
 ### Dominio modreport.it
 - Il sito di produzione è <https://modreport.it> (file `CNAME`); `www.modreport.it` e il vecchio indirizzo GitHub Pages rimandano lì. Aggiornati canonical, Open Graph, `sitemap.xml`, `robots.txt` e documentazione.
 - Titolare e contatto (issue #6) in `js/legal-config.js`: compaiono nel piè di pagina, nell'informativa e nei termini; forma giuridica, sede e P.IVA compaiono solo quando vengono compilate.
+- Produzione: chiave Supabase *publishable* al posto della chiave anon legacy (dismessa da Supabase a fine 2026).
 - Punto 04: il pulsante "Personalizza" nell'intestazione (issue #7) allineato agli altri pulsanti a icona.
 
 ## v0.3.0 — 01/11/2026
